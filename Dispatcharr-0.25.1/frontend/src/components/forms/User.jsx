@@ -71,6 +71,7 @@ const User = ({ user = null, isOpen, onClose }) => {
       epg_days: 0,
       epg_prev_days: 0,
       allowed_ips: [],
+      can_edit_navigation: false,
     },
 
     validate: (values) => ({
@@ -132,6 +133,9 @@ const User = ({ user = null, isOpen, onClose }) => {
     delete values.epg_days;
     customProps.epg_prev_days = values.epg_prev_days || 0;
     delete values.epg_prev_days;
+
+    customProps.can_edit_navigation = values.can_edit_navigation || false;
+    delete values.can_edit_navigation;
 
     values.custom_properties = customProps;
 
@@ -207,6 +211,7 @@ const User = ({ user = null, isOpen, onClose }) => {
             )
           ),
         ],
+        can_edit_navigation: customProps.can_edit_navigation || false,
       });
 
       if (customProps.xc_password) {
@@ -373,6 +378,14 @@ const User = ({ user = null, isOpen, onClose }) => {
                     type: 'checkbox',
                   })}
                   key={form.key('hide_adult_content')}
+                />
+                <Switch
+                  label="Can Edit Navigation"
+                  description="Allows user to reorder, rename, or change icons of sidebar navigation items"
+                  {...form.getInputProps('can_edit_navigation', {
+                    type: 'checkbox',
+                  })}
+                  key={form.key('can_edit_navigation')}
                 />
               </Stack>
             </Tabs.Panel>

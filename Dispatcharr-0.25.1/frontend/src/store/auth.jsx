@@ -67,7 +67,7 @@ const useAuthStore = create((set, get) => ({
     }
   },
 
-  getNavOrder: () => {
+    getNavOrder: () => {
     const user = get().user;
     return user?.custom_properties?.navOrder || null;
   },
@@ -84,7 +84,7 @@ const useAuthStore = create((set, get) => ({
     const validIds = new Set(
       isAdmin ? DEFAULT_ADMIN_ORDER : DEFAULT_USER_ORDER
     );
-    return hiddenNav.filter((id) => validIds.has(id));
+    return hiddenNav.filter((id) => validIds.has(id) || id.startsWith('plugin-'));
   },
 
   toggleNavVisibility: async (itemId) => {
@@ -93,6 +93,24 @@ const useAuthStore = create((set, get) => ({
       ? hiddenNav.filter((id) => id !== itemId)
       : [...hiddenNav, itemId];
     return await get().updateUserPreferences({ hiddenNav: newHiddenNav });
+  },
+
+  updateNavLabel: async (itemId, newLabel) => {
+    const user = get().user;
+    const navLabels = {
+      ...(user?.custom_properties?.navLabels || {}),
+      [itemId]: newLabel,
+    };
+    return await get().updateUserPreferences({ navLabels });
+  },
+
+  updateNavIcon: async (itemId, iconName) => {
+    const user = get().user;
+    const navIcons = {
+      ...(user?.custom_properties?.navIcons || {}),
+      [itemId]: iconName,
+    };
+    return await get().updateUserPreferences({ navIcons });
   },
 
   initData: async () => {

@@ -247,9 +247,11 @@ class UserViewSet(viewsets.ModelViewSet):
         if request.method == "PATCH":
             ALLOWED_FIELDS = {"custom_properties", "first_name", "last_name", "email", "password"}
             disallowed = set(request.data.keys()) - ALLOWED_FIELDS
-
-            for key in disallowed:
-                request.data.pop(key, None)
+            if disallowed:
+                return Response(
+                    {"detail": f"Cannot modify read-only or admin-only fields: {', '.join(disallowed)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
             # Strip admin-managed keys from custom_properties so users cannot
             # set their own XC credentials or network rules via this endpoint.

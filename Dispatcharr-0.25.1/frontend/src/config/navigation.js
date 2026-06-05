@@ -130,26 +130,48 @@ export const DEFAULT_USER_ORDER = [
   'settings',
 ];
 
-export const getOrderedNavItems = (userOrder, isAdmin, channelIds = []) => {
+export const getOrderedNavItems = (userOrder, isAdmin, channelIds = [], uiPlugins = []) => {
   const defaultOrder = isAdmin ? DEFAULT_ADMIN_ORDER : DEFAULT_USER_ORDER;
 
   let order;
   if (userOrder && Array.isArray(userOrder) && userOrder.length > 0) {
-    // Filter saved order to only include allowed items
-    const filteredOrder = userOrder.filter((id) => defaultOrder.includes(id));
+    // Filter saved order to only include allowed items or plugins
+    const filteredOrder = userOrder.filter((id) => defaultOrder.includes(id) || id.startsWith('plugin-'));
 
     // Find any new items that aren't in the saved order and append them
     const missingItems = defaultOrder.filter(
       (id) => !filteredOrder.includes(id)
     );
 
-    order = [...filteredOrder, ...missingItems];
+    // Find any new plugins that aren't in the saved order and append them
+    const missingPlugins = uiPlugins
+      .map((p) => p.id)
+      .filter((id) => !filteredOrder.includes(id));
+
+    order = [...filteredOrder, ...missingItems, ...missingPlugins];
   } else {
-    order = defaultOrder;
+    // Insert uiPlugins into defaultOrder before integrations, system, or settings
+    const insertIndex = defaultOrder.findIndex(
+      (id) => id === 'integrations' || id === 'system' || id === 'settings'
+    );
+    const orderList = [...defaultOrder];
+    const pluginIds = uiPlugins.map((p) => p.id);
+    if (insertIndex !== -1) {
+      orderList.splice(insertIndex, 0, ...pluginIds);
+      order = orderList;
+    } else {
+      order = [...orderList, ...pluginIds];
+    }
   }
 
+  // Combine NAV_ITEMS with dynamic UI plugins map
+  const pluginItemsMap = {};
+  uiPlugins.forEach((p) => {
+    pluginItemsMap[p.id] = p;
+  });
+
   return order.map((id) => {
-    const item = NAV_ITEMS[id];
+    const item = NAV_ITEMS[id] || pluginItemsMap[id];
     if (!item) return null;
 
     // Group item (has paths array)

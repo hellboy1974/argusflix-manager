@@ -9,7 +9,7 @@ from apps.channels.models import ChannelProfile
 # Valid navigation item IDs for validation
 VALID_NAV_ITEM_IDS = {
     'channels', 'vods', 'sources', 'guide', 'dvr',
-    'stats', 'plugins', 'integrations', 'system', 'settings'
+    'stats', 'plugins', 'integrations', 'system', 'settings', 'stalker'
 }
 MAX_CUSTOM_PROPS_SIZE = 102400  # 100KB limit
 
@@ -23,7 +23,7 @@ def validate_nav_array(value, field_name):
     for item in value:
         if not isinstance(item, str):
             raise serializers.ValidationError(f"{field_name} items must be strings")
-        if item not in VALID_NAV_ITEM_IDS:
+        if item not in VALID_NAV_ITEM_IDS and not item.startswith("plugin-"):
             raise serializers.ValidationError(f"'{item}' is not a valid navigation item ID")
 
 
@@ -98,6 +98,28 @@ class UserSerializer(serializers.ModelSerializer):
         if 'hiddenNav' in value:
             validate_nav_array(value['hiddenNav'], 'hiddenNav')
 
+        # Validate navLabels if present
+        if 'navLabels' in value:
+            labels = value['navLabels']
+            if not isinstance(labels, dict):
+                raise serializers.ValidationError("navLabels must be a dictionary")
+            for k, v in labels.items():
+                if not isinstance(k, str) or not isinstance(v, str):
+                    raise serializers.ValidationError("navLabels keys and values must be strings")
+                if k not in VALID_NAV_ITEM_IDS and not k.startswith("plugin-"):
+                    raise serializers.ValidationError(f"'{k}' is not a valid navigation item ID in navLabels")
+
+        # Validate navIcons if present
+        if 'navIcons' in value:
+            icons = value['navIcons']
+            if not isinstance(icons, dict):
+                raise serializers.ValidationError("navIcons must be a dictionary")
+            for k, v in icons.items():
+                if not isinstance(k, str) or not isinstance(v, str):
+                    raise serializers.ValidationError("navIcons keys and values must be strings")
+                if k not in VALID_NAV_ITEM_IDS and not k.startswith("plugin-"):
+                    raise serializers.ValidationError(f"'{k}' is not a valid navigation item ID in navIcons")
+
         return value
 
     def create(self, validated_data):
@@ -131,8 +153,15 @@ class UserSerializer(serializers.ModelSerializer):
                 if nav_field in merged and isinstance(merged[nav_field], list):
                     merged[nav_field] = [
                         item for item in merged[nav_field]
-                        if item in VALID_NAV_ITEM_IDS
+                        if item in VALID_NAV_ITEM_IDS or item.startswith("plugin-")
                     ]
+            # Scrub stale nav IDs for navLabels and navIcons
+            for nav_dict_field in ('navLabels', 'navIcons'):
+                if nav_dict_field in merged and isinstance(merged[nav_dict_field], dict):
+                    merged[nav_dict_field] = {
+                        k: v for k, v in merged[nav_dict_field].items()
+                        if (k in VALID_NAV_ITEM_IDS or k.startswith("plugin-")) and isinstance(v, str)
+                    }
             instance.custom_properties = merged
 
         for attr, value in validated_data.items():

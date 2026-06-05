@@ -205,25 +205,38 @@ const Sidebar = ({ collapsed, toggleDrawer, drawerWidth, miniDrawerWidth }) => {
   }, [plugins]);
 
   const navItems = useMemo(() => {
-    const orderedItems = getOrderedNavItems(navOrder, isAdmin, channelIds);
-    const visibleItems = orderedItems.filter((item) => !hiddenNav.includes(item.id));
-    
     // Filter dynamic UI plugins by permissions
     const filteredUiPlugins = uiPlugins.filter((p) => !p.adminOnly || isAdmin);
     
-    // Insert dynamic UI plugins before integrations, system or settings menus
-    const insertIndex = visibleItems.findIndex(
-      (item) => item.id === 'integrations' || item.id === 'system' || item.id === 'settings'
-    );
+    const orderedItems = getOrderedNavItems(navOrder, isAdmin, channelIds, filteredUiPlugins);
+    const visibleItems = orderedItems.filter((item) => !hiddenNav.includes(item.id));
     
-    if (insertIndex !== -1) {
-      const result = [...visibleItems];
-      result.splice(insertIndex, 0, ...filteredUiPlugins);
-      return result;
-    } else {
-      return [...visibleItems, ...filteredUiPlugins];
-    }
-  }, [navOrder, hiddenNav, isAdmin, channelIds, uiPlugins]);
+    // Apply customized labels and icons from user custom_properties
+    const customLabels = authUser?.custom_properties?.navLabels || {};
+    const customIcons = authUser?.custom_properties?.navIcons || {};
+
+    return visibleItems.map((item) => {
+      const mappedItem = { ...item };
+      if (customLabels[item.id]) {
+        mappedItem.label = customLabels[item.id];
+      }
+      if (customIcons[item.id]) {
+        const iconName = customIcons[item.id];
+        mappedItem.icon = LucideIcons[iconName] || item.icon;
+      }
+      // If group paths exist, override their labels too (if any match)
+      if (mappedItem.paths) {
+        mappedItem.paths = mappedItem.paths.map((p) => {
+          const childId = `${item.id}-${p.label.toLowerCase().replace(/\s+/g, '_')}`;
+          if (customLabels[childId]) {
+            return { ...p, label: customLabels[childId] };
+          }
+          return p;
+        });
+      }
+      return mappedItem;
+    });
+  }, [navOrder, hiddenNav, isAdmin, channelIds, uiPlugins, authUser]);
 
   // Environment settings and version are loaded by the settings store during initData()
   // No need to fetch them again here - just use the store values
