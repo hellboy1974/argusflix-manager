@@ -138,6 +138,24 @@ Komplette Neugestaltung und Erweiterung der integrierten Import-Funktionen für 
   * **Automatisches Stream-Validieren:** Hintergrund-Tasks, die Stream-URLs auf Erreichbarkeit prüfen und defekte Streams automatisch deaktivieren oder markieren.
   * **Feinkörniger Filter-Mechanismus:** Ausschluss oder Filterung bestimmter Gruppen (Länder, Genres) oder Stream-Typen (SD vs. HD) direkt auf Datenbank-Ebene beim Sync.
 * **Frontend (React):**
-  * **Modernisiertes Dashboard:** Ein übersichtliches und ansprechendes Redesign der Seiten zur Verwaltung von M3U-Playlists und Xtream-Verbindungen, mit direkter Visualisierung von Verbindungsstatus und Anzahl der Streams.
+  * **Modernisiertes Dashboard:** Ein übersichtlicheres und ansprechenderes Redesign der Seiten zur Verwaltung von M3U-Playlists und Xtream-Verbindungen, mit direkter Visualisierung von Verbindungsstatus und Anzahl der Streams.
   * **Detaillierte Import-Logs:** Ein Echtzeit-Import-Inspector, der Logs und Fehlerberichte während einer Synchronisierung übersichtlich anzeigt.
+
+---
+
+## 🌐 Projekt 10: Mehrsprachigkeit (Internationalisierung / i18n)
+
+Implementierung einer vollständigen Mehrsprachigkeit (z. B. Deutsch und Englisch) sowohl im React-Frontend als auch im Django-Backend.
+
+### 🛠️ Technische Umsetzung
+* **Frontend (React - i18next):**
+  - **Bibliotheken:** Integration von `i18next`, `react-i18next` und `i18next-browser-languagedetector`.
+  - **Lokalisierungsdateien:** Erstellung von JSON-Wörterbüchern für jede Sprache im Frontend (z. B. `frontend/src/locales/de.json` und `en.json`).
+  - **Komponenten-Refactoring:** Ersetzung statischer Texte durch Übersetzungs-Hooks: `const { t } = useTranslation();` und `{t('key')}`.
+  - **Language-Selector:** Ein Dropdown-Menü in der Sidebar oder den Benutzereinstellungen zur Sprachwahl. Die ausgewählte Sprache wird in den `custom_properties` des Benutzers im Backend gespeichert, sodass sie auf allen Geräten synchronisiert wird.
+* **Backend (Django - i18n):**
+  - **Django Translation:** Verwendung von `gettext_lazy` in Modellen, Serializern und Views für übersetzbare Fehlermeldungen und System-Benachrichtigungen.
+  - **Spracherkennung:** Aktivierung der Django LocaleMiddleware, um die Sprache automatisch anhand des `Accept-Language` Headers oder eines benutzerdefinierten Cookies/Settings zu wählen.
+  - **Lokalisierungs-Kompilierung:** Übersetzung über Standard-Übersetzungsdateien (`django.po` / `django.mo`), die mittels Djangos `makemessages` und `compilemessages` verwaltet werden.
+
 
