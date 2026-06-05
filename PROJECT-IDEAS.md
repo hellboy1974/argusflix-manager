@@ -110,3 +110,34 @@ Ermöglicht die Erstellung und den Export von benutzerdefinierten Playlists, die
   * **Playlist-Builder UI:** Ein intuitiver Baukasten, in dem Admins per Drag-and-Drop oder Multi-Select Streams, Filme und Serien zu einer neuen Playlist hinzufügen können.
   * **Source Mapper:** Eine Zuweisungs-Oberfläche, auf der festgelegt wird, welcher Upstream-Provider (Stalker-Portal X oder Xtream-Panel Y) für welchen Ziel-Kanal/VOD in der Custom Playlist genutzt werden soll (inkl. Fallbacks).
   * **Scheduler & Sync UI:** Eine Zeitauswahl (Timepicker / Intervall-Dropdown) zur Definition automatischer Aktualisierungspläne pro Upstream-Quelle, kombiniert mit einem Button für die sofortige manuelle Synchronisation.
+
+---
+
+## 📅 Projekt 8: Überarbeitung der EPG-Verwaltung
+
+Optimierung und Flexibilisierung des EPG-Imports und der EPG-Zuordnung für eine verbesserte Handhabung von Programmdaten.
+
+### 🛠️ Technische Umsetzung
+* **Backend (Django):**
+  * **EPG-Zuweisung & Mapping:** Optimierung des Algorithmus zur automatischen Zuordnung von EPG-Kanälen zu Stream-Kanälen basierend auf Ähnlichkeitsmetriken.
+  * **Multi-Source-EPG-Aggregator:** Importieren und Mergen von mehreren XMLTV-, GZ- oder ZIP-EPG-Quellen.
+  * **Präzises Offset-Management:** Einstellbarer Zeitversatz (Timezone Offset) pro EPG-Quelle und zusätzlich pro Einzelkanal im Backend.
+* **Frontend (React):**
+  * **Visueller EPG-Inspektor & Editor:** Eine Benutzeroberfläche zur direkten Vorschau des EPG-Programms pro Kanal, mit der Möglichkeit zur manuellen Korrektur von Zuordnungen und EPG-IDs.
+  * **EPG-Status-Monitor:** Übersichtliche Anzeige der Aktualisierungszeiten aller EPG-Quellen, der Anzahl geladener Sendungen und eventueller Parse-Fehler.
+
+---
+
+## 🔌 Projekt 9: Überarbeitung der M3U- und Xtream-Zugänge (Original-Feature-Redesign)
+
+Komplette Neugestaltung und Erweiterung der integrierten Import-Funktionen für M3U-Playlists und Xtream-Codes-Zugänge im Core-System, um mehr Kontrolle über Verbindungsparameter und Importabläufe zu ermöglichen.
+
+### 🛠️ Technische Umsetzung
+* **Backend (Django):**
+  * **Erweitertes Connection-Management:** Optionale Einstellungen für HTTP User-Agent, Timeout-Werte, SSL-Zertifikatsprüfung umgehen, und Proxy-Routing pro M3U-Account.
+  * **Automatisches Stream-Validieren:** Hintergrund-Tasks, die Stream-URLs auf Erreichbarkeit prüfen und defekte Streams automatisch deaktivieren oder markieren.
+  * **Feinkörniger Filter-Mechanismus:** Ausschluss oder Filterung bestimmter Gruppen (Länder, Genres) oder Stream-Typen (SD vs. HD) direkt auf Datenbank-Ebene beim Sync.
+* **Frontend (React):**
+  * **Modernisiertes Dashboard:** Ein übersichtliches und ansprechendes Redesign der Seiten zur Verwaltung von M3U-Playlists und Xtream-Verbindungen, mit direkter Visualisierung von Verbindungsstatus und Anzahl der Streams.
+  * **Detaillierte Import-Logs:** Ein Echtzeit-Import-Inspector, der Logs und Fehlerberichte während einer Synchronisierung übersichtlich anzeigt.
+
