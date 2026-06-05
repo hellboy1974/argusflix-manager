@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Test UI Plugin</title>
+    <style>
+        body {
+            background-color: #18181b;
+            color: #f4f4f5;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background-color: #27272a;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            border: 1px solid #3f3f46;
+            max-width: 450px;
+        }
+        h1 {
+            color: #c084fc;
+            margin-top: 0;
+            font-size: 1.8rem;
+        }
+        p {
+            color: #a1a1aa;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+        .status {
+            margin-top: 1.5rem;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: #18181b;
+            border: 1px solid #27272a;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Test UI Plugin Geladen!</h1>
+        <p>Diese Oberfläche wird direkt aus <code>plugins/test_ui/ui/</code> vom Django-Backend ausgeliefert.</p>
+        <div id="token-status" class="status">Prüfe Token...</div>
+    </div>
+    <script>
+        // Read token from URL query params
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const statusDiv = document.getElementById('token-status');
+        if (token) {
+            statusDiv.innerHTML = '<span style="color: #4ade80;">✔ Token erfolgreich im Iframe empfangen!</span>';
+            console.log('Received JWT Token:', token);
+        } else {
+            statusDiv.innerHTML = '<span style="color: #f87171;">❌ Kein Token empfangen.</span>';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Xtream Codes Toolbox</title>
+    <style>
+        :root {
+            --bg-color: #18181b;
+            --card-bg: #1e1e24;
+            --border-color: #2d2d34;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --accent-color: #8b5cf6;
+            --accent-hover: #7c3aed;
+            --accent-glow: rgba(139, 92, 246, 0.15);
+            --danger-color: #ef4444;
+            --danger-hover: #dc2626;
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 16px;
+            overflow-x: hidden;
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-title h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .badge {
+            background-color: rgba(139, 92, 246, 0.2);
+            color: #c084fc;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        /* Tabs Navigation */
+        .tabs-container {
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 24px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: #c084fc;
+            border-bottom: 2px solid #8b5cf6;
+        }
+
+        /* Card container */
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Forms */
+        .form-grid {
+            display: grid;
+            grid-template-cols: 1fr;
+            gap: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .form-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .span-2 {
+                grid-column: span 2;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-control {
+            background-color: #18181b;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            margin-top: 6px;
+        }
+
+        .checkbox-group input {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-color);
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 9px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-danger {
+            background-color: transparent;
+            color: var(--danger-color);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger-color);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Table */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            padding: 12px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .status-danger {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .status-warning {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .status-info {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .status-muted {
+            background-color: rgba(161, 161, 170, 0.15);
+            color: #cbd5e1;
+            border: 1px solid rgba(161, 161, 170, 0.3);
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid transparent;
+        }
+
+        .alert-success {
+            background-color: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .alert-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .alert-info {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        /* Detail List */
+        .detail-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-weight: 600;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border-left-color: currentColor;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Layout panels */
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+            <h1>Xtream Codes Toolbox</h1>
+            <span class="badge">v1.0.0</span>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tabs-container">
+        <button class="tab-btn active" id="tab-dashboard" onclick="switchTab('dashboard')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+            Konfigurierte Panels
+        </button>
+        <button class="tab-btn" id="tab-import" onclick="switchTab('import')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+            Panel importieren
+        </button>
+        <button class="tab-btn" id="tab-test" onclick="switchTab('test')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24M14.83 9.17l4.24-4.24M14.83 14.83l4.24 4.24M9.17 14.83l-4.24 4.24"></path></svg>
+            Verbindungstest
+        </button>
+    </div>
+
+    <!-- Notifications banner -->
+    <div id="alert-banner" style="display: none;"></div>
+
+    <!-- Tab 1: Dashboard -->
+    <div id="panel-dashboard" class="tab-panel active">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Aktive Xtream IPTV-Quellen</h2>
+                <button class="btn btn-secondary" onclick="loadPanels()" id="btn-refresh-list">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    Aktualisieren
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Server URL</th>
+                            <th>Ablaufdatum</th>
+                            <th>Verbindungen</th>
+                            <th>Sync-Status</th>
+                            <th>Letzter Abgleich</th>
+                            <th style="text-align: right;">Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="panels-table-body">
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 30px;">
+                                Lade Panels...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 2: Import Panel -->
+    <div id="panel-import" class="tab-panel">
+        <div class="form-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Neues IPTV Panel registrieren</h2>
+                </div>
+                
+                <form id="import-form" onsubmit="handleImport(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="import-name">Name der Quelle</label>
+                            <input type="text" id="import-name" class="form-control" placeholder="z.B. Premium IPTV" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="import-url">Server URL (Host + Port)</label>
+                            <input type="text" id="import-url" class="form-control" placeholder="http://domain.com:8080" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="import-user">Benutzername</label>
+                            <input type="text" id="import-user" class="form-control" placeholder="Username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="import-pass">Passwort</label>
+                            <input type="password" id="import-pass" class="form-control" placeholder="Password" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="import-interval">Automatisches Update-Intervall</label>
+                            <select id="import-interval" class="form-control">
+                                <option value="0">Deaktiviert (Manuell)</option>
+                                <option value="3600" selected>Jede Stunde</option>
+                                <option value="21600">Alle 6 Stunden</option>
+                                <option value="43200">Alle 12 Stunden</option>
+                                <option value="86400">Einmal täglich</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" style="justify-content: center;">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="import-vod">
+                                <label for="import-vod">VOD (Filme) mit importieren</label>
+                            </div>
+                            <div class="checkbox-group" style="margin-top: 10px;">
+                                <input type="checkbox" id="import-series">
+                                <label for="import-series">Serien mit importieren</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-secondary" onclick="testConnectionFromImport()" id="btn-import-test">
+                            Verbindung testen
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="btn-import-submit">
+                            Importieren
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Inspector panel for live test during import -->
+            <div class="card" id="import-test-result-card" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">Testergebnis</h2>
+                </div>
+                <div id="import-test-result-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Connection Test -->
+    <div id="panel-test" class="tab-panel">
+        <div class="form-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Panel-Anmeldedaten prüfen</h2>
+                </div>
+                
+                <form id="test-form" onsubmit="handleTest(event)">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="test-url">Server URL</label>
+                        <input type="text" id="test-url" class="form-control" placeholder="http://domain.com:8080" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="test-user">Benutzername</label>
+                        <input type="text" id="test-user" class="form-control" placeholder="Username" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="test-pass">Passwort</label>
+                        <input type="password" id="test-pass" class="form-control" placeholder="Password" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;" id="btn-test-submit">
+                        Test ausführen
+                    </button>
+                </form>
+            </div>
+
+            <!-- Detailed Inspector -->
+            <div class="card" id="test-inspector" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">Panel-Details & Auswertung</h2>
+                </div>
+                
+                <div id="test-inspector-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Retrieve JWT Token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        // Initial setup
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!token) {
+                showAlert('error', 'Kein Authentifizierungstoken empfangen. Bitte lade die Seite über die Hauptsidebar neu.');
+            } else {
+                loadPanels();
+            }
+        });
+
+        // Tab Switching
+        function switchTab(tabId) {
+            // Update tabs nav
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+
+            // Update content panels
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+            document.getElementById(`panel-${tabId}`).classList.add('active');
+
+            // Trigger list update on dashboard select
+            if (tabId === 'dashboard') {
+                loadPanels();
+            }
+        }
+
+        // Notification Banner
+        function showAlert(type, message) {
+            const banner = document.getElementById('alert-banner');
+            banner.className = `alert alert-${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}`;
+            
+            let icon = '';
+            if (type === 'error') {
+                icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+            } else if (type === 'success') {
+                icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+            } else {
+                icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+            }
+
+            banner.innerHTML = `${icon} <span>${message}</span>`;
+            banner.style.display = 'flex';
+
+            // Auto dismiss success/info alerts after 5 seconds
+            if (type !== 'error') {
+                setTimeout(() => {
+                    banner.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Fetch API Helper
+        async function runAction(actionId, params = {}) {
+            const response = await fetch('/api/plugins/plugins/xtream_toolbox/run/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    action: actionId,
+                    params: params
+                })
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.json().catch(() => ({}));
+                throw new Error(errorBody.error || `HTTP Fehler! Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error || 'Aktion fehlgeschlagen.');
+            }
+
+            return data.result;
+        }
+
+        // Action 1: Load Panels List
+        async function loadPanels() {
+            const btn = document.getElementById('btn-refresh-list');
+            const tbody = document.getElementById('panels-table-body');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Aktualisiere...';
+
+            try {
+                const result = await runAction('get_panels');
+                if (result.status === 'error') {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger-color);">${result.message}</td></tr>`;
+                    return;
+                }
+
+                const panels = result.panels || [];
+                if (panels.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 30px;">Keine Xtream Codes Panels importiert. Wechsle auf "Panel importieren" zum Hinzufügen.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                panels.forEach(p => {
+                    // Expiry Badge
+                    let expBadgeClass = 'status-success';
+                    let expDateLabel = p.exp_date || 'Unbegrenzt';
+                    if (p.exp_date) {
+                        const expiry = new Date(p.exp_date);
+                        if (expiry < new Date()) {
+                            expBadgeClass = 'status-danger';
+                            expDateLabel = `Abgelaufen (${expiry.toLocaleDateString()})`;
+                        } else {
+                            expDateLabel = expiry.toLocaleDateString();
+                        }
+                    }
+
+                    // Connection count info
+                    const conCount = (p.max_connections !== null && p.max_connections !== undefined)
+                        ? `${p.active_connections || 0} / ${p.max_connections}`
+                        : '-';
+
+                    // Sync Status Badge
+                    let statusClass = 'status-muted';
+                    if (p.status === 'success') statusClass = 'status-success';
+                    else if (p.status === 'error') statusClass = 'status-danger';
+                    else if (p.status === 'fetching' || p.status === 'parsing') statusClass = 'status-info';
+
+                    tbody.innerHTML += `
+                        <tr style="opacity: ${p.is_active ? 1 : 0.5}">
+                            <td><strong>${escapeHtml(p.name)}</strong></td>
+                            <td><code style="font-size: 0.75rem;">${escapeHtml(p.server_url)}</code></td>
+                            <td><span class="status-badge ${expBadgeClass}">${expDateLabel}</span></td>
+                            <td><code>${conCount}</code></td>
+                            <td><span class="status-badge ${statusClass}">${p.status ? p.status.toUpperCase() : 'IDLE'}</span></td>
+                            <td><span style="font-size: 0.8rem; color: var(--text-secondary);">${p.updated_at ? new Date(p.updated_at).toLocaleString() : 'Nie'}</span></td>
+                            <td align="right">
+                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <button class="btn btn-secondary" style="padding: 6px 10px;" onclick="refreshPanel(${p.id}, '${escapeJs(p.name)}')" title="Jetzt synchronisieren">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                                    </button>
+                                    <button class="btn btn-danger" style="padding: 6px 10px;" onclick="deletePanel(${p.id}, '${escapeJs(p.name)}')" title="Löschen">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+            } catch (e) {
+                showAlert('error', `Fehler beim Laden der Panels: ${e.message}`);
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger-color);">Fehler beim Laden.</td></tr>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Aktualisieren';
+            }
+        }
+
+        // Action 2: Connection Test
+        async function handleTest(event) {
+            event.preventDefault();
+            const btn = document.getElementById('btn-test-submit');
+            const inspector = document.getElementById('test-inspector');
+            const content = document.getElementById('test-inspector-content');
+
+            const url = document.getElementById('test-url').value;
+            const user = document.getElementById('test-user').value;
+            const pass = document.getElementById('test-pass').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Teste Verbindung...';
+            inspector.style.display = 'none';
+
+            try {
+                const result = await runAction('test_connection', {
+                    server_url: url,
+                    username: user,
+                    password: pass
+                });
+
+                if (result.status === 'error') {
+                    showAlert('error', result.message);
+                    return;
+                }
+
+                // Success, render details
+                const details = result.details;
+                let statusBadge = `<span class="status-badge status-muted">${details.account_status}</span>`;
+                if (details.account_status === 'Active') {
+                    statusBadge = `<span class="status-badge status-success">AKTIV</span>`;
+                } else if (details.account_status === 'Expired' || details.account_status === 'Banned') {
+                    statusBadge = `<span class="status-badge status-danger">${details.account_status.toUpperCase()}</span>`;
+                }
+
+                content.innerHTML = `
+                    <div class="alert alert-success" style="margin-bottom: 20px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        <span>Verbindung erfolgreich hergestellt!</span>
+                    </div>
+                    <div class="detail-list">
+                        <div class="detail-row">
+                            <span class="detail-label">Account Status</span>
+                            <span class="detail-value">${statusBadge}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Gültig bis</span>
+                            <span class="detail-value" style="color: #4ade80;">${details.exp_date}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Aktive Verbindungen</span>
+                            <span class="detail-value"><code>${details.active_connections} / ${details.max_connections}</code></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Server Zeitzone</span>
+                            <span class="detail-value"><code>${details.timezone}</code></span>
+                        </div>
+                    </div>
+                `;
+                inspector.style.display = 'block';
+
+            } catch (e) {
+                showAlert('error', `Verbindungstest fehlgeschlagen: ${e.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Test ausführen';
+            }
+        }
+
+        // Connection test inline from import tab
+        async function testConnectionFromImport() {
+            const btn = document.getElementById('btn-import-test');
+            const resultCard = document.getElementById('import-test-result-card');
+            const resultContent = document.getElementById('import-test-result-content');
+
+            const url = document.getElementById('import-url').value;
+            const user = document.getElementById('import-user').value;
+            const pass = document.getElementById('import-pass').value;
+
+            if (!url || !user || !pass) {
+                showAlert('error', 'Bitte trage zuerst URL, Benutzername und Passwort ein, um die Verbindung zu testen.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Teste...';
+            resultCard.style.display = 'none';
+
+            try {
+                const result = await runAction('test_connection', {
+                    server_url: url,
+                    username: user,
+                    password: pass
+                });
+
+                if (result.status === 'error') {
+                    resultContent.innerHTML = `
+                        <div class="alert alert-error" style="margin: 0;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                            <span><strong>Fehler:</strong> ${escapeHtml(result.message)}</span>
+                        </div>
+                    `;
+                } else {
+                    const details = result.details;
+                    resultContent.innerHTML = `
+                        <div class="alert alert-success" style="margin-bottom: 12px;">
+                            <span>Verbindung erfolgreich!</span>
+                        </div>
+                        <div class="detail-list" style="gap: 8px; font-size: 0.85rem;">
+                            <div class="detail-row">
+                                <span class="detail-label">Status</span>
+                                <span class="detail-value">${details.account_status}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Gültig bis</span>
+                                <span class="detail-value">${details.exp_date}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Max. Leitungen</span>
+                                <span class="detail-value">${details.max_connections}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                resultCard.style.display = 'block';
+
+            } catch (e) {
+                showAlert('error', `Verbindungstest fehlgeschlagen: ${e.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Verbindung testen';
+            }
+        }
+
+        // Action 3: Import Panel
+        async function handleImport(event) {
+            event.preventDefault();
+            const btn = document.getElementById('btn-import-submit');
+
+            const name = document.getElementById('import-name').value;
+            const url = document.getElementById('import-url').value;
+            const user = document.getElementById('import-user').value;
+            const pass = document.getElementById('import-pass').value;
+            const vod = document.getElementById('import-vod').checked;
+            const series = document.getElementById('import-series').checked;
+            const interval = document.getElementById('import-interval').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Importiere...';
+
+            try {
+                const result = await runAction('import_panel', {
+                    name: name,
+                    server_url: url,
+                    username: user,
+                    password: pass,
+                    enable_vod: vod,
+                    enable_series: series,
+                    refresh_interval: parseInt(interval)
+                });
+
+                if (result.status === 'error') {
+                    showAlert('error', result.message);
+                    return;
+                }
+
+                // Success
+                showAlert('success', result.message);
+                document.getElementById('import-form').reset();
+                document.getElementById('import-test-result-card').style.display = 'none';
+                
+                // Switch back to dashboard after brief delay
+                setTimeout(() => {
+                    switchTab('dashboard');
+                }, 1500);
+
+            } catch (e) {
+                showAlert('error', `Import fehlgeschlagen: ${e.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Importieren';
+            }
+        }
+
+        // Action 4: Refresh Single Panel
+        async function refreshPanel(id, name) {
+            try {
+                const result = await runAction('refresh_panel', { id: id });
+                if (result.status === 'error') {
+                    showAlert('error', result.message);
+                } else {
+                    showAlert('success', `Aktualisierung für '${name}' im Hintergrund gestartet.`);
+                    loadPanels();
+                }
+            } catch (e) {
+                showAlert('error', `Fehler beim Starten des Updates: ${e.message}`);
+            }
+        }
+
+        // Action 5: Delete Panel
+        async function deletePanel(id, name) {
+            const confirmed = confirm(`Bist du sicher, dass du das IPTV Panel '${name}' löschen möchtest? Alle automatisch generierten Kanäle und zugehörigen Streams werden ebenfalls entfernt.`);
+            if (!confirmed) return;
+
+            try {
+                const result = await runAction('delete_panel', { id: id });
+                if (result.status === 'error') {
+                    showAlert('error', result.message);
+                } else {
+                    showAlert('success', result.message);
+                    loadPanels();
+                }
+            } catch (e) {
+                showAlert('error', `Fehler beim Löschen des Panels: ${e.message}`);
+            }
+        }
+
+        // HTML Helper
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function escapeJs(str) {
+            if (!str) return '';
+            return str
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '\\"');
+        }
+    </script>
+</body>
+</html>

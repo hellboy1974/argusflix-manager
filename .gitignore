@@ -1,0 +1,32 @@
+# Git ignore file for Dispatcharr Reloaded Workspace
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+*.db
+*.db-journal
+*.sqlite3
+
+# Node/Frontend (if building locally)
+node_modules/
+.npm
+dist/
+build/
+
+# Local configuration & state
+.env
+.reload_token
+*.log
+*.zip
+*.txt
+
+# IDEs
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

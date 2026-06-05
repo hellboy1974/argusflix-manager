@@ -1,0 +1,39 @@
+# docker-compose.yml for Unraid (Docker Compose Manager)
+# Customize the absolute paths (/mnt/user/appdata/...) to match your actual Unraid shares.
+
+services:
+  dispatcharr:
+    # Option 1 (Recommended): Use the official pre-built image and mount your custom plugins/scripts.
+    image: ghcr.io/dispatcharr/dispatcharr:latest
+    
+    # Option 2 (Uncomment if you made changes to the core code of Dispatcharr-0.25.1):
+    # build:
+    #   context: /mnt/user/appdata/dispatcharr/Dispatcharr-0.25.1
+    #   dockerfile: docker/Dockerfile
+    
+    container_name: dispatcharr
+    restart: unless-stopped
+    ports:
+      - 9191:9191
+    volumes:
+      # Data persistence (database, logs, uploads, backups)
+      - /mnt/user/appdata/dispatcharr/data:/data
+      
+      # Custom plugins directory
+      - /mnt/user/appdata/dispatcharr/plugins:/data/plugins
+      
+      # Custom scripts directory
+      - /mnt/user/appdata/dispatcharr/scripts:/data/scripts
+      
+    environment:
+      - DISPATCHARR_ENV=aio
+      - REDIS_HOST=localhost
+      - CELERY_BROKER_URL=redis://localhost:6379/0
+      - DISPATCHARR_LOG_LEVEL=info
+      - DISPATCHARR_ALLOWED_SCRIPT_DIRS=/data/scripts
+      - TZ=Europe/Berlin
+      
+    # Optional: Hardware acceleration (Intel QuickSync / VA-API / NVidia)
+    # Unraid makes passing GPUs very simple.
+    #devices:
+    #  - /dev/dri:/dev/dri

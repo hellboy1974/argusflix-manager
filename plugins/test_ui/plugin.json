@@ -1,0 +1,10 @@
+{
+  "name": "Test UI Plugin",
+  "version": "1.0.0",
+  "description": "A dummy plugin to verify the Dynamic Iframe UI System",
+  "has_ui": true,
+  "icon": "Layout",
+  "admin_only": false,
+  "fields": [],
+  "actions": []
+}

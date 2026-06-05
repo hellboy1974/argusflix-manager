@@ -1,0 +1,178 @@
+{
+  "name": "Stalker Portal Auditor & Checker",
+  "version": "1.0.0",
+  "description": "Prüft Stalker-Portale im Bulk auf Erreichbarkeit mit IP-Geolokalisierung und führt tiefgehende Sicherheits- & STB-Kompatibilitätsaudits durch. Unterstützt SOCKS5/VPN Proxies.",
+  "author": "Antigravity",
+  "fields": [
+    {
+      "id": "info_section_1",
+      "label": "--- Bulk Status Checker ---",
+      "type": "info",
+      "help_text": "Trage hier eine Liste von Portalen ein, um sie parallel auf Online-Status, IP-Adresse und Geolokalisierung zu prüfen."
+    },
+    {
+      "id": "bulk_urls",
+      "label": "Portal URLs (Bulk Check)",
+      "type": "text",
+      "default": "http://example.com:8080\nhttp://live-tv.com:1234",
+      "placeholder": "Eine URL pro Zeile oder kommagetrennt eingeben...",
+      "help_text": "URLs für die Bulk-Erreichbarkeitsprüfung."
+    },
+    {
+      "id": "info_section_2",
+      "label": "--- Deep Portal Audit ---",
+      "type": "info",
+      "help_text": "Trage hier eine einzelne URL ein, um ein tiefgehendes Sicherheits- und STB-Kompatibilitätsaudit durchzuführen."
+    },
+    {
+      "id": "single_url",
+      "label": "Portal URL (Tiefen-Audit)",
+      "type": "string",
+      "default": "http://example.com:8080",
+      "placeholder": "http://example.com:8080",
+      "help_text": "Einzelne URL für das inaktive Sicherheits- und Kompatibilitätsaudit."
+    },
+    {
+      "id": "info_section_3",
+      "label": "--- Allgemeine Einstellungen ---",
+      "type": "info"
+    },
+    {
+      "id": "proxy",
+      "label": "SOCKS5/VPN/HTTP Proxy URL (Manuell)",
+      "type": "string",
+      "default": "",
+      "placeholder": "socks5h://127.0.0.1:1080",
+      "help_text": "Einzelner Proxy für manuelle Verwendung. Wird ignoriert, wenn Rotation aktiv ist."
+    },
+    {
+      "id": "proxy_import_url",
+      "label": "Proxy GitHub/Web-URL",
+      "type": "string",
+      "default": "",
+      "placeholder": "https://raw.githubusercontent.com/.../proxies.txt",
+      "help_text": "GitHub oder raw Web-URL einer Proxy-Liste (eine Adresse pro Zeile)."
+    },
+    {
+      "id": "proxy_import_file",
+      "label": "Proxy Lokale Datei",
+      "type": "string",
+      "default": "",
+      "placeholder": "data/proxies.txt",
+      "help_text": "Lokale Datei relativ zum Dispatcharr-Hauptordner mit Proxy-Adressen."
+    },
+    {
+      "id": "proxy_use_rotation",
+      "label": "Proxy-Rotation aktivieren",
+      "type": "boolean",
+      "default": false,
+      "help_text": "Rotiert Scans & Audits dynamisch über alle importierten, verifizierten Proxys."
+    },
+    {
+      "id": "proxy_test_timeout",
+      "label": "Proxy-Test Timeout (Sekunden)",
+      "type": "number",
+      "default": 4,
+      "help_text": "Maximaler Verbindungs-Timeout beim Prüfen der Proxys auf Funktionsfähigkeit."
+    },
+    {
+      "id": "stb_model",
+      "label": "STB Emulations-Modell",
+      "type": "select",
+      "default": "MAG322",
+      "options": [
+        { "value": "MAG322", "label": "MAG 322" },
+        { "value": "MAG254", "label": "MAG 254" },
+        { "value": "MAG250", "label": "MAG 250" },
+        { "value": "Formuler Z8", "label": "Formuler Z8" },
+        { "value": "DreamBox", "label": "DreamBox" }
+      ],
+      "help_text": "Standard Set-Top-Box-Modell zur Emulation bei Scans und Handshakes."
+    },
+    {
+      "id": "custom_macs",
+      "label": "Custom MAC-Adressen zum Testen",
+      "type": "string",
+      "default": "00:1A:79:AB:CD:EF",
+      "placeholder": "00:1A:79:XX:XX:XX, 00:1A:79:YY:YY:YY",
+      "help_text": "Kommagetrennte Liste von MAC-Adressen, um Portal-Authentifizierung (Login) zu testen."
+    },
+    {
+      "id": "urlscan_api_key",
+      "label": "urlscan.io API-Schlüssel (Optional)",
+      "type": "string",
+      "default": "",
+      "input_type": "password",
+      "placeholder": "Eigener API-Key...",
+      "help_text": "Lass das Feld leer, um den standardmäßig integrierten API-Schlüssel zu verwenden."
+    },
+    {
+      "id": "max_workers",
+      "label": "Maximale Threads/Workers",
+      "type": "number",
+      "default": 15,
+      "help_text": "Anzahl paralleler Anfragen für Bulk-Prüfung, Port-Scans und Subdomains (max 50)."
+    },
+    {
+      "id": "enable_subdomains",
+      "label": "Audit: Subdomains suchen",
+      "type": "boolean",
+      "default": true,
+      "help_text": "Sucht nach gängigen Subdomains (www, api, secure, stream etc.) auf der Domain."
+    },
+    {
+      "id": "enable_ports",
+      "label": "Audit: Offene Ports scannen",
+      "type": "boolean",
+      "default": true,
+      "help_text": "Scannt gängige IPTV-Ports auf Offenheit."
+    },
+    {
+      "id": "enable_stb_fingerprinting",
+      "label": "Audit: STB-Modelle testen",
+      "type": "boolean",
+      "default": true,
+      "help_text": "Testet verschiedene Set-Top-Boxen (MAGs, Formuler etc.) auf Akzeptanz."
+    },
+    {
+      "id": "enable_similar_portals",
+      "label": "Audit: Ähnliche Portale suchen",
+      "type": "boolean",
+      "default": false,
+      "help_text": "Sucht über urlscan.io nach anderen Portalen auf derselben IP (erfordert urlscan.io API-Key)."
+    },
+    {
+      "id": "enable_admin_discovery",
+      "label": "Audit: Admin-Pfade erkennen",
+      "type": "boolean",
+      "default": true,
+      "help_text": "Sucht nach typischen Admin-/Portal-Verzeichnissen (/c/, /stalker_portal/ etc.)."
+    }
+  ],
+  "actions": [
+    {
+      "id": "import_and_test_proxies",
+      "label": "Proxys importieren & prüfen",
+      "description": "Lädt Proxys aus der konfigurierten URL/Datei, prüft sie parallel auf Erreichbarkeit, löscht inaktive und speichert die aktiven.",
+      "button_label": "Proxys synchronisieren",
+      "button_variant": "outline",
+      "button_color": "orange"
+    },
+    {
+      "id": "run_status_check",
+      "label": "Bulk-Erreichbarkeit prüfen",
+      "description": "Startet eine parallele Prüfung aller in 'Portal URLs (Bulk Check)' eingetragenen Portale inklusive IP-Geolokalisierung.",
+      "button_label": "Status prüfen",
+      "button_variant": "filled",
+      "button_color": "green"
+    },
+    {
+      "id": "run_audit",
+      "label": "Portal auditieren",
+      "description": "Startet ein tiefgehendes Sicherheits-, STB- und Pfad-Audit auf der in 'Portal URL (Tiefen-Audit)' angegebenen URL.",
+      "button_label": "Scan starten",
+      "button_variant": "filled",
+      "button_color": "blue"
+    }
+  ]
+}

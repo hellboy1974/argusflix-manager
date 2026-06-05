@@ -1,0 +1,114 @@
+# Dispatcharr - Local Build Deployment Configuration
+# This compose file builds Dispatcharr from your local modified source code,
+# automatically compiling any frontend (React/JSX) and backend changes.
+
+services:
+  # ============================================================================
+  # Web Service
+  # ============================================================================
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: dispatcharr_web
+    restart: unless-stopped
+    ports:
+      - 8383:9191
+    volumes:
+      - ./data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # --- Environment Configuration ---
+    environment:
+      - DISPATCHARR_ENV=modular
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=dispatcharr
+      - POSTGRES_USER=dispatch
+      - POSTGRES_PASSWORD=secret
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DISPATCHARR_LOG_LEVEL=info
+
+  # ============================================================================
+  # Celery Service - Background task worker
+  # ============================================================================
+  celery:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: dispatcharr_celery
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+    volumes:
+      - ./data:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    entrypoint: ["/app/docker/entrypoint.celery.sh"]
+
+    # --- Environment Configuration ---
+    environment:
+      - DISPATCHARR_ENV=modular
+      - DISPATCHARR_PORT=9191
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=dispatcharr
+      - POSTGRES_USER=dispatch
+      - POSTGRES_PASSWORD=secret
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DISPATCHARR_LOG_LEVEL=info
+      - DJANGO_SETTINGS_MODULE=dispatcharr.settings
+      - PYTHONUNBUFFERED=1
+
+  # ============================================================================
+  # PostgreSQL
+  # ============================================================================
+  db:
+    image: postgres:17
+    container_name: dispatcharr_db
+    restart: unless-stopped
+    ports:
+      - "5436:5432"
+    environment:
+      - POSTGRES_DB=dispatcharr
+      - POSTGRES_USER=dispatch
+      - POSTGRES_PASSWORD=secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dispatch -d dispatcharr"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # Redis
+  # ============================================================================
+  redis:
+    image: redis:latest
+    container_name: dispatcharr_redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+# ==============================================================================
+# Volumes
+# ==============================================================================
+volumes:
+  postgres_data:

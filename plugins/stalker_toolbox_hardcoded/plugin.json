@@ -1,0 +1,285 @@
+{
+  "name": "Stalker Portal Toolbox (Hardcoded)",
+  "version": "1.0.0",
+  "description": "All-in-One Stalker (Ministra) portal utility. Encompasses dynamic stream redirection proxying, portal testing, port scanning, subdomain checks, custom MAC generation, and high-speed range scanning.",
+  "author": "Antigravity",
+  "fields": [
+    {
+      "id": "sec_core",
+      "label": "⚙️ [ SEKTION 1: CORE CONFIG & MULTI-PORTALS ] ─────────────────────────",
+      "type": "info",
+      "description": "General settings, configured Stalker portals, and M3U playlist integration."
+    },
+    {
+      "id": "proxy_port",
+      "label": "Proxy Port",
+      "type": "number",
+      "default": 8282,
+      "help_text": "Port on which the local stalker redirect proxy runs. Must be free."
+    },
+    {
+      "id": "portals_json",
+      "label": "Portals JSON Configuration",
+      "type": "text",
+      "default": "[]",
+      "help_text": "JSON list containing Stalker portals. Ex: [{\"name\":\"p1\", \"url\":\"http://url:80\", \"mac\":\"00:1A:79:XX:XX:XX\", \"active\":true}]. Click Save Settings after editing."
+    },
+    {
+      "id": "bulk_import_text",
+      "label": "Bulk Import Text / Paste Bin",
+      "type": "text",
+      "default": "",
+      "help_text": "Paste raw text from forums or log files containing URL and MAC combos, then run the 'Bulk Import Combos' action."
+    },
+    {
+      "id": "sync_live",
+      "label": "Sync Live TV",
+      "type": "boolean",
+      "default": true
+    },
+    {
+      "id": "sync_vod",
+      "label": "Sync VOD (Movies)",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "id": "sync_series",
+      "label": "Sync Series (TV Shows)",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "id": "sync_vod_limit",
+      "label": "Max VOD Items per Category",
+      "type": "number",
+      "default": 100,
+      "help_text": "Limits the number of movies fetched per category to keep sync fast. Set to 0 for unlimited."
+    },
+    {
+      "id": "sync_series_limit",
+      "label": "Max Series per Category",
+      "type": "number",
+      "default": 50,
+      "help_text": "Limits the number of TV shows fetched per category. Set to 0 for unlimited."
+    },
+    {
+      "id": "sec_detective",
+      "label": "🕵️ [ SEKTION 2: PORTAL DETECTIVE ] ────────────────────────────────────",
+      "type": "info",
+      "description": "Forensic scanner to check portal online status, resolve IPs, find subdomains, probe open ports, discover admin pages, and check Cloudflare protections."
+    },
+    {
+      "id": "detective_url",
+      "label": "Detective Target URL",
+      "type": "string",
+      "default": "",
+      "help_text": "The portal URL to investigate (e.g. 'http://mypanel.cc:8080')."
+    },
+    {
+      "id": "detective_urlscan_key",
+      "label": "urlscan.io API Key (Optional)",
+      "type": "string",
+      "default": "",
+      "help_text": "Optional API Key for urlscan.io to search for co-hosted portals/panels on the same server IP."
+    },
+    {
+      "id": "detective_scan_subdomains",
+      "label": "Enumerate Subdomains",
+      "type": "boolean",
+      "default": false,
+      "help_text": "Enable brute-forcing common subdomains (www, api, secure, tv, stream) to find hidden servers."
+    },
+    {
+      "id": "detective_scan_ports",
+      "label": "Port Scan Server",
+      "type": "boolean",
+      "default": false,
+      "help_text": "Enable scanning standard IPTV ports (80, 443, 8080, 8880, 25461, etc.) to discover other open ports."
+    },
+    {
+      "id": "sec_generator",
+      "label": "🔢 [ SEKTION 3: MAC ADDRESS GENERATOR ] ──────────────────────────────",
+      "type": "info",
+      "description": "Generate unique MAC address combo files using standard IPTV vendor prefixes."
+    },
+    {
+      "id": "gen_prefixes",
+      "label": "MAC Prefixes",
+      "type": "string",
+      "default": "00:1A:79:",
+      "help_text": "Prefixes to use, separated by commas (e.g. '00:1A:79:,74:1A:79:,D4:CF:F9:')."
+    },
+    {
+      "id": "gen_count",
+      "label": "MAC Count per Prefix",
+      "type": "number",
+      "default": 1000,
+      "help_text": "Number of MAC addresses to generate for each prefix."
+    },
+    {
+      "id": "gen_mode",
+      "label": "Generation Mode",
+      "type": "select",
+      "default": "random",
+      "options": [
+        { "value": "random", "label": "Random Suffix" },
+        { "value": "ascending", "label": "Sequential Ascending" },
+        { "value": "descending", "label": "Sequential Descending" }
+      ]
+    },
+    {
+      "id": "gen_suffix_start",
+      "label": "Suffix Start (Optional)",
+      "type": "string",
+      "default": "",
+      "help_text": "Starting suffix (e.g. '00:00:00'). Leave blank for default."
+    },
+    {
+      "id": "gen_suffix_end",
+      "label": "Suffix Finish (Optional)",
+      "type": "string",
+      "default": "",
+      "help_text": "Ending suffix (e.g. 'FF:FF:FF'). Leave blank for default."
+    },
+    {
+      "id": "gen_filename",
+      "label": "Output Filename",
+      "type": "string",
+      "default": "combo.txt",
+      "help_text": "The generated file will be saved in your data directory under this name."
+    },
+    {
+      "id": "sec_scanner",
+      "label": "🔍 [ SEKTION 4: MAC ADDRESS RANGE SCANNER ] ───────────────────────────",
+      "type": "info",
+      "description": "Concurrently scan a range of MAC addresses for subscription status on a portal."
+    },
+    {
+      "id": "scan_portal",
+      "label": "Scan Target Portal Name",
+      "type": "string",
+      "default": "",
+      "help_text": "Name of the portal config to scan (must be present in Section 1)."
+    },
+    {
+      "id": "scan_mac_start",
+      "label": "Scan MAC Start",
+      "type": "string",
+      "default": "00:1A:79:00:00:00"
+    },
+    {
+      "id": "scan_mac_end",
+      "label": "Scan MAC End",
+      "type": "string",
+      "default": "00:1A:79:00:00:FF"
+    },
+    {
+      "id": "scan_threads",
+      "label": "Scan Threads (Concurrency)",
+      "type": "number",
+      "default": 5,
+      "help_text": "Number of concurrent scanning threads (1 to 15)."
+    },
+    {
+      "id": "scan_cooldown",
+      "label": "Scan Cooldown (seconds)",
+      "type": "number",
+      "default": 1
+    },
+    {
+      "id": "sec_proxies",
+      "label": "🔗 [ SEKTION 5: SOCKS5/HTTP PROXY ROTATOR ] ─────────────────────────",
+      "type": "info",
+      "description": "Upload/paste proxy lists to rotate connections through HTTP, HTTPS, SOCKS4, or SOCKS5 proxies. SOCKS5h is recommended for DNS routing."
+    },
+    {
+      "id": "proxies_paste",
+      "label": "Proxies List (Paste Bin)",
+      "type": "text",
+      "default": "",
+      "help_text": "Paste your list of proxies, one per line (e.g. '192.168.1.100:1080' or 'socks5h://user:password@proxy.com:1080'). If protocol is omitted, 'socks5h://' is assumed."
+    },
+    {
+      "id": "proxy_urls",
+      "label": "Proxy list URLs (e.g. GitHub)",
+      "type": "text",
+      "default": "",
+      "help_text": "Paste links to raw text files containing proxies (one URL per line, e.g. from GitHub). They will be automatically fetched, parsed, and merged with the Paste Bin list."
+    }
+  ],
+  "actions": [
+    {
+      "id": "bulk_import_portals",
+      "label": "Bulk Import Combos",
+      "description": "Parses Paste Bin and appends parsed portals to your Portals JSON configuration.",
+      "button_label": "Run Bulk Import",
+      "button_variant": "filled",
+      "button_color": "violet"
+    },
+    {
+      "id": "test_connections",
+      "label": "Test Connections",
+      "description": "Performs handshakes and profile checks for all configured portals.",
+      "button_label": "Test Portals",
+      "button_variant": "outline",
+      "button_color": "green"
+    },
+    {
+      "id": "sync_channels",
+      "label": "Sync Playlists",
+      "description": "Fetches channels from active portals and registers them as M3U Accounts in Dispatcharr.",
+      "button_label": "Sync Playlists",
+      "button_variant": "filled",
+      "button_color": "blue"
+    },
+    {
+      "id": "run_detective",
+      "label": "Run Portal Detective",
+      "description": "Investigates target URL, searches admin portals, port scans, resolves ASN/IP, and writes report to /data/stalker_detective_<domain>.txt.",
+      "button_label": "Investigate Target",
+      "button_variant": "filled",
+      "button_color": "indigo"
+    },
+    {
+      "id": "run_generator",
+      "label": "Generate MACs",
+      "description": "Generates a list of MAC addresses and saves it to your output file in /data/.",
+      "button_label": "Generate MAC List",
+      "button_variant": "outline",
+      "button_color": "teal"
+    },
+    {
+      "id": "scan_macs",
+      "label": "Scan MAC Range",
+      "description": "Concurrently scans the MAC range on the selected portal. Results are written to /data/stalker_scan_results.txt.",
+      "button_label": "Start Range Scan",
+      "button_variant": "subtle",
+      "button_color": "orange"
+    },
+    {
+      "id": "get_scan_status",
+      "label": "Get Scan Status",
+      "description": "Returns the current MAC scanner status.",
+      "button_label": "Check Status",
+      "button_variant": "subtle",
+      "button_color": "gray"
+    },
+    {
+      "id": "fetch_portal_categories",
+      "label": "Fetch Portal Categories",
+      "description": "Helper to retrieve available genres and categories for a configured portal.",
+      "button_label": "Fetch Categories",
+      "button_variant": "subtle",
+      "button_color": "gray"
+    },
+    {
+      "id": "prune_offline_portals",
+      "label": "Prune Offline Portals",
+      "description": "Removes all configured portals that are offline or failed the connection test.",
+      "button_label": "Prune Offline",
+      "button_variant": "filled",
+      "button_color": "red"
+    }
+  ]
+}

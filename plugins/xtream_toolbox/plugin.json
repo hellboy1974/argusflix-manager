@@ -1,0 +1,105 @@
+{
+  "name": "Xtream Toolbox",
+  "version": "1.0.0",
+  "description": "Manage, test, and import Xtream Codes IPTV panels into Dispatcharr.",
+  "has_ui": true,
+  "icon": "Wrench",
+  "admin_only": true,
+  "fields": [],
+  "actions": [
+    {
+      "id": "get_panels",
+      "label": "Get Panels List",
+      "description": "Retrieves the list of configured Xtream Codes accounts",
+      "fields": []
+    },
+    {
+      "id": "test_connection",
+      "label": "Test Connection",
+      "description": "Tests connectivity and gets details for an Xtream Codes server",
+      "fields": [
+        {
+          "id": "server_url",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "username",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "password",
+          "type": "text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "import_panel",
+      "label": "Import Panel",
+      "description": "Creates a new Xtream Codes source in Dispatcharr and starts syncing",
+      "fields": [
+        {
+          "id": "name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "server_url",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "username",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "password",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "enable_vod",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "enable_series",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "refresh_interval",
+          "type": "integer",
+          "default": 3600
+        }
+      ]
+    },
+    {
+      "id": "delete_panel",
+      "label": "Delete Panel",
+      "description": "Deletes the selected Xtream Codes source and stops active streams",
+      "fields": [
+        {
+          "id": "id",
+          "type": "integer",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "refresh_panel",
+      "label": "Refresh Panel",
+      "description": "Initiates manual refresh for an Xtream Codes source",
+      "fields": [
+        {
+          "id": "id",
+          "type": "integer",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

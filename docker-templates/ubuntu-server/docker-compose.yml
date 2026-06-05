@@ -1,0 +1,47 @@
+# docker-compose.yml for Ubuntu Server
+# Place this in your repository root, or in the directory where you deploy on the server.
+
+services:
+  dispatcharr:
+    # Option 1 (Recommended): Use the official pre-built image and mount your custom plugins/scripts.
+    image: ghcr.io/dispatcharr/dispatcharr:latest
+    
+    # Option 2 (Uncomment if you made changes to the core code of Dispatcharr-0.25.1):
+    # build:
+    #   context: ./Dispatcharr-0.25.1
+    #   dockerfile: docker/Dockerfile
+    
+    container_name: dispatcharr
+    restart: unless-stopped
+    ports:
+      - 9191:9191
+    volumes:
+      # Data persistence (database, logos, uploads, backups)
+      - ./data:/data
+      
+      # Custom plugins directory
+      - ./plugins:/data/plugins
+      
+      # Custom scripts directory (for custom shell/python scripts)
+      - ./scripts:/data/scripts
+      
+    environment:
+      - DISPATCHARR_ENV=aio
+      - REDIS_HOST=localhost
+      - CELERY_BROKER_URL=redis://localhost:6379/0
+      - DISPATCHARR_LOG_LEVEL=info
+      
+      # Configure scripts directory inside the container
+      - DISPATCHARR_ALLOWED_SCRIPT_DIRS=/data/scripts
+      
+      # Optional priority tuning
+      #- UWSGI_NICE_LEVEL=-5
+      #- CELERY_NICE_LEVEL=5
+
+    # Optional: Enable high priority for streaming (requires cap_add)
+    #cap_add:
+    #  - SYS_NICE
+
+    # Optional: Hardware acceleration (VA-API / Intel QuickSync / AMD)
+    #devices:
+    #  - /dev/dri:/dev/dri

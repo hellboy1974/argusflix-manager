@@ -1,0 +1,15 @@
+{
+  "name": "Portal Explorer & Integrator",
+  "version": "1.0.0",
+  "description": "Premium-Baumstruktur-Explorer für Stalker-Portale und Xtream-Panels. Ermöglicht das visuelle Ordner-Browsing und den Bulk-Import von Streams direkt in Ihre eigene Kanalliste.",
+  "author": "Antigravity",
+  "fields": [
+    {
+      "id": "info_msg",
+      "label": "--- Portal Explorer Web UI ---",
+      "type": "info",
+      "help_text": "Nach Aktivierung des Plugins können Sie die Premium-Ordneransicht direkt im Webbrowser unter http://127.0.0.1:5656/portal-explorer/ aufrufen."
+    }
+  ],
+  "actions": []
+}
