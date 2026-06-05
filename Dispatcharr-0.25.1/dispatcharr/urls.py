@@ -2,7 +2,11 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
 from django.views.generic import TemplateView, RedirectView
+import os
+
+
 from .routing import websocket_urlpatterns
 from apps.output.views import xc_player_api, xc_panel_api, xc_get, xc_xmltv
 from apps.proxy.live_proxy.views import stream_xc
@@ -68,3 +72,12 @@ urlpatterns += websocket_urlpatterns
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Serve built React frontend assets and media
+    dev_patterns = [
+        path("assets/<path:path>", serve, {"document_root": os.path.join(settings.BASE_DIR, "frontend", "dist", "assets")}),
+        path("logo.png", serve, {"document_root": os.path.join(settings.BASE_DIR, "frontend", "dist"), "path": "logo.png"}),
+        path("favicon.ico", serve, {"document_root": os.path.join(settings.BASE_DIR, "frontend", "dist"), "path": "favicon.ico"}),
+    ]
+    urlpatterns = dev_patterns + urlpatterns
+
+
