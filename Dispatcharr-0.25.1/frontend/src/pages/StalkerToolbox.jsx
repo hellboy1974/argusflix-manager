@@ -361,8 +361,8 @@ export default function StalkerToolbox() {
     try {
       const fullSettings = { ...settings, ...updatedFields };
       const resp = await API.updatePluginSettings(pluginKey, fullSettings);
-      if (resp?.success) {
-        usePluginStore.getState().updatePlugin(pluginKey, { settings: resp.settings || fullSettings });
+      if (resp) {
+        usePluginStore.getState().updatePlugin(pluginKey, { settings: resp });
         return true;
       }
     } catch (e) {
