@@ -16,6 +16,9 @@ import {
   Blocks,
   MonitorCog,
   Terminal,
+  Film,
+  Tv,
+  ListPlus,
 } from 'lucide-react';
 
 export const NAV_ITEMS = {
@@ -27,11 +30,25 @@ export const NAV_ITEMS = {
     adminOnly: false,
     hasBadge: true,
   },
-  vods: {
-    id: 'vods',
-    label: 'VODs',
-    icon: Video,
-    path: '/vods',
+  movies: {
+    id: 'movies',
+    label: 'Movies',
+    icon: Film,
+    path: '/movies',
+    adminOnly: true,
+  },
+  series: {
+    id: 'series',
+    label: 'Series',
+    icon: Tv,
+    path: '/series',
+    adminOnly: true,
+  },
+  playlists: {
+    id: 'playlists',
+    label: 'Playlists',
+    icon: ListPlus,
+    path: '/playlists',
     adminOnly: true,
   },
   sources: {
@@ -113,7 +130,9 @@ export const NAV_ITEMS = {
 
 export const DEFAULT_ADMIN_ORDER = [
   'channels',
-  'vods',
+  'movies',
+  'series',
+  'playlists',
   'sources',
   'guide',
   'dvr',

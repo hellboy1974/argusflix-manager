@@ -17,6 +17,7 @@ import gevent
 from apps.proxy.config import TSConfig as Config
 from apps.channels.models import Channel, Stream
 from core.utils import RedisClient, log_system_event
+from core.proxy_helper import get_proxies_from_url
 from django.db import close_old_connections
 from redis.exceptions import ConnectionError, TimeoutError
 from .input.manager import StreamManager
@@ -673,6 +674,19 @@ class ProxyServer:
             self.stream_buffers[channel_id] = buffer
 
             # Only the owner worker creates the actual stream manager
+            # Load proxy_url from the stream's M3U account (if configured)
+            _proxy_url = None
+            if channel_stream_id:
+                try:
+                    _stream_obj = Stream.objects.select_related('m3u_account').get(id=channel_stream_id)
+                    _acct = getattr(_stream_obj, 'm3u_account', None)
+                    if _acct:
+                        _proxy_url = (_acct.custom_properties or {}).get('proxy_url', '') or None
+                        if _proxy_url:
+                            logger.info(f"Channel {channel_id}: using proxy for stream (account '{_acct.name}')")
+                except Exception as _e:
+                    logger.debug(f"Could not load proxy_url for stream {channel_stream_id}: {_e}")
+
             stream_manager = StreamManager(
                 channel_id,
                 channel_url,
@@ -680,7 +694,8 @@ class ProxyServer:
                 user_agent=channel_user_agent,
                 transcode=transcode,
                 stream_id=channel_stream_id,  # Pass stream ID to the manager
-                worker_id=self.worker_id  # Pass worker_id explicitly to eliminate circular dependency
+                worker_id=self.worker_id,  # Pass worker_id explicitly to eliminate circular dependency
+                proxy_url=_proxy_url,
             )
             logger.info(f"Created StreamManager for channel {channel_id} with stream ID {channel_stream_id}")
             self.stream_managers[channel_id] = stream_manager

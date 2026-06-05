@@ -149,6 +149,11 @@ class M3UAccountSerializer(serializers.ModelSerializer):
     auto_enable_new_groups_vod = serializers.BooleanField(required=False, write_only=True)
     auto_enable_new_groups_series = serializers.BooleanField(required=False, write_only=True)
     cron_expression = serializers.CharField(required=False, allow_blank=True, default="")
+    proxy_url = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, default="",
+        help_text="Optional SOCKS5H/HTTP proxy URL for this account (e.g. socks5h://user:pass@host:port). "
+                  "Routes both playlist sync and live stream connections through this proxy."
+    )
 
     class Meta:
         model = M3UAccount
@@ -178,6 +183,7 @@ class M3UAccountSerializer(serializers.ModelSerializer):
             "status",
             "last_message",
             "enable_vod",
+            "proxy_url",
             "auto_enable_new_groups_live",
             "auto_enable_new_groups_vod",
             "auto_enable_new_groups_series",
@@ -217,6 +223,7 @@ class M3UAccountSerializer(serializers.ModelSerializer):
         custom_props = instance.custom_properties or {}
 
         data["enable_vod"] = custom_props.get("enable_vod", False)
+        data["proxy_url"] = custom_props.get("proxy_url", "")
         data["auto_enable_new_groups_live"] = custom_props.get("auto_enable_new_groups_live", True)
         data["auto_enable_new_groups_vod"] = custom_props.get("auto_enable_new_groups_vod", True)
         data["auto_enable_new_groups_series"] = custom_props.get("auto_enable_new_groups_series", True)
@@ -261,6 +268,7 @@ class M3UAccountSerializer(serializers.ModelSerializer):
 
         # Handle enable_vod preference and auto_enable_new_groups settings
         enable_vod = validated_data.pop("enable_vod", None)
+        proxy_url = validated_data.pop("proxy_url", None)
         auto_enable_new_groups_live = validated_data.pop("auto_enable_new_groups_live", None)
         auto_enable_new_groups_vod = validated_data.pop("auto_enable_new_groups_vod", None)
         auto_enable_new_groups_series = validated_data.pop("auto_enable_new_groups_series", None)
@@ -278,6 +286,12 @@ class M3UAccountSerializer(serializers.ModelSerializer):
 
         if enable_vod is not None:
             custom_props["enable_vod"] = enable_vod
+        if proxy_url is not None:
+            # Empty string = remove proxy
+            if proxy_url.strip():
+                custom_props["proxy_url"] = proxy_url.strip()
+            else:
+                custom_props.pop("proxy_url", None)
         if auto_enable_new_groups_live is not None:
             custom_props["auto_enable_new_groups_live"] = auto_enable_new_groups_live
         if auto_enable_new_groups_vod is not None:
@@ -341,6 +355,7 @@ class M3UAccountSerializer(serializers.ModelSerializer):
 
         # Handle enable_vod preference and auto_enable_new_groups settings during creation
         enable_vod = validated_data.pop("enable_vod", False)
+        proxy_url = validated_data.pop("proxy_url", "") or ""
         auto_enable_new_groups_live = validated_data.pop("auto_enable_new_groups_live", True)
         auto_enable_new_groups_vod = validated_data.pop("auto_enable_new_groups_vod", True)
         auto_enable_new_groups_series = validated_data.pop("auto_enable_new_groups_series", True)
@@ -350,6 +365,8 @@ class M3UAccountSerializer(serializers.ModelSerializer):
 
         # Set preferences (default to True for auto_enable_new_groups)
         custom_props["enable_vod"] = enable_vod
+        if proxy_url.strip():
+            custom_props["proxy_url"] = proxy_url.strip()
         custom_props["auto_enable_new_groups_live"] = auto_enable_new_groups_live
         custom_props["auto_enable_new_groups_vod"] = auto_enable_new_groups_vod
         custom_props["auto_enable_new_groups_series"] = auto_enable_new_groups_series

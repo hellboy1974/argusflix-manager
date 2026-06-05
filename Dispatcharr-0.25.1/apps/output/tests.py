@@ -4,8 +4,15 @@ from apps.channels.models import Channel, ChannelGroup
 from apps.epg.models import EPGData, EPGSource
 import xml.etree.ElementTree as ET
 
+def get_response_content(response):
+    if hasattr(response, 'streaming_content'):
+        return b"".join(response.streaming_content).decode()
+    return response.content.decode()
+
 class OutputM3UTest(TestCase):
     def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
         self.client = Client()
     
     def test_generate_m3u_response(self):
@@ -46,6 +53,8 @@ class OutputEPGXMLEscapingTest(TestCase):
     """Test XML escaping of channel_id attributes in EPG generation"""
 
     def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
         self.client = Client()
         self.group = ChannelGroup.objects.create(name="Test Group")
 
@@ -62,7 +71,7 @@ class OutputEPGXMLEscapingTest(TestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-        content = response.content.decode()
+        content = get_response_content(response)
 
         # Should contain escaped ampersand
         self.assertIn('id="News &amp; Sports"', content)
@@ -86,7 +95,7 @@ class OutputEPGXMLEscapingTest(TestCase):
         url = reverse('output:generate_epg') + '?tvg_id_source=tvg_id'
         response = self.client.get(url)
 
-        content = response.content.decode()
+        content = get_response_content(response)
         self.assertIn('id="Channel &lt;HD&gt;"', content)
 
         try:
@@ -106,13 +115,17 @@ class OutputEPGXMLEscapingTest(TestCase):
         url = reverse('output:generate_epg') + '?tvg_id_source=tvg_id'
         response = self.client.get(url)
 
-        content = response.content.decode()
+        content = get_response_content(response)
         self.assertIn('id="Test &amp; &quot;Special&quot; &lt;Chars&gt;"', content)
 
         try:
             tree = ET.fromstring(content)
             # Verify we can find the channel with correct ID in parsed tree
-            channel_elem = tree.find('.//channel[@id="Test & \\"Special\\" <Chars>"]')
+            channel_elem = None
+            for elem in tree.findall('.//channel'):
+                if elem.get('id') == 'Test & "Special" <Chars>':
+                    channel_elem = elem
+                    break
             self.assertIsNotNone(channel_elem)
         except ET.ParseError as e:
             self.fail(f"Generated EPG with all special chars is not valid XML: {e}")
@@ -132,14 +145,67 @@ class OutputEPGXMLEscapingTest(TestCase):
         url = reverse('output:generate_epg') + '?tvg_id_source=tvg_id'
         response = self.client.get(url)
 
-        content = response.content.decode()
+        content = get_response_content(response)
 
         # Check programme elements have escaped channel attributes
         self.assertIn('channel="News &amp; Sports"', content)
 
         try:
             tree = ET.fromstring(content)
-            programmes = tree.findall('.//programme[@channel="News & Sports"]')
+            programmes = [p for p in tree.findall('.//programme') if p.get('channel') == "News & Sports"]
             self.assertGreater(len(programmes), 0)
         except ET.ParseError as e:
             self.fail(f"Generated EPG with programme elements is not valid XML: {e}")
+
+
+class CustomPlaylistTest(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        from apps.output.models import CustomPlaylist, CustomPlaylistLiveMapping, CustomPlaylistVODMapping
+        from apps.channels.models import Channel, ChannelGroup
+
+        self.client = Client()
+
+        # Groups
+        self.group_news = ChannelGroup.objects.create(name="News Group")
+        self.group_sports = ChannelGroup.objects.create(name="Sports Group")
+
+        # Channels
+        self.chan_news = Channel.objects.create(
+            channel_number=1.0,
+            name="News Channel",
+            tvg_id="news.channel",
+            channel_group=self.group_news
+        )
+        self.chan_sports = Channel.objects.create(
+            channel_number=2.0,
+            name="Sports Channel",
+            tvg_id="sports.channel",
+            channel_group=self.group_sports
+        )
+
+        # Custom Playlist
+        self.playlist = CustomPlaylist.objects.create(name="News Only Playlist")
+        CustomPlaylistLiveMapping.objects.create(playlist=self.playlist, channel_group=self.group_news)
+
+    def test_custom_m3u_endpoint(self):
+        """Test that custom M3U endpoint only outputs mapped channels."""
+        url = reverse('output:custom_m3u', kwargs={'token': self.playlist.token})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        content = response.content.decode()
+        self.assertIn("News Channel", content)
+        self.assertNotIn("Sports Channel", content)
+
+    def test_custom_epg_endpoint(self):
+        """Test that custom EPG endpoint only outputs EPG for mapped channels."""
+        url = reverse('output:custom_epg', kwargs={'token': self.playlist.token})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        content = get_response_content(response)
+        self.assertIn('id="1"', content)  # News Channel number
+        self.assertNotIn('id="2"', content)  # Sports Channel number
+

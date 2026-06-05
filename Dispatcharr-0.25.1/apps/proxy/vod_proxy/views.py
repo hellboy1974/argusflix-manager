@@ -1021,6 +1021,23 @@ def stream_xc_movie(request, username, password, stream_id, extension):
     session_id = request.GET.get('session_id')
     profile_id = request.GET.get('profile_id')
 
+    # Check if username is a custom playlist token
+    from apps.output.models import CustomPlaylist
+    playlist = CustomPlaylist.objects.filter(token=username, is_active=True).first()
+    if playlist:
+        filters = {"movie_id": stream_id, "m3u_account__is_active": True}
+        try:
+            movie_relation = M3UMovieRelation.objects.select_related('movie').filter(**filters).order_by('-m3u_account__priority', 'id').first()
+            if not movie_relation:
+                return JsonResponse({"error": "Movie not found"}, status=404)
+        except Exception:
+            return JsonResponse({"error": "Movie not found"}, status=404)
+
+        if not playlist.vod_mappings.filter(vod_category=movie_relation.category).exists():
+            return JsonResponse({"error": "Forbidden"}, status=403)
+
+        return stream_vod(request._request, 'movie', movie_relation.movie.uuid, session_id, profile_id, None)
+
     user = get_object_or_404(User, username=username)
 
     if not network_access_allowed(request, 'STREAMS', user):
@@ -1057,6 +1074,23 @@ def stream_xc_episode(request, username, password, stream_id, extension):
 
     session_id = request.GET.get('session_id')
     profile_id = request.GET.get('profile_id')
+
+    # Check if username is a custom playlist token
+    from apps.output.models import CustomPlaylist
+    playlist = CustomPlaylist.objects.filter(token=username, is_active=True).first()
+    if playlist:
+        filters = {"episode_id": stream_id, "m3u_account__is_active": True}
+        try:
+            episode_relation = M3UEpisodeRelation.objects.select_related('episode', 'series_relation').filter(**filters).order_by('-m3u_account__priority', 'id').first()
+            if not episode_relation:
+                return JsonResponse({"error": "Episode not found"}, status=404)
+        except Exception:
+            return JsonResponse({"error": "Episode not found"}, status=404)
+
+        if not playlist.vod_mappings.filter(vod_category=episode_relation.series_relation.category).exists():
+            return JsonResponse({"error": "Forbidden"}, status=403)
+
+        return stream_vod(request._request, 'episode', episode_relation.episode.uuid, session_id, profile_id, None)
 
     user = get_object_or_404(User, username=username)
 

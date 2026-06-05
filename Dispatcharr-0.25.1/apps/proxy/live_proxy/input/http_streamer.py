@@ -15,10 +15,11 @@ logger = get_logger()
 class HTTPStreamReader:
     """Thread-based HTTP stream reader that writes to a pipe"""
 
-    def __init__(self, url, user_agent=None, chunk_size=8192):
+    def __init__(self, url, user_agent=None, chunk_size=8192, proxies=None):
         self.url = url
         self.user_agent = user_agent
         self.chunk_size = chunk_size
+        self.proxies = proxies  # e.g. {'http': 'socks5h://...', 'https': 'socks5h://...'}
         self.session = None
         self.response = None
         self.thread = None
@@ -57,6 +58,11 @@ class HTTPStreamReader:
 
             # Create session
             self.session = requests.Session()
+
+            # Apply proxy if configured (supports socks5h://, socks5://, http://)
+            if self.proxies:
+                self.session.proxies = self.proxies
+                logger.debug(f"HTTP streamer using proxy for {self.url}")
 
             # Disable retries for faster failure detection
             adapter = HTTPAdapter(max_retries=0, pool_connections=1, pool_maxsize=1)

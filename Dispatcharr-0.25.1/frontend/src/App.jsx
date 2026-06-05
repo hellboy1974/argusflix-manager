@@ -20,7 +20,9 @@ import ConnectPage from './pages/Connect';
 import ConnectLogsPage from './pages/ConnectLogs';
 import Users from './pages/Users';
 import LogosPage from './pages/Logos';
-import VODsPage from './pages/VODs';
+import MoviesPage from './pages/Movies';
+import SeriesPage from './pages/Series';
+import CustomPlaylistsPage from './pages/CustomPlaylists';
 import Toolbox from './pages/Toolbox';
 import useAuthStore from './store/auth';
 import FloatingVideo from './components/FloatingVideo';
@@ -170,7 +172,9 @@ const App = () => {
                         <Route path="/users" element={<Users />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/logos" element={<LogosPage />} />
-                        <Route path="/vods" element={<VODsPage />} />
+                        <Route path="/movies" element={<MoviesPage />} />
+                        <Route path="/series" element={<SeriesPage />} />
+                        <Route path="/playlists" element={<CustomPlaylistsPage />} />
                         <Route path="/toolbox/:pluginKey" element={<Toolbox />} />
                       </>
                     ) : (

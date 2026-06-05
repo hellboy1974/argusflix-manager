@@ -588,10 +588,25 @@ def stream_ts(request, channel_id, user=None, force_output_format=None):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def stream_xc(request, username, password, channel_id):
-    user = get_object_or_404(User, username=username)
-
     extension = pathlib.Path(channel_id).suffix
     channel_id = pathlib.Path(channel_id).stem
+
+    # Check if username is a custom playlist token
+    from apps.output.models import CustomPlaylist
+    playlist = CustomPlaylist.objects.filter(token=username, is_active=True).first()
+    if playlist:
+        channel = get_object_or_404(Channel, id=int(channel_id))
+        if not playlist.live_mappings.filter(channel_group=channel.channel_group).exists():
+            return Response({"error": "Forbidden"}, status=403)
+        if extension.lower() == '.mp4':
+            force_format = 'fmp4'
+        elif extension.lower() == '.ts':
+            force_format = 'mpegts'
+        else:
+            force_format = None
+        return stream_ts(request._request if hasattr(request, '_request') else request, str(channel.uuid), None, force_output_format=force_format)
+
+    user = get_object_or_404(User, username=username)
 
     if not network_access_allowed(request, 'STREAMS', user):
         return Response({"error": "Forbidden"}, status=403)

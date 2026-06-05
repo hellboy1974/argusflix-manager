@@ -324,7 +324,8 @@ export default function StalkerToolbox() {
 
   const jsonParse = (str) => {
     try {
-      return JSON.parse(str);
+      const parsed = JSON.parse(str);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -670,7 +671,7 @@ export default function StalkerToolbox() {
                     <Group justify="space-between" mb="sm">
                       <Text fw={600} size="sm">Configured Portals</Text>
                       <Group gap="xs">
-                        {portalsList.some(p => p.status?.includes('Failed')) && (
+                        {portalsList.some(p => typeof p.status === 'string' && p.status.includes('Failed')) && (
                           <Button size="xs" color="red" variant="light" onClick={() => executeAction('prune_offline_portals')} loading={actionRunning === 'prune_offline_portals'}>
                             Prune Offline
                           </Button>
@@ -707,11 +708,11 @@ export default function StalkerToolbox() {
                               <Table.Td>
                                 {p.expiry ? (
                                   <Stack gap={2}>
-                                    <Text size="xs" fw={500} c={p.expiry.toLowerCase().includes('expire') || p.expiry.toLowerCase().includes('limit') ? 'dimmed' : 'teal'}>
+                                    <Text size="xs" fw={500} c={(typeof p.expiry === 'string' && (p.expiry.toLowerCase().includes('expire') || p.expiry.toLowerCase().includes('limit'))) ? 'dimmed' : 'teal'}>
                                       {p.expiry}
                                     </Text>
                                     {p.status && (
-                                      <Badge size="xxs" color={p.status === 'Active' ? 'green' : p.status.includes('Failed') ? 'red' : 'orange'} variant="light">
+                                      <Badge size="xxs" color={p.status === 'Active' ? 'green' : (typeof p.status === 'string' && p.status.includes('Failed')) ? 'red' : 'orange'} variant="light">
                                         {p.status}
                                       </Badge>
                                     )}

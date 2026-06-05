@@ -225,6 +225,8 @@ class RedisClient:
 def acquire_task_lock(task_name, id):
     """Acquire a lock to prevent concurrent task execution."""
     redis_client = RedisClient.get_client()
+    if redis_client is None:
+        return True
     lock_id = f"task_lock_{task_name}_{id}"
 
     # Use the Redis SET command with NX (only set if not exists) and EX (set expiration)
@@ -238,6 +240,8 @@ def acquire_task_lock(task_name, id):
 def release_task_lock(task_name, id):
     """Release the lock after task execution."""
     redis_client = RedisClient.get_client()
+    if redis_client is None:
+        return
     lock_id = f"task_lock_{task_name}_{id}"
 
     # Remove the lock
@@ -272,6 +276,8 @@ class TaskLockRenewer:
         while not self._stop_event.wait(self.renewal_interval):
             try:
                 redis_client = RedisClient.get_client()
+                if redis_client is None:
+                    break
                 if redis_client.exists(self.lock_id):
                     redis_client.expire(self.lock_id, self.ttl)
                     logger.debug(

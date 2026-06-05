@@ -23,7 +23,7 @@ logger = get_logger()
 class StreamManager:
     """Manages a connection to a TS stream without using raw sockets"""
 
-    def __init__(self, channel_id, url, buffer, user_agent=None, transcode=False, stream_id=None, worker_id=None):
+    def __init__(self, channel_id, url, buffer, user_agent=None, transcode=False, stream_id=None, worker_id=None, proxy_url=None):
         # Basic properties
         self.channel_id = channel_id
         # Cache channel name once to avoid repeated DB queries in hot retry/reconnect loops
@@ -57,6 +57,10 @@ class StreamManager:
 
         # User agent for connection
         self.user_agent = user_agent or Config.DEFAULT_USER_AGENT
+
+        # Proxy configuration (optional, e.g. socks5h://user:pass@host:port)
+        self.proxy_url = proxy_url or ''
+        self.proxies = {'http': proxy_url, 'https': proxy_url} if proxy_url else None
 
         # Stream health monitoring
         self.last_data_time = time.time()
@@ -991,7 +995,8 @@ class StreamManager:
             self.http_reader = HTTPStreamReader(
                 url=self.url,
                 user_agent=self.user_agent,
-                chunk_size=self.chunk_size
+                chunk_size=self.chunk_size,
+                proxies=self.proxies,
             )
 
             # Start the reader thread and get the read end of the pipe

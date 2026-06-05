@@ -103,18 +103,25 @@ def epg_endpoint(request, profile_name=None, user=None):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST", "HEAD"])
-def generate_m3u(request, profile_name=None, user=None):
+def generate_m3u(request, profile_name=None, user=None, custom_playlist=None):
     """
     Dynamically generate an M3U file from channels.
     The stream URL now points to the new stream_view that uses StreamProfile.
     Supports both GET and POST methods for compatibility with IPTVSmarters.
     """
-    # Check if this is a POST request and the body is not empty (which we don't want to allow)
-    logger.debug("Generating M3U for profile: %s, user: %s, method: %s", profile_name, user.username if user else "Anonymous", request.method)
+    # Check if this is a POST request with data (which we don't want to allow)
+    if request.method == "POST" and request.body:
+        if request.body.decode() != '{}':
+            return HttpResponseForbidden("POST requests with body are not allowed, body is: {}".format(request.body.decode()))
+
+    logger.debug("Generating M3U for profile: %s, user: %s, method: %s, custom_playlist: %s", profile_name, user.username if user else "Anonymous", request.method, custom_playlist.name if custom_playlist else "None")
 
     # Check cache for recent identical request (helps with double-GET from browsers)
     from django.core.cache import cache
-    cache_params = f"{profile_name or 'all'}:{user.username if user else 'anonymous'}:{request.GET.urlencode()}"
+    if custom_playlist is not None:
+        cache_params = f"custom_playlist:{custom_playlist.token}:{request.GET.urlencode()}"
+    else:
+        cache_params = f"{profile_name or 'all'}:{user.username if user else 'anonymous'}:{request.GET.urlencode()}"
     content_cache_key = f"m3u_content:{cache_params}"
 
     cached_content = cache.get(content_cache_key)
@@ -123,12 +130,13 @@ def generate_m3u(request, profile_name=None, user=None):
         response = HttpResponse(cached_content, content_type="audio/x-mpegurl")
         response["Content-Disposition"] = 'attachment; filename="channels.m3u"'
         return response
-    # Check if this is a POST request with data (which we don't want to allow)
-    if request.method == "POST" and request.body:
-        if request.body.decode() != '{}':
-            return HttpResponseForbidden("POST requests with body are not allowed, body is: {}".format(request.body.decode()))
 
-    if user is not None:
+    if custom_playlist is not None:
+        mapped_group_ids = custom_playlist.live_mappings.values_list('channel_group_id', flat=True)
+        base_qs = Channel.objects.filter(
+            channel_group__id__in=mapped_group_ids
+        ).select_related('channel_group', 'logo')
+    elif user is not None:
         if user.user_level < 10:
             user_profile_count = user.channel_profiles.count()
 
@@ -205,10 +213,19 @@ def generate_m3u(request, profile_name=None, user=None):
     xc_username = request.GET.get('username')
     xc_password = request.GET.get('password')
     is_xc_request = user is not None and xc_username and xc_password
+    base_url = build_absolute_uri_with_port(request, '')
 
-    if is_xc_request:
+    if custom_playlist is not None:
+        # For custom playlists, point EPG to custom EPG endpoint
+        epg_url = f"{base_url}/output/custom/{custom_playlist.token}/xmltv"
+        proxy_qs = {}
+        if output_profile_id:
+            proxy_qs['output_profile'] = output_profile_id
+        if output_format_param:
+            proxy_qs['output_format'] = output_format_param
+        proxy_qs_suffix = f"?{urlencode(proxy_qs)}" if proxy_qs else ""
+    elif is_xc_request:
         # This is an XC API request - use XC-style EPG URL
-        base_url = build_absolute_uri_with_port(request, '')
         epg_url = f"{base_url}/xmltv.php?username={xc_username}&password={xc_password}"
         # Build the query-string suffix for stream URLs once - it's the same for every channel
         xc_qs = {}
@@ -292,7 +309,10 @@ def generate_m3u(request, profile_name=None, user=None):
         )
 
         # Determine the stream URL based on request type
-        if is_xc_request:
+        if custom_playlist is not None:
+            # Use custom streaming wrapper to enforce token validation & group mappings
+            stream_url = f"{base_url}/output/custom/{custom_playlist.token}/live/any/any/{channel.id}{proxy_qs_suffix}"
+        elif is_xc_request:
             stream_url = f"{base_url}/live/{xc_username}/{xc_password}/{channel.id}{xc_qs_suffix}"
         elif use_direct_urls:
             # Try to get the first stream's direct URL
@@ -316,12 +336,14 @@ def generate_m3u(request, profile_name=None, user=None):
 
     # Log system event for M3U download (with deduplication based on client)
     client_id, client_ip, user_agent = get_client_identifier(request)
-    event_cache_key = f"m3u_download:{user.username if user else 'anonymous'}:{profile_name or 'all'}:{client_id}"
+    user_str = f"custom:{custom_playlist.name}" if custom_playlist else (user.username if user else 'anonymous')
+    profile_str = f"custom:{custom_playlist.slug}" if custom_playlist else (profile_name or 'all')
+    event_cache_key = f"m3u_download:{user_str}:{profile_str}:{client_id}"
     if not cache.get(event_cache_key):
         log_system_event(
             event_type='m3u_download',
-            profile=profile_name or 'all',
-            user=user.username if user else 'anonymous',
+            profile=profile_str,
+            user=user_str,
             channels=channel_count,
             client_ip=client_ip,
             user_agent=user_agent,
@@ -1295,7 +1317,7 @@ def generate_dummy_epg(
     return xml_lines
 
 
-def generate_epg(request, profile_name=None, user=None):
+def generate_epg(request, profile_name=None, user=None, custom_playlist=None):
     """
     Dynamically generate an XMLTV (EPG) file using streaming response to handle keep-alives.
     Since the EPG data is stored independently of Channels, we group programmes
@@ -1322,10 +1344,13 @@ def generate_epg(request, profile_name=None, user=None):
         prev_days = 0
     use_cached_logos = request.GET.get('cachedlogos', 'true').lower() != 'false'
     tvg_id_source = request.GET.get('tvg_id_source', 'channel_number').lower()
-    cache_params = (
-        f"{profile_name or 'all'}:{user.username if user else 'anonymous'}"
-        f":d={num_days}:p={prev_days}:logos={use_cached_logos}:tvgid={tvg_id_source}"
-    )
+    if custom_playlist is not None:
+        cache_params = f"custom_playlist:{custom_playlist.token}:d={num_days}:p={prev_days}:logos={use_cached_logos}:tvgid={tvg_id_source}"
+    else:
+        cache_params = (
+            f"{profile_name or 'all'}:{user.username if user else 'anonymous'}"
+            f":d={num_days}:p={prev_days}:logos={use_cached_logos}:tvgid={tvg_id_source}"
+        )
     content_cache_key = f"epg_content:{cache_params}"
 
     cached_content = cache.get(content_cache_key)
@@ -1346,7 +1371,12 @@ def generate_epg(request, profile_name=None, user=None):
         )
 
         # Get channels based on user/profile
-        if user is not None:
+        if custom_playlist is not None:
+            mapped_group_ids = custom_playlist.live_mappings.values_list('channel_group_id', flat=True)
+            base_qs = Channel.objects.filter(
+                channel_group__id__in=mapped_group_ids
+            ).select_related('logo', 'epg_data__epg_source')
+        elif user is not None:
             if user.user_level < 10:
                 user_profile_count = user.channel_profiles.count()
 
@@ -1975,11 +2005,13 @@ def _xc_allowed_output_formats(user):
     return ['ts', 'mp4']
 
 
-def xc_get_info(request, full=False):
-    user = xc_get_user(request)
-
-    if user is None:
-        return JsonResponse({'error': 'Unauthorized'}, status=401)
+def xc_get_info(request, full=False, custom_playlist=None):
+    if custom_playlist is None:
+        user = xc_get_user(request)
+        if user is None:
+            return JsonResponse({'error': 'Unauthorized'}, status=401)
+    else:
+        user = None
 
     raw_host = request.get_host()
     if ":" in raw_host:
@@ -1988,24 +2020,36 @@ def xc_get_info(request, full=False):
         hostname = raw_host
         port = "443" if request.is_secure() else "80"
 
-    if user.stream_limit and user.stream_limit > 0:
-        active_cons = len(get_user_active_connections(user.id))
-        max_connections = user.stream_limit
+    if user is not None:
+        if user.stream_limit and user.stream_limit > 0:
+            active_cons = len(get_user_active_connections(user.id))
+            max_connections = user.stream_limit
+        else:
+            active_cons = len(get_user_active_connections(None))
+            max_connections = calculate_tuner_count(minimum=1, unlimited_default=50)
+        allowed_formats = _xc_allowed_output_formats(user)
+        username_val = request.GET.get("username")
+        password_val = request.GET.get("password")
+        msg_val = "Dispatcharr XC API"
     else:
-        active_cons = len(get_user_active_connections(None))
-        max_connections = calculate_tuner_count(minimum=1, unlimited_default=50)
+        active_cons = 0
+        max_connections = 50
+        allowed_formats = ["ts", "mp4"]
+        username_val = custom_playlist.name
+        password_val = "custom"
+        msg_val = f"Dispatcharr XC API (Custom: {custom_playlist.name})"
 
     info = {
         "user_info": {
-            "username": request.GET.get("username"),
-            "password": request.GET.get("password"),
-            "message": "Dispatcharr XC API",
+            "username": username_val,
+            "password": password_val,
+            "message": msg_val,
             "auth": 1,
             "status": "Active",
             "exp_date": str(int(time.time()) + (90 * 24 * 60 * 60)),
             "active_cons": str(active_cons),
             "max_connections": str(max_connections),
-            "allowed_output_formats": _xc_allowed_output_formats(user),
+            "allowed_output_formats": allowed_formats,
         },
         "server_info": {
             "url": hostname,
@@ -2022,9 +2066,9 @@ def xc_get_info(request, full=False):
         info['categories'] = {
             "series": [],
             "movie": [],
-            "live": xc_get_live_categories(user),
+            "live": xc_get_live_categories(None, custom_playlist=custom_playlist),
         }
-        info['available_channels'] = {channel["stream_id"]: channel for channel in xc_get_live_streams(request, user, request.GET.get("category_id"))}
+        info['available_channels'] = {channel["stream_id"]: channel for channel in xc_get_live_streams(request, None, request.GET.get("category_id"), custom_playlist=custom_playlist)}
 
     return info
 
@@ -2144,7 +2188,7 @@ def xc_xmltv(request):
     return generate_epg(request, None, user)
 
 
-def xc_get_live_categories(user):
+def xc_get_live_categories(user, custom_playlist=None):
     from django.db.models import Min
     from django.db.models.functions import Coalesce
 
@@ -2158,7 +2202,14 @@ def xc_get_live_categories(user):
     )
     hidden_exclusion = {"channels__hidden_from_output": False}
 
-    if user.user_level < 10:
+    if custom_playlist is not None:
+        mapped_group_ids = custom_playlist.live_mappings.values_list('channel_group_id', flat=True)
+        channel_groups = ChannelGroup.objects.filter(
+            id__in=mapped_group_ids,
+            channels__isnull=False,
+            **hidden_exclusion,
+        ).distinct().annotate(min_channel_number=effective_min).order_by('min_channel_number')
+    elif user.user_level < 10:
         user_profile_count = user.channel_profiles.count()
 
         # If user has ALL profiles or NO profiles, give unrestricted access
@@ -2197,10 +2248,23 @@ def xc_get_live_categories(user):
     return response
 
 
-def _xc_live_streams_setup(request, user, category_id):
+def _xc_live_streams_setup(request, user, category_id, custom_playlist=None):
     from apps.channels.managers import with_effective_values
 
-    if user.user_level < 10:
+    if custom_playlist is not None:
+        filters = {}
+        mapped_group_ids = custom_playlist.live_mappings.values_list('channel_group_id', flat=True)
+        if category_id is not None:
+            # Only allow if the requested category is in mapped groups
+            if int(category_id) in mapped_group_ids:
+                filters["channel_group__id"] = category_id
+            else:
+                # requested category not in mapped groups -> return empty
+                filters["channel_group__id"] = -1
+        else:
+            filters["channel_group__id__in"] = mapped_group_ids
+        base_qs = Channel.objects.filter(**filters).select_related('channel_group', 'logo')
+    elif user.user_level < 10:
         user_profile_count = user.channel_profiles.count()
 
         # If user has ALL profiles or NO profiles, give unrestricted access
@@ -2311,18 +2375,18 @@ def _xc_channel_entry(channel, channel_num_map, _get_default_group_id, _logo_url
     }
 
 
-def xc_get_live_streams(request, user, category_id=None):
+def xc_get_live_streams(request, user, category_id=None, custom_playlist=None):
     channels, channel_num_map, _get_default_group_id, _logo_url_prefix, _logo_url_suffix = \
-        _xc_live_streams_setup(request, user, category_id)
+        _xc_live_streams_setup(request, user, category_id, custom_playlist=custom_playlist)
     return [
         _xc_channel_entry(ch, channel_num_map, _get_default_group_id, _logo_url_prefix, _logo_url_suffix)
         for ch in channels
     ]
 
 
-def _xc_stream_live_streams(request, user, category_id=None):
+def _xc_stream_live_streams(request, user, category_id=None, custom_playlist=None):
     channels, channel_num_map, _get_default_group_id, _logo_url_prefix, _logo_url_suffix = \
-        _xc_live_streams_setup(request, user, category_id)
+        _xc_live_streams_setup(request, user, category_id, custom_playlist=custom_playlist)
     yield "["
     sep = ""
     for channel in channels:
@@ -2333,7 +2397,7 @@ def _xc_stream_live_streams(request, user, category_id=None):
     yield "]"
 
 
-def xc_get_epg(request, user, short=False):
+def xc_get_epg(request, user, short=False, custom_playlist=None):
     from apps.channels.managers import with_effective_values
 
     channel_id = request.GET.get('stream_id')
@@ -2347,7 +2411,11 @@ def xc_get_epg(request, user, short=False):
     def _annotate(qs):
         return with_effective_values(qs, select_related_fks=True).exclude(hidden_from_output=True)
 
-    if user.user_level < 10:
+    if custom_playlist is not None:
+        channel = _annotate(Channel.objects.filter(id=channel_id).select_related('epg_data__epg_source')).first()
+        if not channel or not custom_playlist.live_mappings.filter(channel_group=channel.channel_group).exists():
+            raise Http404()
+    elif user.user_level < 10:
         user_profile_count = user.channel_profiles.count()
 
         # If user has ALL profiles or NO profiles, give unrestricted access
@@ -2525,17 +2593,25 @@ def xc_get_epg(request, user, short=False):
     return output
 
 
-def xc_get_vod_categories(user):
+def xc_get_vod_categories(user, custom_playlist=None):
     """Get VOD categories for XtreamCodes API"""
     from apps.vod.models import VODCategory, M3UMovieRelation
 
     response = []
 
     # All authenticated users get access to VOD from all active M3U accounts
-    categories = VODCategory.objects.filter(
-        category_type='movie',
-        m3umovierelation__m3u_account__is_active=True
-    ).distinct().order_by(Lower("name"))
+    if custom_playlist is not None:
+        mapped_cat_ids = custom_playlist.vod_mappings.values_list('vod_category_id', flat=True)
+        categories = VODCategory.objects.filter(
+            category_type='movie',
+            id__in=mapped_cat_ids,
+            m3umovierelation__m3u_account__is_active=True
+        ).distinct().order_by(Lower("name"))
+    else:
+        categories = VODCategory.objects.filter(
+            category_type='movie',
+            m3umovierelation__m3u_account__is_active=True
+        ).distinct().order_by(Lower("name"))
 
     for category in categories:
         response.append({
@@ -2547,7 +2623,7 @@ def xc_get_vod_categories(user):
     return response
 
 
-def xc_get_vod_streams(request, user, category_id=None):
+def xc_get_vod_streams(request, user, category_id=None, custom_playlist=None):
     """Get VOD streams (movies) for XtreamCodes API"""
     from apps.vod.models import Movie, M3UMovieRelation
     from django.db.models import Prefetch
@@ -2557,8 +2633,18 @@ def xc_get_vod_streams(request, user, category_id=None):
     # All authenticated users get access to VOD from all active M3U accounts
     filters = {"m3u_relations__m3u_account__is_active": True}
 
-    if category_id:
-        filters["m3u_relations__category_id"] = category_id
+    if custom_playlist is not None:
+        mapped_cat_ids = list(custom_playlist.vod_mappings.values_list('vod_category_id', flat=True))
+        if category_id:
+            if int(category_id) in mapped_cat_ids:
+                filters["m3u_relations__category_id"] = category_id
+            else:
+                filters["m3u_relations__category_id"] = -1
+        else:
+            filters["m3u_relations__category_id__in"] = mapped_cat_ids
+    else:
+        if category_id:
+            filters["m3u_relations__category_id"] = category_id
 
     # Optimize with prefetch_related to eliminate N+1 queries
     # This loads all relations in a single query instead of one per movie
@@ -2611,17 +2697,25 @@ def xc_get_vod_streams(request, user, category_id=None):
     return streams
 
 
-def xc_get_series_categories(user):
+def xc_get_series_categories(user, custom_playlist=None):
     """Get series categories for XtreamCodes API"""
     from apps.vod.models import VODCategory, M3USeriesRelation
 
     response = []
 
     # All authenticated users get access to series from all active M3U accounts
-    categories = VODCategory.objects.filter(
-        category_type='series',
-        m3useriesrelation__m3u_account__is_active=True
-    ).distinct().order_by(Lower("name"))
+    if custom_playlist is not None:
+        mapped_cat_ids = custom_playlist.vod_mappings.values_list('vod_category_id', flat=True)
+        categories = VODCategory.objects.filter(
+            category_type='series',
+            id__in=mapped_cat_ids,
+            m3useriesrelation__m3u_account__is_active=True
+        ).distinct().order_by(Lower("name"))
+    else:
+        categories = VODCategory.objects.filter(
+            category_type='series',
+            m3useriesrelation__m3u_account__is_active=True
+        ).distinct().order_by(Lower("name"))
 
     for category in categories:
         response.append({
@@ -2633,7 +2727,7 @@ def xc_get_series_categories(user):
     return response
 
 
-def xc_get_series(request, user, category_id=None):
+def xc_get_series(request, user, category_id=None, custom_playlist=None):
     """Get series list for XtreamCodes API"""
     from apps.vod.models import M3USeriesRelation
 
@@ -2642,8 +2736,18 @@ def xc_get_series(request, user, category_id=None):
     # All authenticated users get access to series from all active M3U accounts
     filters = {"m3u_account__is_active": True}
 
-    if category_id:
-        filters["category_id"] = category_id
+    if custom_playlist is not None:
+        mapped_cat_ids = list(custom_playlist.vod_mappings.values_list('vod_category_id', flat=True))
+        if category_id:
+            if int(category_id) in mapped_cat_ids:
+                filters["category_id"] = category_id
+            else:
+                filters["category_id"] = -1
+        else:
+            filters["category_id__in"] = mapped_cat_ids
+    else:
+        if category_id:
+            filters["category_id"] = category_id
 
     # Get series relations instead of series directly
     series_relations = M3USeriesRelation.objects.filter(**filters).select_related(
@@ -2684,7 +2788,7 @@ def xc_get_series(request, user, category_id=None):
     return series_list
 
 
-def xc_get_series_info(request, user, series_id):
+def xc_get_series_info(request, user, series_id, custom_playlist=None):
     """Get detailed series information including episodes"""
     from apps.vod.models import M3USeriesRelation, M3UEpisodeRelation
 
@@ -2699,6 +2803,11 @@ def xc_get_series_info(request, user, series_id):
         series = series_relation.series
     except M3USeriesRelation.DoesNotExist:
         raise Http404()
+
+    if custom_playlist is not None:
+        mapped_cat_ids = custom_playlist.vod_mappings.values_list('vod_category_id', flat=True)
+        if series_relation.category_id not in mapped_cat_ids:
+            raise Http404()
 
     # Check if we need to refresh detailed info (similar to vod api_views pattern)
     try:
@@ -2892,7 +3001,7 @@ def xc_get_series_info(request, user, series_id):
     return info
 
 
-def xc_get_vod_info(request, user, vod_id):
+def xc_get_vod_info(request, user, vod_id, custom_playlist=None):
     """Get detailed VOD (movie) information"""
     from apps.vod.models import M3UMovieRelation
     from django.utils import timezone
@@ -2912,6 +3021,11 @@ def xc_get_vod_info(request, user, vod_id):
         movie = movie_relation.movie
     except (M3UMovieRelation.DoesNotExist, M3UMovieRelation.MultipleObjectsReturned):
         raise Http404()
+
+    if custom_playlist is not None:
+        mapped_cat_ids = custom_playlist.vod_mappings.values_list('vod_category_id', flat=True)
+        if movie_relation.category_id not in mapped_cat_ids:
+            raise Http404()
 
     # Initialize basic movie data first
     movie_data = {
@@ -3196,3 +3310,132 @@ def format_duration_hms(seconds):
     """
     seconds = int(seconds or 0)
     return f"{seconds//3600:02}:{(seconds%3600)//60:02}:{seconds%60:02}"
+
+
+# Custom Playlist Endpoints
+def custom_m3u_endpoint(request, token):
+    if not network_access_allowed(request, "M3U_EPG"):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+    from apps.output.models import CustomPlaylist
+    playlist = get_object_or_404(CustomPlaylist, token=token, is_active=True)
+    if request.method == "HEAD":
+        response = HttpResponse(content_type="audio/x-mpegurl")
+        response["Content-Disposition"] = 'attachment; filename="channels.m3u"'
+        return response
+    return generate_m3u(request, custom_playlist=playlist)
+
+
+def custom_epg_endpoint(request, token):
+    if not network_access_allowed(request, "M3U_EPG"):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+    from apps.output.models import CustomPlaylist
+    playlist = get_object_or_404(CustomPlaylist, token=token, is_active=True)
+    if request.method == "HEAD":
+        response = HttpResponse(content_type="application/xml")
+        response["Content-Disposition"] = 'attachment; filename="Dispatcharr.xml"'
+        response["Cache-Control"] = "no-cache"
+        return response
+    return generate_epg(request, custom_playlist=playlist)
+
+
+@csrf_exempt
+def custom_xc_player_api(request, token):
+    if not network_access_allowed(request, 'XC_API'):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+    from apps.output.models import CustomPlaylist
+    playlist = get_object_or_404(CustomPlaylist, token=token, is_active=True)
+    action = request.GET.get("action")
+
+    if action == "get_live_categories":
+        return JsonResponse(xc_get_live_categories(None, custom_playlist=playlist), safe=False)
+    elif action == "get_live_streams":
+        return StreamingHttpResponse(
+            _xc_stream_live_streams(request, None, request.GET.get("category_id"), custom_playlist=playlist),
+            content_type="application/json",
+        )
+    elif action == "get_short_epg":
+        return JsonResponse(xc_get_epg(request, None, short=True, custom_playlist=playlist), safe=False)
+    elif action == "get_simple_data_table":
+        return JsonResponse(xc_get_epg(request, None, short=False, custom_playlist=playlist), safe=False)
+    elif action == "get_vod_categories":
+        return JsonResponse(xc_get_vod_categories(None, custom_playlist=playlist), safe=False)
+    elif action == "get_vod_streams":
+        return JsonResponse(xc_get_vod_streams(request, None, request.GET.get("category_id"), custom_playlist=playlist), safe=False)
+    elif action == "get_series_categories":
+        return JsonResponse(xc_get_series_categories(None, custom_playlist=playlist), safe=False)
+    elif action == "get_series":
+        return JsonResponse(xc_get_series(request, None, request.GET.get("category_id"), custom_playlist=playlist), safe=False)
+    elif action == "get_series_info":
+        return JsonResponse(xc_get_series_info(request, None, request.GET.get("series_id"), custom_playlist=playlist), safe=False)
+    elif action == "get_vod_info":
+        return JsonResponse(xc_get_vod_info(request, None, request.GET.get("vod_id"), custom_playlist=playlist), safe=False)
+    else:
+        server_info = xc_get_info(request, custom_playlist=playlist)
+        return JsonResponse(server_info, safe=False)
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def custom_stream_xc(request, token, username, password, channel_id):
+    from apps.output.models import CustomPlaylist
+    playlist = get_object_or_404(CustomPlaylist, token=token, is_active=True)
+    import pathlib
+    extension = pathlib.Path(channel_id).suffix
+    channel_id = pathlib.Path(channel_id).stem
+    channel = get_object_or_404(Channel, id=channel_id)
+
+    if not playlist.live_mappings.filter(channel_group=channel.channel_group).exists():
+        return HttpResponseForbidden("Channel not mapped in playlist")
+
+    from apps.proxy.live_proxy.views import stream_ts
+    if extension.lower() == '.mp4':
+        force_format = 'fmp4'
+    elif extension.lower() == '.ts':
+        force_format = 'mpegts'
+    else:
+        force_format = None
+
+    return stream_ts(request._request if hasattr(request, '_request') else request, str(channel.uuid), None, force_output_format=force_format)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def custom_stream_xc_movie(request, token, username, password, stream_id, extension):
+    from apps.output.models import CustomPlaylist
+    playlist = get_object_or_404(CustomPlaylist, token=token, is_active=True)
+    from apps.vod.models import M3UMovieRelation
+
+    session_id = request.GET.get('session_id')
+    profile_id = request.GET.get('profile_id')
+
+    filters = {"movie_id": stream_id, "m3u_account__is_active": True}
+    movie_relation = get_object_or_404(M3UMovieRelation.objects.select_related('movie'), **filters)
+
+    if not playlist.vod_mappings.filter(vod_category=movie_relation.category).exists():
+        return HttpResponseForbidden("Movie not mapped in playlist")
+
+    from apps.proxy.vod_proxy.views import stream_vod
+    return stream_vod(request._request if hasattr(request, '_request') else request, 'movie', movie_relation.movie.uuid, session_id, profile_id, None)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def custom_stream_xc_episode(request, token, username, password, stream_id, extension):
+    from apps.output.models import CustomPlaylist
+    playlist = get_object_or_404(CustomPlaylist, token=token, is_active=True)
+    from apps.vod.models import M3UEpisodeRelation
+
+    session_id = request.GET.get('session_id')
+    profile_id = request.GET.get('profile_id')
+
+    filters = {"episode_id": stream_id, "m3u_account__is_active": True}
+    episode_relation = get_object_or_404(M3UEpisodeRelation.objects.select_related('episode', 'series_relation'), **filters)
+
+    if not playlist.vod_mappings.filter(vod_category=episode_relation.series_relation.category).exists():
+        return HttpResponseForbidden("Series episode not mapped in playlist")
+
+    from apps.proxy.vod_proxy.views import stream_vod
+    return stream_vod(request._request if hasattr(request, '_request') else request, 'episode', episode_relation.episode.uuid, session_id, profile_id, None)

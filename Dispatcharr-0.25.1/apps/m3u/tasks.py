@@ -32,6 +32,7 @@ from core.models import CoreSettings, UserAgent
 from asgiref.sync import async_to_sync
 from core.xtream_codes import Client as XCClient
 from core.utils import send_websocket_update
+from core.proxy_helper import get_proxies_for_account
 from .utils import normalize_stream_url
 
 logger = logging.getLogger(__name__)
@@ -69,9 +70,11 @@ def fetch_m3u_lines(account, use_cache=False):
                 account.last_message = "Starting download..."
                 account.save(update_fields=["status", "last_message"])
 
+                proxies = get_proxies_for_account(account)
                 response = requests.get(
                     account.server_url, headers=headers, stream=True,
                     timeout=(30, 60),  # 30s connect, 60s read between chunks
+                    proxies=proxies,
                 )
 
                 # Log the actual response details for debugging
@@ -801,11 +804,13 @@ def collect_xc_streams(account_id, enabled_groups):
             }
 
     try:
+        _proxy_url = (account.custom_properties or {}).get('proxy_url', '')
         with XCClient(
             account.server_url,
             account.username,
             account.password,
             account.get_user_agent(),
+            proxy_url=_proxy_url or None,
         ) as xc_client:
 
             # Fetch ALL live streams in a single API call (much more efficient)
@@ -882,11 +887,13 @@ def process_xc_category_direct(account_id, batch, groups, hash_keys):
     stream_hashes = {}
 
     try:
+        _proxy_url = (account.custom_properties or {}).get('proxy_url', '')
         with XCClient(
             account.server_url,
             account.username,
             account.password,
             account.get_user_agent(),
+            proxy_url=_proxy_url or None,
         ) as xc_client:
             # Log the batch details to help with debugging
             logger.debug(f"Processing XC batch: {batch}")
@@ -1441,9 +1448,11 @@ def refresh_m3u_groups(account_id, use_cache=False, full_refresh=False, scan_sta
             )
 
             # Create XCClient with explicit error handling
+            _proxy_url = (account.custom_properties or {}).get('proxy_url', '')
             try:
                 with XCClient(
-                    account.server_url, account.username, account.password, user_agent_string
+                    account.server_url, account.username, account.password, user_agent_string,
+                    proxy_url=_proxy_url or None,
                 ) as xc_client:
                     logger.info(f"XCClient instance created successfully")
 
@@ -2940,11 +2949,13 @@ def refresh_account_profiles(account_id):
                 profile_url, profile_username, profile_password = get_transformed_credentials(account, profile)
 
                 # Create a separate XC client for this profile's credentials
+                _proxy_url = (account.custom_properties or {}).get('proxy_url', '')
                 with XCClient(
                     profile_url,
                     profile_username,
                     profile_password,
-                    user_agent_string
+                    user_agent_string,
+                    proxy_url=_proxy_url or None,
                 ) as profile_client:
                     # Authenticate with this profile's credentials
                     if profile_client.authenticate():
@@ -3003,11 +3014,13 @@ def refresh_account_info(profile_id):
         transformed_url, transformed_username, transformed_password = get_transformed_credentials(account, profile)
 
         # Initialize XtreamCodes client with extracted/transformed credentials
+        _proxy_url = (account.custom_properties or {}).get('proxy_url', '')
         client = XCClient(
             transformed_url,
             transformed_username,
             transformed_password,
             account.get_user_agent(),
+            proxy_url=_proxy_url or None,
         )        # Authenticate and get account info
         auth_result = client.authenticate()
         if not auth_result:

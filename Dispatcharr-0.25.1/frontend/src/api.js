@@ -3817,4 +3817,47 @@ export default class API {
       errorNotification('Failed to fetch connect logs', e);
     }
   }
+
+  static async getCustomPlaylists() {
+    try {
+      return await request(`${host}/api/output/playlists/`);
+    } catch (e) {
+      errorNotification('Failed to fetch custom playlists', e);
+    }
+  }
+
+  static async createCustomPlaylist(data) {
+    try {
+      return await request(`${host}/api/output/playlists/`, {
+        method: 'POST',
+        body: data,
+      });
+    } catch (e) {
+      errorNotification('Failed to create custom playlist', e);
+      throw e;
+    }
+  }
+
+  static async updateCustomPlaylist(id, data) {
+    try {
+      return await request(`${host}/api/output/playlists/${id}/`, {
+        method: 'PATCH',
+        body: data,
+      });
+    } catch (e) {
+      errorNotification('Failed to update custom playlist', e);
+      throw e;
+    }
+  }
+
+  static async deleteCustomPlaylist(id) {
+    try {
+      return await request(`${host}/api/output/playlists/${id}/`, {
+        method: 'DELETE',
+      });
+    } catch (e) {
+      errorNotification('Failed to delete custom playlist', e);
+      throw e;
+    }
+  }
 }
