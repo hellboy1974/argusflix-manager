@@ -851,6 +851,9 @@ export default class API {
           },
         }
       );
+          },
+        }
+      );
 
       // Optional success notification
       if (response?.success) {
@@ -4077,6 +4080,25 @@ export default class API {
       });
     } catch (e) {
       errorNotification('Failed to bulk move series', e);
+      throw e;
+    }
+  }
+
+  static async smartMatchEPG(channelIds, threshold = 85) {
+    try {
+      const response = await request(
+        `${host}/api/channels/channels/smart-epg-match/`,
+        {
+          method: 'POST',
+          body: {
+            channel_ids: channelIds,
+            threshold: threshold,
+          },
+        }
+      );
+      return response;
+    } catch (e) {
+      errorNotification('Failed to smart match EPG', e);
       throw e;
     }
   }

@@ -1046,6 +1046,7 @@ class ChannelViewSet(viewsets.ModelViewSet):
             "from_stream",
             "from_stream_bulk",
             "match_epg",
+            "smart_epg_match",
             "set_epg",
             "batch_set_epg",
         ]:
@@ -1380,6 +1381,7 @@ class ChannelViewSet(viewsets.ModelViewSet):
 
             # On hide under compact mode, release the channel_number
             # so the slot is reused. The bulk path bypasses the
+
             # post_save signal that handles single-row hides.
             if hide_transition_candidates:
                 from .compact_numbering import (
@@ -1583,6 +1585,126 @@ class ChannelViewSet(viewsets.ModelViewSet):
         return Response({
             "message": f"Successfully updated {len(validated_updates)} channels",
             "channels": serialized_channels
+        })
+
+    @extend_schema(
+        methods=["POST"],
+        description="Smart match channels to EPG data using fuzzy string matching.",
+        request=inline_serializer(
+            name="SmartEPGMatchRequest",
+            fields={
+                "channel_ids": serializers.ListField(
+                    child=serializers.IntegerField(),
+                    help_text="List of channel IDs to auto-match.",
+                ),
+                "threshold": serializers.IntegerField(
+                    default=85,
+                    min_value=50,
+                    max_value=100,
+                    help_text="Fuzzy matching threshold (50-100). Default is 85.",
+                ),
+            },
+        ),
+        responses={
+            200: inline_serializer(
+                name="SmartEPGMatchResponse",
+                fields={
+                    "message": serializers.CharField(),
+                    "matched_count": serializers.IntegerField(),
+                },
+            ),
+            400: inline_serializer(
+                name="SmartEPGMatchErrorResponse",
+                fields={
+                    "error": serializers.CharField(),
+                },
+            ),
+        },
+    )
+    @action(detail=False, methods=["post"], url_path="smart-epg-match")
+    def smart_epg_match(self, request):
+        from rapidfuzz import process, fuzz
+        from apps.epg.models import EPGData
+
+        channel_ids = request.data.get("channel_ids", [])
+        threshold = request.data.get("threshold", 85)
+
+        if not isinstance(channel_ids, list):
+            return Response(
+                {"error": "channel_ids must be a list of integers"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not channel_ids:
+            return Response(
+                {"message": "No channels provided for matching", "matched_count": 0},
+                status=status.HTTP_200_OK,
+            )
+
+        channels = Channel.objects.filter(id__in=channel_ids, epg_data__isnull=True)
+        if not channels.exists():
+            return Response(
+                {"message": "All provided channels already have EPG data or do not exist", "matched_count": 0},
+                status=status.HTTP_200_OK,
+            )
+
+        # Pre-fetch all available EPGData names and IDs into memory for rapid matching
+        # Create a dictionary mapping the lowercase EPG name to its ID
+        # If there are duplicates, we'll just keep the first one we see
+        epg_records = list(EPGData.objects.all().values('id', 'name', 'tvg_id'))
+        if not epg_records:
+            return Response(
+                {"error": "No EPG data available to match against"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        epg_names_dict = {}
+        for record in epg_records:
+            name = record['name'].lower().strip()
+            tvg_id = (record['tvg_id'] or '').lower().strip()
+            if name and name not in epg_names_dict:
+                epg_names_dict[name] = record['id']
+            if tvg_id and tvg_id not in epg_names_dict:
+                epg_names_dict[tvg_id] = record['id']
+
+        epg_choices = list(epg_names_dict.keys())
+        matched_count = 0
+        channels_to_update = []
+
+        for channel in channels:
+            channel_name = channel.name.lower().strip()
+            channel_tvg_id = (channel.tvg_id or '').lower().strip()
+            
+            best_match_id = None
+            
+            # Try to match by exact tvg_id first if present
+            if channel_tvg_id and channel_tvg_id in epg_names_dict:
+                best_match_id = epg_names_dict[channel_tvg_id]
+            else:
+                # Fallback to fuzzy matching the channel name
+                # extractOne returns (match_string, score, index)
+                result = process.extractOne(
+                    channel_name, 
+                    epg_choices, 
+                    scorer=fuzz.WRatio, 
+                    score_cutoff=threshold
+                )
+                
+                if result:
+                    match_str, score, _ = result
+                    best_match_id = epg_names_dict[match_str]
+
+            if best_match_id:
+                channel.epg_data_id = best_match_id
+                channels_to_update.append(channel)
+                matched_count += 1
+
+        if channels_to_update:
+            Channel.objects.bulk_update(channels_to_update, ['epg_data_id'], batch_size=100)
+
+        return Response({
+            "message": f"Successfully matched {matched_count} channels to EPG data.",
+            "matched_count": matched_count
         })
 
     @extend_schema(

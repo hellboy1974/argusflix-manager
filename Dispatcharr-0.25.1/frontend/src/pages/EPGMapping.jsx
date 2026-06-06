@@ -14,6 +14,8 @@ import {
   Flex,
   Paper,
   Divider,
+  Checkbox,
+  Slider,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { Search, Zap, Link, Tv, AlertCircle } from 'lucide-react';
@@ -47,6 +49,8 @@ const EPGMappingContent = () => {
   const [epgSourceFilter, setEpgSourceFilter] = useState('all');
   
   const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedChannelIds, setSelectedChannelIds] = useState(new Set());
+  const [matchThreshold, setMatchThreshold] = useState(85);
 
   // Initial Load
   useEffect(() => {
@@ -126,6 +130,25 @@ const EPGMappingContent = () => {
     setEpgSearch(channel.name);
   };
 
+  const toggleChannelSelection = (id) => {
+    const newSelected = new Set(selectedChannelIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedChannelIds(newSelected);
+  };
+
+  const handleSelectAllVisible = () => {
+    if (selectedChannelIds.size === channelList.length) {
+      setSelectedChannelIds(new Set());
+    } else {
+      const allIds = channelList.map((c) => c.id);
+      setSelectedChannelIds(new Set(allIds));
+    }
+  };
+
   const handleAssignEPG = async (tvg) => {
     if (!selectedChannel) return;
     setIsUpdating(true);
@@ -172,54 +195,44 @@ const EPGMappingContent = () => {
     }
   };
 
-  const handleAutoMatchAll = async () => {
+  const handleSmartMatch = async () => {
     setIsUpdating(true);
-    let matchedCount = 0;
-    
-    // We only try to match channels that are currently visible in the filtered list
-    // and don't have an EPG yet.
-    const unmappedChannels = channelList.filter(c => !c.epg_data_id);
-    
-    if (unmappedChannels.length === 0) {
-      notifications.show({ title: 'Info', message: 'No unmapped channels in current view to auto-match.', color: 'blue' });
-      setIsUpdating(false);
-      return;
-    }
-
-    // Try to match each channel
-    for (const channel of unmappedChannels) {
-      const channelNameLower = channel.name.toLowerCase().trim();
-      const channelIdLower = channel.tvg_id ? channel.tvg_id.toLowerCase().trim() : '';
-      
-      // Look for a perfect match in tvgs (either by exact name or tvg_id)
-      const match = tvgs.find(t => {
-        const tvgNameLower = (t.name || '').toLowerCase().trim();
-        const tvgIdLower = (t.tvg_id || '').toLowerCase().trim();
-        
-        return (tvgNameLower !== '' && tvgNameLower === channelNameLower) || 
-               (tvgIdLower !== '' && tvgIdLower === channelIdLower);
-      });
-
-      if (match) {
-        try {
-          await api.updateChannel({
-            id: channel.id,
-            epg_data_id: match.id,
-          });
-          matchedCount++;
-        } catch(e) {
-          console.error(`Failed to auto-match channel ${channel.name}`, e);
-        }
+    try {
+      let channelsToMatch = [];
+      if (selectedChannelIds.size > 0) {
+        channelsToMatch = Array.from(selectedChannelIds);
+      } else {
+        // If nothing is explicitly checked, match all visible UNMAPPED channels
+        channelsToMatch = channelList
+          .filter((c) => !c.epg_data_id)
+          .map((c) => c.id);
       }
+
+      if (channelsToMatch.length === 0) {
+        notifications.show({
+          title: 'Info',
+          message: 'No unmapped channels to match.',
+          color: 'blue',
+        });
+        setIsUpdating(false);
+        return;
+      }
+
+      const response = await api.smartMatchEPG(channelsToMatch, matchThreshold);
+      
+      notifications.show({
+        title: 'Smart Match Complete',
+        message: response.message || `Matching finished.`,
+        color: response.matched_count > 0 ? 'green' : 'orange',
+      });
+      
+      fetchChannels();
+      setSelectedChannelIds(new Set()); // clear selection
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsUpdating(false);
     }
-    
-    setIsUpdating(false);
-    fetchChannels();
-    notifications.show({
-      title: 'Auto-Match Complete',
-      message: `Successfully matched ${matchedCount} out of ${unmappedChannels.length} channels.`,
-      color: matchedCount > 0 ? 'green' : 'orange'
-    });
   };
 
   // Render Rows
@@ -240,12 +253,20 @@ const EPGMappingContent = () => {
           }}
         >
           <Group justify="space-between" wrap="nowrap">
-            <Box style={{ overflow: 'hidden' }}>
-              <Text size="sm" fw={500} truncate>{channel.name}</Text>
-              <Text size="xs" c="dimmed" truncate>
-                Group: {channelGroups[channel.channel_group_id]?.name || 'None'}
-              </Text>
-            </Box>
+            <Group gap="xs" wrap="nowrap" style={{ overflow: 'hidden' }}>
+              <Checkbox
+                size="xs"
+                checked={selectedChannelIds.has(channel.id)}
+                onChange={() => toggleChannelSelection(channel.id)}
+                onClick={(e) => e.stopPropagation()} // Prevent row click from firing
+              />
+              <Box style={{ overflow: 'hidden' }}>
+                <Text size="sm" fw={500} truncate>{channel.name}</Text>
+                <Text size="xs" c="dimmed" truncate>
+                  Group: {channelGroups[channel.channel_group_id]?.name || 'None'}
+                </Text>
+              </Box>
+            </Group>
             {channel.epg_data_id ? (
               <Badge color="green" variant="light" size="xs">Mapped</Badge>
             ) : (
@@ -298,16 +319,29 @@ const EPGMappingContent = () => {
           <Tv size={24} />
           <Text size="xl" fw={600}>Advanced EPG Mapping</Text>
         </Group>
-        <Group>
+        <Group align="center" gap="lg">
+          <Box w={200}>
+            <Text size="xs" fw={500} mb={2}>Smart Match Threshold: {matchThreshold}%</Text>
+            <Slider
+              value={matchThreshold}
+              onChange={setMatchThreshold}
+              min={50}
+              max={100}
+              step={1}
+              size="sm"
+              color="blue"
+              marks={[{ value: 50, label: 'Loose' }, { value: 85, label: 'Strict' }, { value: 100, label: 'Exact' }]}
+            />
+          </Box>
           <Button
             size="sm"
             variant="light"
             color="blue"
             leftSection={<Zap size={16} />}
-            onClick={handleAutoMatchAll}
+            onClick={handleSmartMatch}
             loading={isUpdating}
           >
-            Auto-Match Visible
+            {selectedChannelIds.size > 0 ? `Smart Match Selected (${selectedChannelIds.size})` : 'Smart Match Visible'}
           </Button>
           <Badge size="lg" color="blue" variant="dot">
             {channelList.length} Channels visible
@@ -342,6 +376,17 @@ const EPGMappingContent = () => {
                     checked={filterUnmappedOnly}
                     onChange={(e) => setFilterUnmappedOnly(e.currentTarget.checked)}
                   />
+                </Group>
+                <Group justify="space-between" align="center" mt="xs">
+                  <Checkbox
+                    size="xs"
+                    label={`Select All Visible (${channelList.length})`}
+                    checked={channelList.length > 0 && selectedChannelIds.size === channelList.length}
+                    onChange={handleSelectAllVisible}
+                  />
+                  {selectedChannelIds.size > 0 && (
+                    <Text size="xs" c="dimmed">{selectedChannelIds.size} selected</Text>
+                  )}
                 </Group>
               </Stack>
             </Paper>
