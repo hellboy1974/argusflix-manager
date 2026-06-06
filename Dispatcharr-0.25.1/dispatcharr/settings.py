@@ -126,10 +126,10 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
 ]
 
+X_FRAME_OPTIONS = "SAMEORIGIN"
 
 ROOT_URLCONF = "dispatcharr.urls"
 

@@ -1471,6 +1471,10 @@ class PluginUIStaticAPIView(APIView):
     """
     permission_classes = []  # Handled manually in get() to support URL query param auth
 
+    from django.utils.decorators import method_decorator
+    from django.views.decorators.clickjacking import xframe_options_exempt
+
+    @method_decorator(xframe_options_exempt)
     def get(self, request, key, path="index.html"):
         from rest_framework_simplejwt.authentication import JWTAuthentication
         from django.views.static import serve as django_static_serve

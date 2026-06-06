@@ -26,6 +26,8 @@ ENV VIRTUAL_ENV=/dispatcharrpy
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 WORKDIR /app
 
+# Force cache bust for Python files
+ENV CACHE_BUST=1
 # Copy application code
 COPY . /app
 # Copy nginx configuration

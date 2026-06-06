@@ -851,9 +851,6 @@ export default class API {
           },
         }
       );
-          },
-        }
-      );
 
       // Optional success notification
       if (response?.success) {
