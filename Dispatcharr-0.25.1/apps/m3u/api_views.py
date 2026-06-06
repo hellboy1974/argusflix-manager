@@ -492,6 +492,23 @@ class M3UAccountViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @action(detail=True, methods=["post"], url_path="validate-streams")
+    def validate_streams(self, request, pk=None):
+        """Trigger parallelized stream validation for this M3U account"""
+        account = self.get_object()
+        try:
+            from .tasks import validate_account_streams_task
+            validate_account_streams_task.delay(account.id)
+            return Response(
+                {"message": f"Stream validation initiated for account {account.name}"},
+                status=status.HTTP_202_ACCEPTED,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to initiate stream validation: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     @action(detail=True, methods=["patch"], url_path="group-settings")
     def update_group_settings(self, request, pk=None):
         """Update auto channel sync settings for M3U account groups"""

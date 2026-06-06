@@ -154,7 +154,8 @@ const App = () => {
                     {isAuthenticated && isInitialized ? (
                       <>
                         <Route path="/channels" element={<Channels />} />
-                        <Route path="/content-import" element={<ContentImport />} />
+                        <Route path="/connections" element={<ContentImport />} />
+                        <Route path="/content-import" element={<Navigate to="/connections" replace />} />
                         <Route path="/guide" element={<Guide />} />
                         <Route path="/dvr" element={<DVR />} />
                         <Route path="/stats" element={<Stats />} />

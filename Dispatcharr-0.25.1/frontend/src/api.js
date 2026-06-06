@@ -1440,6 +1440,21 @@ export default class API {
       errorNotification('Failed to refresh M3U account', e);
     }
   }
+
+  static async validatePlaylist(id) {
+    try {
+      const response = await request(
+        `${host}/api/m3u/accounts/${id}/validate-streams/`,
+        {
+          method: 'POST',
+        }
+      );
+      return response;
+    } catch (e) {
+      errorNotification('Failed to start stream validation', e);
+    }
+  }
+
   static async refreshAllPlaylist() {
     try {
       const response = await request(`${host}/api/m3u/refresh/`, {

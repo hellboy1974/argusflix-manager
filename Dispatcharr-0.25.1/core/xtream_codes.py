@@ -8,11 +8,16 @@ logger = logging.getLogger(__name__)
 class Client:
     """Xtream Codes API Client with robust error handling"""
 
-    def __init__(self, server_url, username, password, user_agent=None, proxy_url=None):
+    def __init__(self, server_url, username, password, user_agent=None, proxy_url=None, timeout=60, verify_ssl=True):
         self.server_url = self._normalize_url(server_url)
         self.username = username
         self.password = password
         self.user_agent = user_agent
+        self.timeout = timeout
+        self.verify_ssl = verify_ssl
+        if not verify_ssl:
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
         # Fix: Properly handle all possible user_agent input types
         if user_agent:
@@ -71,7 +76,7 @@ class Client:
             url = f"{self.server_url}/{endpoint}"
             logger.debug(f"XC API Request: {url} with params: {params}")
 
-            response = self.session.get(url, params=params, timeout=60)
+            response = self.session.get(url, params=params, timeout=self.timeout, verify=self.verify_ssl)
             response.raise_for_status()
 
             # Check if response is empty

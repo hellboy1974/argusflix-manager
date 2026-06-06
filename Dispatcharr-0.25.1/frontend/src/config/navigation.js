@@ -33,11 +33,11 @@ export const NAV_ITEMS = {
       { label: 'Playlists', icon: ListPlus, path: '/playlists', adminOnly: true },
     ]
   },
-  content_import: {
-    id: 'content_import',
-    label: 'Content Import',
+  connections: {
+    id: 'connections',
+    label: 'Connection Management',
     icon: Play,
-    path: '/content-import',
+    path: '/connections',
     adminOnly: true,
   },
   guide: {
@@ -84,7 +84,7 @@ export const NAV_ITEMS = {
     icon: Blocks,
     adminOnly: true,
     paths: [
-      { label: 'Connections', icon: Webhook, path: '/connect' },
+      { label: 'Webhooks & Scripts', icon: Webhook, path: '/connect' },
       { label: 'Logs', icon: Logs, path: '/connect/logs' },
     ],
   },
@@ -112,7 +112,7 @@ export const NAV_ITEMS = {
 
 export const DEFAULT_ADMIN_ORDER = [
   'media',
-  'content_import',
+  'connections',
   'guide',
   'dvr',
   'stats',

@@ -73,6 +73,9 @@ const M3U = ({
       stale_stream_days: 7,
       priority: 0,
       enable_vod: false,
+      timeout: 30,
+      skip_ssl_verification: false,
+      proxy_url: '',
     },
 
     validate: {
@@ -105,6 +108,12 @@ const M3U = ({
             ? m3uAccount.priority
             : 0,
         enable_vod: m3uAccount.enable_vod || false,
+        timeout:
+          m3uAccount.timeout !== undefined && m3uAccount.timeout !== null
+            ? m3uAccount.timeout
+            : 30,
+        skip_ssl_verification: m3uAccount.skip_ssl_verification || false,
+        proxy_url: m3uAccount.proxy_url || '',
       });
       setExpDate(m3uAccount.exp_date ? new Date(m3uAccount.exp_date) : null);
 
@@ -372,6 +381,28 @@ const M3U = ({
                 )}
               />
 
+              <NumberInput
+                style={{ width: '100%' }}
+                id="timeout"
+                name="timeout"
+                label="HTTP Timeout"
+                description="HTTP connection timeout in seconds"
+                min={1}
+                {...form.getInputProps('timeout')}
+                key={form.key('timeout')}
+              />
+
+              <TextInput
+                style={{ width: '100%' }}
+                id="proxy_url"
+                name="proxy_url"
+                label="Proxy URL"
+                description="Proxy URL (e.g. socks5h://user:pass@host:port)"
+                placeholder="e.g. socks5h://127.0.0.1:1080"
+                {...form.getInputProps('proxy_url')}
+                key={form.key('proxy_url')}
+              />
+
               <ScheduleInput
                 scheduleType={scheduleType}
                 onScheduleTypeChange={setScheduleType}
@@ -420,6 +451,12 @@ const M3U = ({
               description="Enable or disable this M3U account"
               {...form.getInputProps('is_active', { type: 'checkbox' })}
               key={form.key('is_active')}
+            />
+            <Checkbox
+              label="Bypass SSL Validation"
+              description="Bypass SSL certificate verification for this M3U account"
+              {...form.getInputProps('skip_ssl_verification', { type: 'checkbox' })}
+              key={form.key('skip_ssl_verification')}
             />
           </Flex>
 

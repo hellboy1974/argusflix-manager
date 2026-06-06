@@ -100,6 +100,20 @@ class M3UAccount(models.Model):
         default=0,
         help_text="Priority for VOD provider selection (higher numbers = higher priority). Used when multiple providers offer the same content.",
     )
+    timeout = models.PositiveIntegerField(
+        default=30,
+        help_text="HTTP request timeout in seconds (default: 30).",
+    )
+    skip_ssl_verification = models.BooleanField(
+        default=False,
+        help_text="Bypass SSL/TLS certificate validation.",
+    )
+    proxy_url = models.CharField(
+        max_length=1000,
+        blank=True,
+        default="",
+        help_text="Optional SOCKS5H/HTTP proxy URL for this account (e.g. socks5h://user:pass@host:port).",
+    )
     def __str__(self):
         return self.name
 

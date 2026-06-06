@@ -304,8 +304,8 @@ def get_alternate_streams(channel_id: str, current_stream_id: Optional[int] = No
         redis_client = RedisClient.get_client()
         logger.debug(f"Looking for alternate streams for channel {channel_id}, current stream ID: {current_stream_id}")
 
-        # Get all assigned streams for this channel using the correct ordering
-        streams = channel.streams.all().order_by('channelstream__order')
+        # Get all assigned active streams for this channel using the correct ordering
+        streams = channel.streams.filter(is_active=True).order_by('channelstream__order')
         logger.debug(f"Channel {channel_id} has {streams.count()} total assigned streams")
 
         if not streams.exists():
@@ -399,7 +399,7 @@ def get_alternate_streams(channel_id: str, current_stream_id: Optional[int] = No
         logger.error(f"Error getting alternate streams for channel {channel_id}: {e}", exc_info=True)
         return []
 
-def validate_stream_url(url, user_agent=None, timeout=(5, 5)):
+def validate_stream_url(url, user_agent=None, timeout=(5, 5), proxies=None, verify_ssl=True):
     """
     Validate if a stream URL is accessible without downloading the full content.
 
@@ -410,6 +410,8 @@ def validate_stream_url(url, user_agent=None, timeout=(5, 5)):
         url (str): The URL to validate
         user_agent (str): User agent to use for the request
         timeout (tuple): Connection and read timeout in seconds
+        proxies (dict): Optional proxies dict
+        verify_ssl (bool): Whether to verify SSL certificates
 
     Returns:
         tuple: (is_valid, final_url, status_code, message)
@@ -419,6 +421,10 @@ def validate_stream_url(url, user_agent=None, timeout=(5, 5)):
     if url.startswith(('udp://', 'rtp://', 'rtsp://')):
         logger.info(f"Skipping HTTP validation for non-HTTP protocol: {url}")
         return True, url, 200, "Non-HTTP protocol (UDP/RTP/RTSP) - validation skipped"
+
+    if not verify_ssl:
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     try:
         # Create session with proper headers
@@ -435,7 +441,9 @@ def validate_stream_url(url, user_agent=None, timeout=(5, 5)):
             head_response = session.head(
                 url,
                 timeout=timeout,
-                allow_redirects=True
+                allow_redirects=True,
+                proxies=proxies,
+                verify=verify_ssl
             )
         except requests.exceptions.RequestException as e:
             head_request_success = False
@@ -451,7 +459,9 @@ def validate_stream_url(url, user_agent=None, timeout=(5, 5)):
             url,
             stream=True,
             timeout=timeout,
-            allow_redirects=True
+            allow_redirects=True,
+            proxies=proxies,
+            verify=verify_ssl
         )
 
         # IMPORTANT: Check status code first before checking content

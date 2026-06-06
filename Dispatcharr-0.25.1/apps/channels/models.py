@@ -96,6 +96,11 @@ class Stream(models.Model):
         db_index=True,
     )
     last_seen = models.DateTimeField(db_index=True, default=timezone.now)
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="Whether this stream is active and working (not marked broken by validation).",
+    )
     is_stale = models.BooleanField(
         default=False,
         db_index=True,
@@ -670,7 +675,7 @@ class Channel(models.Model):
         has_active_profiles = False
 
         # Iterate through channel streams and their profiles
-        for stream in self.streams.all().order_by("channelstream__order"):
+        for stream in self.streams.filter(is_active=True).order_by("channelstream__order"):
             # Retrieve the M3U account associated with the stream.
             m3u_account = stream.m3u_account
             if not m3u_account:

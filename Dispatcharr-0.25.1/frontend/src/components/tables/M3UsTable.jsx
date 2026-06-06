@@ -31,6 +31,7 @@ import {
   ArrowDownWideNarrow,
   SquarePlus,
   ArrowLeftRight,
+  Activity,
 } from 'lucide-react';
 import ProviderMigrationModal from '../modals/ProviderMigrationModal';
 import useLocalStorage from '../../hooks/useLocalStorage';
@@ -53,6 +54,8 @@ const formatStatusText = (status) => {
       return 'Fetching';
     case 'parsing':
       return 'Parsing';
+    case 'validating_streams':
+      return 'Validating';
     case 'error':
       return 'Error';
     case 'success':
@@ -75,6 +78,8 @@ const getStatusColor = (status) => {
       return 'blue.5';
     case 'parsing':
       return 'indigo.5';
+    case 'validating_streams':
+      return 'indigo.5';
     case 'error':
       return 'red.5';
     case 'success':
@@ -93,6 +98,7 @@ const RowActions = ({
   row,
   refreshPlaylist,
   onMigrate,
+  validateStreams,
 }) => {
   const iconSize =
     tableSize == 'default' ? 'sm' : tableSize == 'compact' ? 'xs' : 'md';
@@ -126,6 +132,17 @@ const RowActions = ({
       >
         <RefreshCcw size={tableSize === 'compact' ? 16 : 18} />
       </ActionIcon>
+      <Tooltip label="Streams validieren">
+        <ActionIcon
+          variant="transparent"
+          size={iconSize}
+          color="indigo.5"
+          onClick={() => validateStreams(row.original.id)}
+          disabled={!row.original.is_active}
+        >
+          <Activity size={tableSize === 'compact' ? 16 : 18} />
+        </ActionIcon>
+      </Tooltip>
       <Tooltip label="Provider Migration">
         <ActionIcon
           variant="transparent"
@@ -213,6 +230,9 @@ const M3UTable = ({ filterType = null }) => {
 
       case 'parsing':
         return buildParsingStats(data);
+
+      case 'validating_streams':
+        return buildValidatingStreamsStats(data);
 
       default:
         return data.status === 'error'
@@ -384,6 +404,34 @@ const M3UTable = ({ filterType = null }) => {
     );
   };
 
+  const buildValidatingStreamsStats = (data) => {
+    if (data.progress == 100) {
+      return 'Validation complete!';
+    }
+
+    if (data.progress == 0) {
+      return 'Validating...';
+    }
+
+    return (
+      <Box>
+        <Flex direction="column" gap={2}>
+          <Flex justify="space-between" align="center">
+            <Text size="xs" fw={500}>
+              Validating:
+            </Text>
+            <Text size="xs">{parseInt(data.progress)}%</Text>
+          </Flex>
+          {data.message && (
+            <Text size="xs" c="dimmed" style={{ lineHeight: 1.1 }}>
+              {data.message}
+            </Text>
+          )}
+        </Flex>
+      </Box>
+    );
+  };
+
   const buildInitializingStats = () => {
     return (
       <Box>
@@ -416,6 +464,7 @@ const M3UTable = ({ filterType = null }) => {
       await API.refreshPlaylist(id);
       // No need to set again since WebSocket will update us once the task starts
     } catch (error) {
+      console.error('Failed to start refresh task:', error);
       // If the API call fails, show an error state
       setRefreshProgress(id, {
         action: 'error',
@@ -423,6 +472,29 @@ const M3UTable = ({ filterType = null }) => {
         account: id,
         type: 'm3u_refresh',
         error: 'Failed to start refresh task',
+        status: 'error',
+      });
+    }
+  };
+
+  const validateStreams = async (id) => {
+    setRefreshProgress(id, {
+      action: 'validating_streams',
+      progress: 0,
+      account: id,
+      type: 'm3u_refresh',
+    });
+
+    try {
+      await API.validatePlaylist(id);
+    } catch (error) {
+      console.error('Failed to start validation task:', error);
+      setRefreshProgress(id, {
+        action: 'error',
+        progress: 0,
+        account: id,
+        type: 'm3u_refresh',
+        error: 'Failed to start validation task',
         status: 'error',
       });
     }
@@ -787,6 +859,7 @@ const M3UTable = ({ filterType = null }) => {
     ],
     [
       refreshPlaylist,
+      validateStreams,
       editPlaylist,
       deletePlaylist,
       toggleActive,
@@ -924,6 +997,7 @@ const M3UTable = ({ filterType = null }) => {
             deletePlaylist={deletePlaylist}
             row={row}
             refreshPlaylist={refreshPlaylist}
+            validateStreams={validateStreams}
             onMigrate={(id) => {
               setMigrationSourceId(id);
               setMigrationModalOpen(true);
@@ -931,7 +1005,7 @@ const M3UTable = ({ filterType = null }) => {
           />
         );
     }
-  }, []);
+  }, [tableSize, editPlaylist, deletePlaylist, refreshPlaylist, validateStreams]);
 
   const table = useTable({
     columns,

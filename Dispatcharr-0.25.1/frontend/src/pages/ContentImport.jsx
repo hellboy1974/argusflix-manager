@@ -23,7 +23,7 @@ const PageContent = () => {
           <Group gap="xs">
             <Download size={24} color="var(--mantine-color-blue-filled)" />
             <Title order={2} style={{ fontFamily: 'Outfit, Inter, sans-serif', fontWeight: 600 }}>
-              Content Import
+              Connection Management
             </Title>
           </Group>
           <Text size="xs" c="dimmed">
@@ -45,16 +45,16 @@ const PageContent = () => {
       }}>
         <Tabs.List>
           <Tabs.Tab value="xtream" leftSection={<Play size={16} />}>
-            Xtream Codes
-          </Tabs.Tab>
-          <Tabs.Tab value="m3u" leftSection={<ListVideo size={16} />}>
-            M3U Playlists
+            Xtream Panels
           </Tabs.Tab>
           <Tabs.Tab value="stalker" leftSection={<Radio size={16} />}>
-            Stalker Portals
+            Stalker Portale
+          </Tabs.Tab>
+          <Tabs.Tab value="m3u" leftSection={<ListVideo size={16} />}>
+            M3U
           </Tabs.Tab>
           <Tabs.Tab value="epg" leftSection={<FileText size={16} />}>
-            EPG-Guides
+            EPG-Quellen
           </Tabs.Tab>
         </Tabs.List>
 

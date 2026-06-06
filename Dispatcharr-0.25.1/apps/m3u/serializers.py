@@ -184,6 +184,8 @@ class M3UAccountSerializer(serializers.ModelSerializer):
             "last_message",
             "enable_vod",
             "proxy_url",
+            "timeout",
+            "skip_ssl_verification",
             "auto_enable_new_groups_live",
             "auto_enable_new_groups_vod",
             "auto_enable_new_groups_series",
@@ -223,7 +225,7 @@ class M3UAccountSerializer(serializers.ModelSerializer):
         custom_props = instance.custom_properties or {}
 
         data["enable_vod"] = custom_props.get("enable_vod", False)
-        data["proxy_url"] = custom_props.get("proxy_url", "")
+        data["proxy_url"] = instance.proxy_url or custom_props.get("proxy_url", "")
         data["auto_enable_new_groups_live"] = custom_props.get("auto_enable_new_groups_live", True)
         data["auto_enable_new_groups_vod"] = custom_props.get("auto_enable_new_groups_vod", True)
         data["auto_enable_new_groups_series"] = custom_props.get("auto_enable_new_groups_series", True)
@@ -287,6 +289,7 @@ class M3UAccountSerializer(serializers.ModelSerializer):
         if enable_vod is not None:
             custom_props["enable_vod"] = enable_vod
         if proxy_url is not None:
+            instance.proxy_url = proxy_url.strip()
             # Empty string = remove proxy
             if proxy_url.strip():
                 custom_props["proxy_url"] = proxy_url.strip()
@@ -374,6 +377,7 @@ class M3UAccountSerializer(serializers.ModelSerializer):
 
         # Build instance manually so we can attach transient attr before save triggers signal
         instance = M3UAccount(**validated_data)
+        instance.proxy_url = proxy_url.strip()
         instance._cron_expression = cron_expr
         instance.save()
 

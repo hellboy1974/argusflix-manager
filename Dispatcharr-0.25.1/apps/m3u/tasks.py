@@ -71,10 +71,17 @@ def fetch_m3u_lines(account, use_cache=False):
                 account.save(update_fields=["status", "last_message"])
 
                 proxies = get_proxies_for_account(account)
+                timeout_val = getattr(account, 'timeout', 30) or 30
+                verify_ssl = not getattr(account, 'skip_ssl_verification', False)
+                if not verify_ssl:
+                    import urllib3
+                    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
                 response = requests.get(
                     account.server_url, headers=headers, stream=True,
-                    timeout=(30, 60),  # 30s connect, 60s read between chunks
+                    timeout=(10, timeout_val),  # 10s connect, timeout_val read between chunks
                     proxies=proxies,
+                    verify=verify_ssl,
                 )
 
                 # Log the actual response details for debugging
@@ -789,6 +796,32 @@ def cleanup_stale_group_relationships(account, scan_start_time):
     return deleted_count
 
 
+def create_xc_client(account, url=None, username=None, password=None, user_agent=None):
+    url = url or account.server_url
+    username = username or account.username
+    password = password or account.password
+    user_agent = user_agent or account.get_user_agent()
+
+    proxy_url = getattr(account, 'proxy_url', '').strip()
+    if not proxy_url:
+        custom = getattr(account, 'custom_properties', None) or {}
+        proxy_url = custom.get('proxy_url', '').strip() if isinstance(custom, dict) else ''
+
+    timeout_val = getattr(account, 'timeout', 30) or 30
+    verify_ssl = not getattr(account, 'skip_ssl_verification', False)
+
+    return XCClient(
+        url,
+        username,
+        password,
+        user_agent=user_agent,
+        proxy_url=proxy_url or None,
+        timeout=timeout_val,
+        verify_ssl=verify_ssl
+    )
+
+
+
 def collect_xc_streams(account_id, enabled_groups):
     """Collect all XC streams in a single API call and filter by enabled groups."""
     account = M3UAccount.objects.get(id=account_id)
@@ -804,14 +837,7 @@ def collect_xc_streams(account_id, enabled_groups):
             }
 
     try:
-        _proxy_url = (account.custom_properties or {}).get('proxy_url', '')
-        with XCClient(
-            account.server_url,
-            account.username,
-            account.password,
-            account.get_user_agent(),
-            proxy_url=_proxy_url or None,
-        ) as xc_client:
+        with create_xc_client(account) as xc_client:
 
             # Fetch ALL live streams in a single API call (much more efficient)
             logger.info("Fetching ALL live streams from XC provider...")
@@ -887,14 +913,7 @@ def process_xc_category_direct(account_id, batch, groups, hash_keys):
     stream_hashes = {}
 
     try:
-        _proxy_url = (account.custom_properties or {}).get('proxy_url', '')
-        with XCClient(
-            account.server_url,
-            account.username,
-            account.password,
-            account.get_user_agent(),
-            proxy_url=_proxy_url or None,
-        ) as xc_client:
+        with create_xc_client(account) as xc_client:
             # Log the batch details to help with debugging
             logger.debug(f"Processing XC batch: {batch}")
 
@@ -1448,12 +1467,8 @@ def refresh_m3u_groups(account_id, use_cache=False, full_refresh=False, scan_sta
             )
 
             # Create XCClient with explicit error handling
-            _proxy_url = (account.custom_properties or {}).get('proxy_url', '')
             try:
-                with XCClient(
-                    account.server_url, account.username, account.password, user_agent_string,
-                    proxy_url=_proxy_url or None,
-                ) as xc_client:
+                with create_xc_client(account, user_agent=user_agent_string) as xc_client:
                     logger.info(f"XCClient instance created successfully")
 
                     # Queue async profile refresh task to run in background
@@ -2949,13 +2964,8 @@ def refresh_account_profiles(account_id):
                 profile_url, profile_username, profile_password = get_transformed_credentials(account, profile)
 
                 # Create a separate XC client for this profile's credentials
-                _proxy_url = (account.custom_properties or {}).get('proxy_url', '')
-                with XCClient(
-                    profile_url,
-                    profile_username,
-                    profile_password,
-                    user_agent_string,
-                    proxy_url=_proxy_url or None,
+                with create_xc_client(
+                    account, url=profile_url, username=profile_username, password=profile_password, user_agent=user_agent_string
                 ) as profile_client:
                     # Authenticate with this profile's credentials
                     if profile_client.authenticate():
@@ -3014,13 +3024,8 @@ def refresh_account_info(profile_id):
         transformed_url, transformed_username, transformed_password = get_transformed_credentials(account, profile)
 
         # Initialize XtreamCodes client with extracted/transformed credentials
-        _proxy_url = (account.custom_properties or {}).get('proxy_url', '')
-        client = XCClient(
-            transformed_url,
-            transformed_username,
-            transformed_password,
-            account.get_user_agent(),
-            proxy_url=_proxy_url or None,
+        client = create_xc_client(
+            account, url=transformed_url, username=transformed_username, password=transformed_password
         )        # Authenticate and get account info
         auth_result = client.authenticate()
         if not auth_result:
@@ -3824,3 +3829,155 @@ def check_account_expirations():
     logger.info(
         f"Account expiration check complete: {len(active_notification_keys)} active notifications"
     )
+
+
+@shared_task
+def validate_account_streams_task(account_id):
+    """
+    Validates all streams associated with the M3UAccount.
+    Updates each stream's 'is_active' and writes check stats in 'custom_properties'.
+    Reports progress back using send_m3u_update with action="validating_streams".
+    """
+    if not acquire_task_lock("validate_account_streams", account_id):
+        return f"Stream validation task already running for account_id={account_id}."
+
+    try:
+        from apps.m3u.models import M3UAccount
+        from apps.channels.models import Stream
+        from apps.proxy.live_proxy.url_utils import validate_stream_url
+        from core.proxy_helper import get_proxies_for_account
+        from django.db import transaction
+
+        account = M3UAccount.objects.get(id=account_id)
+        
+        # Save old status/message so we can restore them or update
+        original_status = account.status
+        original_message = account.last_message
+
+        # Set status to validating_streams
+        account.status = "validating_streams"
+        account.last_message = "Starting stream validation..."
+        account.save(update_fields=["status", "last_message"])
+        
+        streams = list(account.streams.all())
+        total_streams = len(streams)
+        
+        if total_streams == 0:
+            account.status = original_status
+            account.last_message = "No streams to validate."
+            account.save(update_fields=["status", "last_message"])
+            release_task_lock("validate_account_streams", account_id)
+            return "No streams to validate."
+
+        # Prepare parameters
+        user_agent_obj = account.get_user_agent()
+        user_agent_str = user_agent_obj.user_agent if user_agent_obj else "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        proxies = get_proxies_for_account(account)
+        verify_ssl = not getattr(account, 'skip_ssl_verification', False)
+        timeout_val = getattr(account, 'timeout', 30) or 30
+        timeout_tuple = (timeout_val, timeout_val)
+
+        logger.info(f"Starting stream validation for account {account.name} ({total_streams} streams)")
+        send_m3u_update(account_id, "validating_streams", 0, status="validating_streams", message=f"Validated 0/{total_streams} streams")
+
+        checked_count = 0
+        success_count = 0
+        failed_count = 0
+        
+        def check_stream(stream_id, url):
+            try:
+                is_valid, final_url, status_code, message = validate_stream_url(
+                    url,
+                    user_agent=user_agent_str,
+                    timeout=timeout_tuple,
+                    proxies=proxies,
+                    verify_ssl=verify_ssl
+                )
+                return stream_id, is_valid, status_code, message
+            except Exception as e:
+                return stream_id, False, 0, f"Error: {str(e)}"
+
+        results = []
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_stream = {
+                executor.submit(check_stream, s.id, s.url): s for s in streams if s.url
+            }
+            
+            for s in streams:
+                if not s.url:
+                    results.append((s.id, False, 0, "No URL configured"))
+                    checked_count += 1
+            
+            for future in as_completed(future_to_stream):
+                stream_obj = future_to_stream[future]
+                try:
+                    stream_id, is_valid, status_code, message = future.result()
+                    results.append((stream_id, is_valid, status_code, message))
+                except Exception as e:
+                    results.append((stream_obj.id, False, 0, f"Execution error: {str(e)}"))
+                
+                checked_count += 1
+                
+                if checked_count % 5 == 0 or checked_count == total_streams:
+                    progress_pct = int((checked_count / total_streams) * 100)
+                    msg = f"Validated {checked_count}/{total_streams} streams..."
+                    send_m3u_update(
+                        account_id,
+                        "validating_streams",
+                        progress_pct,
+                        status="validating_streams",
+                        message=msg
+                    )
+
+        with transaction.atomic():
+            stream_instances = {s.id: s for s in Stream.objects.filter(id__in=[r[0] for r in results])}
+            
+            for stream_id, is_valid, status_code, message in results:
+                stream = stream_instances.get(stream_id)
+                if stream:
+                    stream.is_active = is_valid
+                    props = stream.custom_properties or {}
+                    props["last_validation"] = {
+                        "timestamp": timezone.now().isoformat(),
+                        "is_valid": is_valid,
+                        "status_code": status_code,
+                        "message": message
+                    }
+                    stream.custom_properties = props
+                    stream.save(update_fields=["is_active", "custom_properties"])
+                    
+                    if is_valid:
+                        success_count += 1
+                    else:
+                        failed_count += 1
+
+        final_msg = f"Validation completed: {success_count} active, {failed_count} inactive streams out of {total_streams} total."
+        logger.info(f"Account {account.name}: {final_msg}")
+        
+        account.status = original_status
+        account.last_message = final_msg
+        account.save(update_fields=["status", "last_message"])
+        
+        send_m3u_update(
+            account_id,
+            "validating_streams_done",
+            100,
+            status=original_status,
+            message=final_msg
+        )
+
+    except Exception as e:
+        error_msg = f"Error validating streams: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        try:
+            account = M3UAccount.objects.get(id=account_id)
+            account.status = "error"
+            account.last_message = error_msg
+            account.save(update_fields=["status", "last_message"])
+            send_m3u_update(account_id, "validating_streams", 100, status="error", message=error_msg)
+        except Exception:
+            pass
+    finally:
+        release_task_lock("validate_account_streams", account_id)
+
+    return f"Validated {total_streams} streams."

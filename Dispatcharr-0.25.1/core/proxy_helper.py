@@ -33,8 +33,10 @@ def get_proxies_for_account(account) -> dict | None:
     if account is None:
         return None
 
-    custom = getattr(account, 'custom_properties', None) or {}
-    proxy_url = custom.get('proxy_url', '').strip() if isinstance(custom, dict) else ''
+    proxy_url = getattr(account, 'proxy_url', '').strip()
+    if not proxy_url:
+        custom = getattr(account, 'custom_properties', None) or {}
+        proxy_url = custom.get('proxy_url', '').strip() if isinstance(custom, dict) else ''
 
     if not proxy_url:
         return None
