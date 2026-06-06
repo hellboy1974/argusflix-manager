@@ -22,6 +22,7 @@ import LogosPage from './pages/Logos';
 import MoviesPage from './pages/Movies';
 import SeriesPage from './pages/Series';
 import CustomPlaylistsPage from './pages/CustomPlaylists';
+import EPGMapping from './pages/EPGMapping';
 import Toolbox from './pages/Toolbox';
 import useAuthStore from './store/auth';
 import FloatingVideo from './components/FloatingVideo';
@@ -156,6 +157,7 @@ const App = () => {
                         <Route path="/connections" element={<ContentImport />} />
                         <Route path="/content-import" element={<Navigate to="/connections" replace />} />
                         <Route path="/guide" element={<Guide />} />
+                        <Route path="/epg-mapping" element={<EPGMapping />} />
                         <Route path="/dvr" element={<DVR />} />
                         <Route path="/stats" element={<Stats />} />
                         <Route

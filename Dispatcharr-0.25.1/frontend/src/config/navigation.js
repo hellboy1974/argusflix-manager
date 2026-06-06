@@ -28,6 +28,7 @@ export const NAV_ITEMS = {
     icon: Tv,
     paths: [
       { label: 'Live TV', icon: ListOrdered, path: '/channels', adminOnly: false },
+      { label: 'EPG Mapping', icon: ListPlus, path: '/epg-mapping', adminOnly: true },
       { label: 'Movies', icon: Film, path: '/movies', adminOnly: true },
       { label: 'Series', icon: Tv, path: '/series', adminOnly: true },
       { label: 'Playlists', icon: ListPlus, path: '/playlists', adminOnly: true },
