@@ -1064,7 +1064,7 @@ class Plugin:
     fields = [
         {"id": "sec_core", "label": "⚙️ [ SEKTION 1: CORE CONFIG & MULTI-PORTALS ] ─────────────────────────", "type": "info", "description": ""},
         {"id": "proxy_port", "label": "Proxy Port", "type": "number", "default": 8282},
-        {"id": "portals_json", "label": "Portals JSON Configuration", "type": "text", "default": "[] Persisted portals list"},
+        {"id": "portals_json", "label": "Portals JSON Configuration", "type": "text", "default": "[]"},
         {"id": "bulk_import_text", "label": "Bulk Import Text / Paste Bin", "type": "text", "default": ""},
         
         {"id": "sec_detective", "label": "🕵️ [ SEKTION 2: PORTAL DETECTIVE ] ────────────────────────────────────", "type": "info", "description": ""},
@@ -1118,6 +1118,9 @@ class Plugin:
         ensure_proxy_running(settings)
         
         portals_json = settings.get("portals_json", "[]")
+        if isinstance(portals_json, str) and portals_json.strip() == "[] Persisted portals list":
+            portals_json = "[]"
+            
         try:
             portals_list = json.loads(portals_json) if portals_json.strip() else []
         except Exception as e:
