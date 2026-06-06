@@ -20,6 +20,7 @@ class EPGSourceSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'name',
+            'group_name',
             'source_type',
             'url',
             'api_key',

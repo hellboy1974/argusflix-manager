@@ -41,6 +41,7 @@ const M3U = ({
   isOpen,
   onClose,
   playlistCreated = false,
+  defaultAccountType = 'XC',
 }) => {
   const userAgents = useUserAgentsStore((s) => s.userAgents);
   const fetchChannelGroups = useChannelsStore((s) => s.fetchChannelGroups);
@@ -65,7 +66,7 @@ const M3U = ({
       max_streams: 0,
       refresh_interval: 24,
       cron_expression: '',
-      account_type: 'XC',
+      account_type: defaultAccountType,
       create_epg: false,
       username: '',
       password: '',
@@ -116,10 +117,11 @@ const M3U = ({
     } else {
       setPlaylist(null);
       form.reset();
+      form.setFieldValue('account_type', defaultAccountType);
       setScheduleType('interval');
       setExpDate(null);
     }
-  }, [m3uAccount]);
+  }, [m3uAccount, defaultAccountType]);
 
   const handleNewPlaylist = async (newPlaylist, values, create_epg) => {
     if (create_epg) {

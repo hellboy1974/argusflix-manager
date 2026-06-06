@@ -45,6 +45,8 @@ import ConfirmationDialog from '../../ConfirmationDialog';
 import useWarningsStore from '../../../store/warnings';
 import ProfileModal, { renderProfileOption } from '../../modals/ProfileModal';
 import EPGMatchModal from '../../modals/EPGMatchModal';
+import ProviderMigrationModal from '../../modals/ProviderMigrationModal';
+import { ArrowLeftRight } from 'lucide-react';
 
 const CreateProfilePopover = React.memo(() => {
   const [opened, setOpened] = useState(false);
@@ -129,6 +131,7 @@ const ChannelTableHeader = ({
   const [assignNumbersModalOpen, setAssignNumbersModalOpen] = useState(false);
   const [groupManagerOpen, setGroupManagerOpen] = useState(false);
   const [epgMatchModalOpen, setEpgMatchModalOpen] = useState(false);
+  const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [confirmDeleteProfileOpen, setConfirmDeleteProfileOpen] =
     useState(false);
   const [profileToDelete, setProfileToDelete] = useState(null);
@@ -497,6 +500,16 @@ const ChannelTableHeader = ({
               >
                 <Text size="xs">Edit Groups</Text>
               </Menu.Item>
+
+              <Menu.Divider />
+
+              <Menu.Item
+                leftSection={<ArrowLeftRight size={18} />}
+                disabled={authUser.user_level != USER_LEVELS.ADMIN}
+                onClick={() => setMigrationModalOpen(true)}
+              >
+                <Text size="xs">Provider Migration…</Text>
+              </Menu.Item>
             </Menu.Dropdown>
           </Menu>
         </Flex>
@@ -529,6 +542,11 @@ const ChannelTableHeader = ({
         opened={epgMatchModalOpen}
         onClose={() => setEpgMatchModalOpen(false)}
         selectedChannelIds={selectedTableIds}
+      />
+
+      <ProviderMigrationModal
+        opened={migrationModalOpen}
+        onClose={() => setMigrationModalOpen(false)}
       />
 
       <ConfirmationDialog

@@ -30,7 +30,9 @@ import {
   ArrowUpNarrowWide,
   ArrowDownWideNarrow,
   SquarePlus,
+  ArrowLeftRight,
 } from 'lucide-react';
+import ProviderMigrationModal from '../modals/ProviderMigrationModal';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import {
   useDateTimeFormat,
@@ -90,6 +92,7 @@ const RowActions = ({
   deletePlaylist,
   row,
   refreshPlaylist,
+  onMigrate,
 }) => {
   const iconSize =
     tableSize == 'default' ? 'sm' : tableSize == 'compact' ? 'xs' : 'md';
@@ -123,11 +126,21 @@ const RowActions = ({
       >
         <RefreshCcw size={tableSize === 'compact' ? 16 : 18} />
       </ActionIcon>
+      <Tooltip label="Provider Migration">
+        <ActionIcon
+          variant="transparent"
+          size={iconSize}
+          color="teal.5"
+          onClick={() => onMigrate(row.original.id)}
+        >
+          <ArrowLeftRight size={tableSize === 'compact' ? 16 : 18} />
+        </ActionIcon>
+      </Tooltip>
     </>
   );
 };
 
-const M3UTable = () => {
+const M3UTable = ({ filterType = null }) => {
   const [playlist, setPlaylist] = useState(null);
   const [playlistModalOpen, setPlaylistModalOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState([]);
@@ -135,6 +148,8 @@ const M3UTable = () => {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [playlistToDelete, setPlaylistToDelete] = useState(null);
+  const [migrationSourceId, setMigrationSourceId] = useState(null);
+  const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   // Auto-created channel preview shown in the delete confirmation so the
   // user sees what cascades along with the account.
   const [autoChannelsInfo, setAutoChannelsInfo] = useState({
@@ -155,6 +170,15 @@ const M3UTable = () => {
   const processedData = useMemo(() => {
     return playlists
       .filter((playlist) => playlist.locked === false)
+      .filter((playlist) => {
+        if (filterType === 'XC') {
+          return playlist.account_type === 'XC';
+        }
+        if (filterType === 'STD') {
+          return playlist.account_type !== 'XC';
+        }
+        return true;
+      })
       .sort((a, b) => {
         // First sort by active status (active items first)
         if (a.is_active !== b.is_active) {
@@ -163,7 +187,7 @@ const M3UTable = () => {
         // Then sort by name (case-insensitive)
         return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
       });
-  }, [playlists]);
+  }, [playlists, filterType]);
 
   const isWarningSuppressed = useWarningsStore((s) => s.isWarningSuppressed);
   const suppressWarning = useWarningsStore((s) => s.suppressWarning);
@@ -900,6 +924,10 @@ const M3UTable = () => {
             deletePlaylist={deletePlaylist}
             row={row}
             refreshPlaylist={refreshPlaylist}
+            onMigrate={(id) => {
+              setMigrationSourceId(id);
+              setMigrationModalOpen(true);
+            }}
           />
         );
     }
@@ -986,7 +1014,7 @@ const M3UTable = () => {
             marginBottom: 0,
           }}
         >
-          M3U Accounts
+          {filterType === 'XC' ? 'Xtream Codes Panels' : filterType === 'STD' ? 'M3U Playlists' : 'M3U Accounts'}
         </Text>
         <Button
           leftSection={<SquarePlus size={14} />}
@@ -1001,7 +1029,7 @@ const M3UTable = () => {
             color: 'white',
           }}
         >
-          Add M3U
+          {filterType === 'XC' ? 'Add Xtream Panel' : 'Add M3U'}
         </Button>
       </Flex>
 
@@ -1049,6 +1077,7 @@ const M3UTable = () => {
         isOpen={playlistModalOpen}
         onClose={closeModal}
         playlistCreated={playlistCreated}
+        defaultAccountType={filterType || 'XC'}
       />
 
       <ConfirmationDialog
@@ -1112,6 +1141,15 @@ This action cannot be undone.`}
         actionKey="delete-m3u"
         onSuppressChange={suppressWarning}
         size="lg"
+      />
+
+      <ProviderMigrationModal
+        opened={migrationModalOpen}
+        onClose={() => {
+          setMigrationModalOpen(false);
+          setMigrationSourceId(null);
+        }}
+        initialSourceId={migrationSourceId}
       />
     </Box>
   );

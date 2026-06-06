@@ -212,6 +212,11 @@ const EPGsTable = () => {
         size: 200,
       },
       {
+        header: 'Group Name',
+        accessorKey: 'group_name',
+        size: 150,
+      },
+      {
         header: 'Type',
         accessorKey: 'source_type',
         size: 100,
@@ -558,6 +563,7 @@ const EPGsTable = () => {
     },
     headerCellRenderFns: {
       name: renderHeaderCell,
+      group_name: renderHeaderCell,
       source_type: renderHeaderCell,
       url: renderHeaderCell,
       status: renderHeaderCell,

@@ -252,7 +252,7 @@ const ChannelRowActions = React.memo(
   (prevProps, nextProps) => prevProps.row.original === nextProps.row.original
 );
 
-const ChannelsTable = ({ onReady }) => {
+const ChannelsTable = ({ onReady, selectedGroup }) => {
   // EPG data lookup
   const tvgsById = useEPGsStore((s) => s.tvgsById);
   const epgs = useEPGsStore((s) => s.epgs);
@@ -340,6 +340,15 @@ const ChannelsTable = ({ onReady }) => {
     channel_group: '',
     epg: '',
   });
+
+  useEffect(() => {
+    if (selectedGroup !== undefined) {
+      setFilters((prev) => ({
+        ...prev,
+        channel_group: selectedGroup || '',
+      }));
+    }
+  }, [selectedGroup]);
   const [, setIsLoading] = useState(true);
 
   const [hdhrUrl, setHDHRUrl] = useState(hdhrUrlBase);

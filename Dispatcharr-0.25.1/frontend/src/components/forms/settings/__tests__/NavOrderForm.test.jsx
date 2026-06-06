@@ -11,6 +11,12 @@ import {
 
 // Mock dependencies
 vi.mock('../../../../store/auth');
+vi.mock('../../../../store/plugins.jsx', () => {
+  const pluginsState = { plugins: [] };
+  return {
+    usePluginStore: vi.fn((selector) => selector(pluginsState)),
+  };
+});
 vi.mock('@mantine/notifications', () => ({
   notifications: {
     show: vi.fn(),
@@ -76,6 +82,27 @@ vi.mock('@mantine/core', () => ({
   ),
   Stack: ({ children }) => <div>{children}</div>,
   useMantineTheme: () => ({}),
+  Modal: ({ children, opened, onClose, title }) => opened ? (
+    <div data-testid="mantine-modal">
+      <h3>{title}</h3>
+      <button onClick={onClose}>Close</button>
+      {children}
+    </div>
+  ) : null,
+  TextInput: (props) => <input type="text" {...props} onChange={(e) => props.onChange && props.onChange(e)} />,
+  Select: (props) => (
+    <select {...props} onChange={(e) => props.onChange && props.onChange(e.target.value)}>
+      {props.data && props.data.map(opt => (
+        <option key={opt.value} value={opt.value}>{opt.label}</option>
+      ))}
+    </select>
+  ),
+  Alert: ({ children, title }) => (
+    <div data-testid="mantine-alert">
+      <h4>{title}</h4>
+      {children}
+    </div>
+  ),
 }));
 
 describe('NavOrderForm', () => {
@@ -84,6 +111,30 @@ describe('NavOrderForm', () => {
   const mockGetHiddenNav = vi.fn();
   const mockToggleNavVisibility = vi.fn();
   const mockUpdateUserPreferences = vi.fn();
+  const mockUpdateNavLabel = vi.fn();
+  const mockUpdateNavIcon = vi.fn();
+
+  const adminState = {
+    user: { user_level: USER_LEVELS.ADMIN, custom_properties: {} },
+    getNavOrder: mockGetNavOrder,
+    setNavOrder: mockSetNavOrder,
+    getHiddenNav: mockGetHiddenNav,
+    toggleNavVisibility: mockToggleNavVisibility,
+    updateUserPreferences: mockUpdateUserPreferences,
+    updateNavLabel: mockUpdateNavLabel,
+    updateNavIcon: mockUpdateNavIcon,
+  };
+
+  const userState = {
+    user: { user_level: USER_LEVELS.USER, custom_properties: { can_edit_navigation: true } },
+    getNavOrder: mockGetNavOrder,
+    setNavOrder: mockSetNavOrder,
+    getHiddenNav: mockGetHiddenNav,
+    toggleNavVisibility: mockToggleNavVisibility,
+    updateUserPreferences: mockUpdateUserPreferences,
+    updateNavLabel: mockUpdateNavLabel,
+    updateNavIcon: mockUpdateNavIcon,
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -96,25 +147,18 @@ describe('NavOrderForm', () => {
 
   describe('Admin User', () => {
     beforeEach(() => {
-      useAuthStore.mockImplementation((selector) => {
-        const state = {
-          user: { user_level: USER_LEVELS.ADMIN, custom_properties: {} },
-          getNavOrder: mockGetNavOrder,
-          setNavOrder: mockSetNavOrder,
-          getHiddenNav: mockGetHiddenNav,
-          toggleNavVisibility: mockToggleNavVisibility,
-          updateUserPreferences: mockUpdateUserPreferences,
-        };
-        return selector(state);
-      });
+      useAuthStore.mockImplementation((selector) => selector(adminState));
     });
 
     it('renders all nav items for admin user', () => {
       render(<NavOrderForm active={true} />);
 
-      expect(screen.getByText('Channels')).toBeInTheDocument();
-      expect(screen.getByText('VODs')).toBeInTheDocument();
-      expect(screen.getByText('M3U & EPG Manager')).toBeInTheDocument();
+      expect(screen.getByText('Playlists & Content')).toBeInTheDocument();
+      expect(screen.queryByText('Channels')).not.toBeInTheDocument();
+      expect(screen.queryByText('Movies')).not.toBeInTheDocument();
+      expect(screen.queryByText('Series')).not.toBeInTheDocument();
+      expect(screen.queryByText('Playlists')).not.toBeInTheDocument();
+      expect(screen.getByText('Content Import')).toBeInTheDocument();
       expect(screen.getByText('TV Guide')).toBeInTheDocument();
       expect(screen.getByText('DVR')).toBeInTheDocument();
       expect(screen.getByText('Stats')).toBeInTheDocument();
@@ -151,6 +195,8 @@ describe('NavOrderForm', () => {
         expect(mockUpdateUserPreferences).toHaveBeenCalledWith({
           navOrder: DEFAULT_ADMIN_ORDER,
           hiddenNav: [],
+          navLabels: {},
+          navIcons: {},
         });
       });
     });
@@ -176,19 +222,18 @@ describe('NavOrderForm', () => {
     });
 
     it('shows hidden items with dimmed styling', () => {
-      mockGetHiddenNav.mockReturnValue(['channels']);
+      mockGetHiddenNav.mockReturnValue(['media']);
       render(<NavOrderForm active={true} />);
 
       // The component should still render the hidden item
-      expect(screen.getByText('Channels')).toBeInTheDocument();
+      expect(screen.getByText('Playlists & Content')).toBeInTheDocument();
     });
 
     it('uses saved order when available', () => {
       const customOrder = [
         'guide',
-        'channels',
-        'vods',
-        'sources',
+        'media',
+        'content_import',
         'dvr',
         'stats',
         'plugins',
@@ -200,37 +245,26 @@ describe('NavOrderForm', () => {
       render(<NavOrderForm active={true} />);
 
       // The component should render with custom order
-      expect(screen.getByText('Channels')).toBeInTheDocument();
+      expect(screen.getByText('Playlists & Content')).toBeInTheDocument();
       expect(screen.getByText('System')).toBeInTheDocument();
     });
   });
 
   describe('Non-Admin User', () => {
     beforeEach(() => {
-      useAuthStore.mockImplementation((selector) => {
-        const state = {
-          user: { user_level: USER_LEVELS.USER, custom_properties: {} },
-          getNavOrder: mockGetNavOrder,
-          setNavOrder: mockSetNavOrder,
-          getHiddenNav: mockGetHiddenNav,
-          toggleNavVisibility: mockToggleNavVisibility,
-          updateUserPreferences: mockUpdateUserPreferences,
-        };
-        return selector(state);
-      });
+      useAuthStore.mockImplementation((selector) => selector(userState));
     });
 
     it('renders only non-admin nav items for regular user', () => {
       render(<NavOrderForm active={true} />);
 
       // Non-admin items should be visible
-      expect(screen.getByText('Channels')).toBeInTheDocument();
+      expect(screen.getByText('Playlists & Content')).toBeInTheDocument();
       expect(screen.getByText('TV Guide')).toBeInTheDocument();
       expect(screen.getByText('Settings')).toBeInTheDocument();
 
       // Admin-only items should not be visible
-      expect(screen.queryByText('VODs')).not.toBeInTheDocument();
-      expect(screen.queryByText('M3U & EPG Manager')).not.toBeInTheDocument();
+      expect(screen.queryByText('Content Import')).not.toBeInTheDocument();
       expect(screen.queryByText('DVR')).not.toBeInTheDocument();
       expect(screen.queryByText('Stats')).not.toBeInTheDocument();
       expect(screen.queryByText('Plugins')).not.toBeInTheDocument();
@@ -249,6 +283,8 @@ describe('NavOrderForm', () => {
         expect(mockUpdateUserPreferences).toHaveBeenCalledWith({
           navOrder: DEFAULT_USER_ORDER,
           hiddenNav: [],
+          navLabels: {},
+          navIcons: {},
         });
       });
     });

@@ -22,40 +22,22 @@ import {
 } from 'lucide-react';
 
 export const NAV_ITEMS = {
-  channels: {
-    id: 'channels',
-    label: 'Channels',
-    icon: ListOrdered,
-    path: '/channels',
-    adminOnly: false,
-    hasBadge: true,
-  },
-  movies: {
-    id: 'movies',
-    label: 'Movies',
-    icon: Film,
-    path: '/movies',
-    adminOnly: true,
-  },
-  series: {
-    id: 'series',
-    label: 'Series',
+  media: {
+    id: 'media',
+    label: 'Playlists & Content',
     icon: Tv,
-    path: '/series',
-    adminOnly: true,
+    paths: [
+      { label: 'Live TV', icon: ListOrdered, path: '/channels', adminOnly: false },
+      { label: 'Movies', icon: Film, path: '/movies', adminOnly: true },
+      { label: 'Series', icon: Tv, path: '/series', adminOnly: true },
+      { label: 'Playlists', icon: ListPlus, path: '/playlists', adminOnly: true },
+    ]
   },
-  playlists: {
-    id: 'playlists',
-    label: 'Playlists',
-    icon: ListPlus,
-    path: '/playlists',
-    adminOnly: true,
-  },
-  sources: {
-    id: 'sources',
-    label: 'M3U & EPG Manager',
+  content_import: {
+    id: 'content_import',
+    label: 'Content Import',
     icon: Play,
-    path: '/sources',
+    path: '/content-import',
     adminOnly: true,
   },
   guide: {
@@ -129,11 +111,8 @@ export const NAV_ITEMS = {
 };
 
 export const DEFAULT_ADMIN_ORDER = [
-  'channels',
-  'movies',
-  'series',
-  'playlists',
-  'sources',
+  'media',
+  'content_import',
   'guide',
   'dvr',
   'stats',
@@ -144,7 +123,7 @@ export const DEFAULT_ADMIN_ORDER = [
 ];
 
 export const DEFAULT_USER_ORDER = [
-  'channels',
+  'media',
   'guide',
   'settings',
 ];
@@ -195,11 +174,24 @@ export const getOrderedNavItems = (userOrder, isAdmin, channelIds = [], uiPlugin
 
     // Group item (has paths array)
     if (item.paths) {
+      // Filter sub-paths based on adminOnly & isAdmin
+      const filteredPaths = item.paths
+        .map((p) => {
+          const childItem = { ...p };
+          if (p.path === '/channels') {
+            childItem.badge = `(${Array.isArray(channelIds) ? channelIds.length : 0})`;
+          }
+          return childItem;
+        })
+        .filter((p) => !p.adminOnly || isAdmin);
+
+      if (filteredPaths.length === 0) return null;
+
       return {
         id: item.id,
         label: item.label,
         icon: item.icon,
-        paths: item.paths,
+        paths: filteredPaths,
         canHide: item.canHide,
       };
     }
@@ -211,11 +203,6 @@ export const getOrderedNavItems = (userOrder, isAdmin, channelIds = [], uiPlugin
       path: item.path,
       canHide: item.canHide,
     };
-
-    // Add badge for channels
-    if (id === 'channels') {
-      navItem.badge = `(${Array.isArray(channelIds) ? channelIds.length : 0})`;
-    }
 
     return navItem;
   }).filter(Boolean);

@@ -12,6 +12,9 @@ vi.mock('../../components/tables/ChannelsTable', () => ({
 vi.mock('../../components/tables/StreamsTable', () => ({
   default: () => <div data-testid="streams-table">StreamsTable</div>,
 }));
+vi.mock('../../components/CategorySidebar', () => ({
+  default: () => <div data-testid="category-sidebar">CategorySidebar</div>,
+}));
 vi.mock('@mantine/core', () => ({
   Box: ({ children, ...props }) => <div {...props}>{children}</div>,
 }));

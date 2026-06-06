@@ -489,13 +489,15 @@ export const EditableEPGCell = ({
   // Format display text - needed for both locked and unlocked states
   const epgObj = epgDataId ? tvgsById[epgDataId] : null;
   const tvgId = epgObj?.tvg_id;
-  const epgName =
-    epgObj && epgObj.epg_source
-      ? epgs[epgObj.epg_source]?.name || epgObj.epg_source
-      : null;
+  const epgSourceObj = epgObj && epgObj.epg_source ? epgs[epgObj.epg_source] : null;
+  const epgName = epgSourceObj
+    ? epgSourceObj.group_name && epgSourceObj.group_name.trim() !== ''
+      ? `${epgSourceObj.group_name.trim()} (${epgSourceObj.name})`
+      : epgSourceObj.name
+    : epgObj?.epg_source || null;
   const displayText =
     epgObj && epgName
-      ? `${epgObj.epg_source} - ${tvgId}`
+      ? `${epgName} - ${tvgId}`
       : epgObj
         ? epgObj.name
         : 'Not Assigned';
@@ -625,14 +627,18 @@ const EditableEPGCellInner = ({
     // Convert tvgsById to an array and sort by EPG source name, then by tvg_id
     const tvgsArray = Object.values(tvgsById);
     tvgsArray.sort((a, b) => {
-      const aEpgName =
-        a.epg_source && epgs[a.epg_source]
-          ? epgs[a.epg_source].name
-          : a.epg_source || '';
-      const bEpgName =
-        b.epg_source && epgs[b.epg_source]
-          ? epgs[b.epg_source].name
-          : b.epg_source || '';
+      const aEpgSource = a.epg_source && epgs[a.epg_source];
+      const aEpgName = aEpgSource
+        ? aEpgSource.group_name && aEpgSource.group_name.trim() !== ''
+          ? `${aEpgSource.group_name.trim()} (${aEpgSource.name})`
+          : aEpgSource.name
+        : a.epg_source || '';
+      const bEpgSource = b.epg_source && epgs[b.epg_source];
+      const bEpgName = bEpgSource
+        ? bEpgSource.group_name && bEpgSource.group_name.trim() !== ''
+          ? `${bEpgSource.group_name.trim()} (${bEpgSource.name})`
+          : bEpgSource.name
+        : b.epg_source || '';
       const epgCompare = aEpgName.localeCompare(bEpgName);
       if (epgCompare !== 0) return epgCompare;
       // Secondary sort by tvg_id
@@ -640,10 +646,12 @@ const EditableEPGCellInner = ({
     });
 
     tvgsArray.forEach((tvg) => {
-      const epgSourceName =
-        tvg.epg_source && epgs[tvg.epg_source]
-          ? epgs[tvg.epg_source].name
-          : tvg.epg_source;
+      const epgSource = tvg.epg_source && epgs[tvg.epg_source];
+      const epgSourceName = epgSource
+        ? epgSource.group_name && epgSource.group_name.trim() !== ''
+          ? `${epgSource.group_name.trim()} (${epgSource.name})`
+          : epgSource.name
+        : tvg.epg_source;
       const tvgName = tvg.name;
       // Create a comprehensive label: "EPG Name | TVG-ID | TVG Name"
       let label;

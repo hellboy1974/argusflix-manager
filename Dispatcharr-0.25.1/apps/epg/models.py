@@ -28,6 +28,7 @@ class EPGSource(models.Model):
     ]
 
     name = models.CharField(max_length=255, unique=True)
+    group_name = models.CharField(max_length=255, blank=True, null=True, help_text="Group EPG sources together (e.g. by country) to merge them in channel mapping UI")
     source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES)
     url = models.URLField(max_length=1000, blank=True, null=True)  # For XMLTV
     api_key = models.CharField(max_length=255, blank=True, null=True)  # For Schedules Direct

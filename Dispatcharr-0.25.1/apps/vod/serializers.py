@@ -86,6 +86,8 @@ class M3UVODCategoryRelationSerializer(serializers.ModelSerializer):
 class VODCategorySerializer(serializers.ModelSerializer):
     category_type_display = serializers.CharField(source='get_category_type_display', read_only=True)
     m3u_accounts = M3UVODCategoryRelationSerializer(many=True, source="m3u_relations", read_only=True)
+    movie_count = serializers.IntegerField(read_only=True)
+    series_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = VODCategory
@@ -95,6 +97,8 @@ class VODCategorySerializer(serializers.ModelSerializer):
             "category_type",
             "category_type_display",
             "m3u_accounts",
+            "movie_count",
+            "series_count",
         ]
 
 class SeriesSerializer(serializers.ModelSerializer):

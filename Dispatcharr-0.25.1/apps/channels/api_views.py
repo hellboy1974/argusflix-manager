@@ -729,6 +729,162 @@ class ChannelGroupViewSet(viewsets.ModelViewSet):
 
         return super().destroy(request, *args, **kwargs)
 
+    @action(detail=False, methods=['post'], url_path='bulk-rename')
+    def bulk_rename(self, request):
+        import regex as re
+        ids = request.data.get('ids', [])
+        find_pat = request.data.get('find')
+        replace_pat = request.data.get('replace', '')
+        rename_mappings = request.data.get('rename_mappings', {})
+
+        if not ids and not rename_mappings:
+            return Response({"error": "No group IDs or rename mappings provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        updated_count = 0
+        merged_count = 0
+
+        with transaction.atomic():
+            if rename_mappings:
+                for g_id, new_name in rename_mappings.items():
+                    if not new_name.strip():
+                        continue
+                    try:
+                        group = ChannelGroup.objects.get(id=g_id)
+                    except ChannelGroup.DoesNotExist:
+                        continue
+                    
+                    if group.name == new_name:
+                        continue
+                        
+                    existing = ChannelGroup.objects.filter(name=new_name).first()
+                    if existing:
+                        Channel.objects.filter(channel_group=group).update(channel_group=existing)
+                        group.delete()
+                        merged_count += 1
+                    else:
+                        group.name = new_name
+                        group.save()
+                        updated_count += 1
+            else:
+                if not find_pat:
+                    return Response({"error": "Regex find pattern is required"}, status=status.HTTP_400_BAD_REQUEST)
+                try:
+                    find_re = re.compile(find_pat)
+                except re.error as e:
+                    return Response({"error": f"Invalid regex: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+                groups = ChannelGroup.objects.filter(id__in=ids)
+                for group in groups:
+                    new_name = find_re.sub(replace_pat, group.name)
+                    if new_name == group.name or not new_name.strip():
+                        continue
+                    
+                    existing = ChannelGroup.objects.filter(name=new_name).first()
+                    if existing:
+                        Channel.objects.filter(channel_group=group).update(channel_group=existing)
+                        group.delete()
+                        merged_count += 1
+                    else:
+                        group.name = new_name
+                        group.save()
+                        updated_count += 1
+
+        return Response({
+            "message": f"Successfully renamed {updated_count} groups, merged {merged_count} groups",
+            "updated_count": updated_count,
+            "merged_count": merged_count
+        })
+
+    @action(detail=False, methods=['post'], url_path='bulk-move')
+    def bulk_move(self, request):
+        source_ids = request.data.get('source_ids', [])
+        target_id = request.data.get('target_id')
+        target_name = request.data.get('target_name')
+
+        if not source_ids:
+            return Response({"error": "source_ids list is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            if target_id:
+                try:
+                    target_group = ChannelGroup.objects.get(id=target_id)
+                except ChannelGroup.DoesNotExist:
+                    return Response({"error": "Target group not found"}, status=status.HTTP_400_BAD_REQUEST)
+            elif target_name:
+                target_group, _ = ChannelGroup.objects.get_or_create(name=target_name)
+            else:
+                return Response({"error": "Either target_id or target_name is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            channels = Channel.objects.filter(channel_group_id__in=source_ids)
+            moved_count = channels.update(channel_group=target_group)
+
+            empty_groups = ChannelGroup.objects.filter(id__in=source_ids).exclude(id=target_group.id)
+            deleted_count = 0
+            for g in empty_groups:
+                if not g.channels.exists() and not (hasattr(g, 'm3u_account') and g.m3u_account.exists()):
+                    g.delete()
+                    deleted_count += 1
+
+        return Response({
+            "message": f"Successfully moved {moved_count} channels and cleaned up {deleted_count} empty groups",
+            "moved_count": moved_count,
+            "deleted_count": deleted_count
+        })
+
+    @action(detail=False, methods=['post'], url_path='bulk-copy')
+    def bulk_copy(self, request):
+        source_ids = request.data.get('source_ids', [])
+        target_id = request.data.get('target_id')
+        target_name = request.data.get('target_name')
+
+        if not source_ids:
+            return Response({"error": "source_ids list is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            if target_id:
+                try:
+                    target_group = ChannelGroup.objects.get(id=target_id)
+                except ChannelGroup.DoesNotExist:
+                    return Response({"error": "Target group not found"}, status=status.HTTP_400_BAD_REQUEST)
+            elif target_name:
+                target_group, _ = ChannelGroup.objects.get_or_create(name=target_name)
+            else:
+                return Response({"error": "Either target_id or target_name is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            source_channels = Channel.objects.filter(channel_group_id__in=source_ids).prefetch_related('streams', 'channelstream_set')
+            
+            copied_count = 0
+            for channel in source_channels:
+                next_num = Channel.get_next_available_channel_number(starting_from=1)
+                
+                new_channel = Channel.objects.create(
+                    name=f"{channel.name} (Copy)",
+                    channel_number=next_num,
+                    channel_group=target_group,
+                    logo=channel.logo,
+                    tvg_id=channel.tvg_id,
+                    tvc_guide_stationid=channel.tvc_guide_stationid,
+                    epg_data=channel.epg_data,
+                    stream_profile=channel.stream_profile,
+                    user_level=channel.user_level,
+                    is_adult=channel.is_adult,
+                    auto_created=False
+                )
+
+                for cs in channel.channelstream_set.all():
+                    ChannelStream.objects.create(
+                        channel=new_channel,
+                        stream=cs.stream,
+                        order=cs.order
+                    )
+                copied_count += 1
+
+        return Response({
+            "message": f"Successfully copied {copied_count} channels to group '{target_group.name}'",
+            "copied_count": copied_count
+        })
+
+
 
 # ─────────────────────────────────────────────────────────
 # 3) Channel Management (CRUD)
@@ -1490,6 +1646,191 @@ class ChannelViewSet(viewsets.ModelViewSet):
             "success": True,
             "updated_count": updated_count,
         }, status=status.HTTP_200_OK)
+
+    # ── Provider Migration: diff ───────────────────────────────────────────────
+
+    @extend_schema(
+        methods=["POST"],
+        description=(
+            "Compare streams / VOD / series between two M3U accounts and return "
+            "a categorised diff (matched, similar, missing, new_only) for each "
+            "content type (live, movies, series). "
+            "Pass 'types': ['live','movies','series'] to control which are computed."
+        ),
+        request=inline_serializer(
+            name="ProviderDiffRequest",
+            fields={
+                "source_account_id": serializers.IntegerField(),
+                "target_account_id": serializers.IntegerField(),
+                "types": serializers.ListField(
+                    child=serializers.ChoiceField(choices=["live", "movies", "series"]),
+                    required=False,
+                ),
+            },
+        ),
+    )
+    @action(detail=False, methods=["post"], url_path="provider-diff")
+    def provider_diff(self, request):
+        """
+        Compute a content diff between source_account and target_account.
+        Heavy normalisation + fuzzy matching (difflib) runs server-side so the
+        frontend only deals with display and confirmation.
+        """
+        from .provider_diff import (
+            diff_live_streams,
+            diff_movies,
+            diff_series,
+            diff_result_to_dict,
+        )
+        from apps.m3u.models import M3UAccount
+
+        source_id = request.data.get("source_account_id")
+        target_id = request.data.get("target_account_id")
+        types     = request.data.get("types", ["live", "movies", "series"])
+
+        if not source_id or not target_id:
+            return Response(
+                {"error": "source_account_id and target_account_id are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if source_id == target_id:
+            return Response(
+                {"error": "source and target must be different accounts"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Verify both accounts exist
+        try:
+            M3UAccount.objects.get(id=source_id)
+            M3UAccount.objects.get(id=target_id)
+        except M3UAccount.DoesNotExist:
+            return Response(
+                {"error": "One or both M3U accounts not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        payload = {}
+
+        if "live" in types:
+            try:
+                payload["live"] = diff_result_to_dict(
+                    diff_live_streams(source_id, target_id)
+                )
+            except Exception as exc:
+                logger.exception("provider_diff: error computing live diff")
+                payload["live"] = {"error": str(exc)}
+
+        if "movies" in types:
+            try:
+                payload["movies"] = diff_result_to_dict(
+                    diff_movies(source_id, target_id)
+                )
+            except Exception as exc:
+                logger.exception("provider_diff: error computing movie diff")
+                payload["movies"] = {"error": str(exc)}
+
+        if "series" in types:
+            try:
+                payload["series"] = diff_result_to_dict(
+                    diff_series(source_id, target_id)
+                )
+            except Exception as exc:
+                logger.exception("provider_diff: error computing series diff")
+                payload["series"] = {"error": str(exc)}
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+    # ── Provider Migration: transfer ───────────────────────────────────────────
+
+    @extend_schema(
+        methods=["POST"],
+        description=(
+            "Apply a set of confirmed stream-swap mappings. For every "
+            "{source_stream_id, target_stream_id} pair the target stream is "
+            "inserted as primary stream on all affected channels; the source "
+            "stream is kept as fallback when keep_old_as_fallback=true."
+        ),
+        request=inline_serializer(
+            name="TransferMappingsRequest",
+            fields={
+                "mappings": serializers.ListField(
+                    child=inline_serializer(
+                        name="MappingPair",
+                        fields={
+                            "source_stream_id": serializers.IntegerField(),
+                            "target_stream_id": serializers.IntegerField(),
+                        },
+                    )
+                ),
+                "keep_old_as_fallback": serializers.BooleanField(required=False, default=True),
+                "mode": serializers.ChoiceField(
+                    choices=["preview", "apply"],
+                    required=False,
+                    default="preview",
+                ),
+            },
+        ),
+    )
+    @action(detail=False, methods=["post"], url_path="transfer-mappings")
+    def transfer_mappings(self, request):
+        """
+        Preview or apply stream-swap mappings produced by provider_diff.
+
+        mode='preview': returns what would change without touching the DB.
+        mode='apply':   executes the transfer atomically.
+        """
+        from .provider_diff import apply_stream_mappings
+        from .models import ChannelStream
+
+        mappings             = request.data.get("mappings", [])
+        keep_old_as_fallback = request.data.get("keep_old_as_fallback", True)
+        mode                 = request.data.get("mode", "preview")
+
+        if not isinstance(mappings, list) or not mappings:
+            return Response(
+                {"error": "mappings must be a non-empty list"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if mode == "preview":
+            # Return how many channels would be affected per mapping pair
+            preview_rows = []
+            for m in mappings:
+                src_id = m.get("source_stream_id")
+                tgt_id = m.get("target_stream_id")
+                if not src_id or not tgt_id:
+                    continue
+                affected = (
+                    ChannelStream.objects
+                    .filter(stream_id=src_id)
+                    .values("channel_id")
+                    .distinct()
+                    .count()
+                )
+                preview_rows.append({
+                    "source_stream_id": src_id,
+                    "target_stream_id": tgt_id,
+                    "channels_affected": affected,
+                })
+            return Response(
+                {"mode": "preview", "mappings": preview_rows},
+                status=status.HTTP_200_OK,
+            )
+
+        # Apply
+        try:
+            result = apply_stream_mappings(mappings, keep_old_as_fallback=keep_old_as_fallback)
+        except Exception as exc:
+            logger.exception("transfer_mappings: unexpected error")
+            return Response(
+                {"error": f"Transfer failed: {exc}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            {"mode": "apply", **result},
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=["post"], url_path="set-names-from-epg")
     def set_names_from_epg(self, request):
@@ -2370,6 +2711,64 @@ class ChannelViewSet(viewsets.ModelViewSet):
                 "programs_refreshed": programs_refreshed,
             }
         )
+
+    @action(detail=False, methods=['post'], url_path='bulk-copy')
+    def bulk_copy(self, request):
+        """Bulk copy selected channels to a target group."""
+        from django.db import transaction
+        from .models import Channel, ChannelGroup, ChannelStream
+
+        channel_ids = request.data.get('channel_ids', [])
+        target_group_id = request.data.get('target_group_id')
+        target_name = request.data.get('target_name')
+
+        if not channel_ids:
+            return Response({"error": "channel_ids list is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            if target_group_id:
+                try:
+                    target_group = ChannelGroup.objects.get(id=target_group_id)
+                except ChannelGroup.DoesNotExist:
+                    return Response({"error": "Target group not found"}, status=status.HTTP_400_BAD_REQUEST)
+            elif target_name:
+                target_group, _ = ChannelGroup.objects.get_or_create(name=target_name)
+            else:
+                return Response({"error": "Either target_group_id or target_name is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            source_channels = Channel.objects.filter(id__in=channel_ids).prefetch_related('streams', 'channelstream_set')
+            
+            copied_count = 0
+            for channel in source_channels:
+                next_num = Channel.get_next_available_channel_number(starting_from=1)
+                
+                new_channel = Channel.objects.create(
+                    name=f"{channel.name} (Copy)",
+                    channel_number=next_num,
+                    channel_group=target_group,
+                    logo=channel.logo,
+                    tvg_id=channel.tvg_id,
+                    tvc_guide_stationid=channel.tvc_guide_stationid,
+                    epg_data=channel.epg_data,
+                    stream_profile=channel.stream_profile,
+                    user_level=channel.user_level,
+                    is_adult=channel.is_adult,
+                    auto_created=False
+                )
+
+                for cs in channel.channelstream_set.all():
+                    ChannelStream.objects.create(
+                        channel=new_channel,
+                        stream=cs.stream,
+                        order=cs.order
+                    )
+                copied_count += 1
+
+        return Response({
+            "message": f"Successfully copied {copied_count} channels to group '{target_group.name}'",
+            "copied_count": copied_count
+        })
+
 
 
 # ─────────────────────────────────────────────────────────

@@ -2075,6 +2075,41 @@ def xc_get_info(request, full=False, custom_playlist=None):
 
 def xc_player_api(request, full=False):
     action = request.GET.get("action")
+    username = request.GET.get("username")
+
+    if username:
+        from apps.output.models import CustomPlaylist
+        playlist = CustomPlaylist.objects.filter(token=username, is_active=True).first()
+        if playlist:
+            if not network_access_allowed(request, 'XC_API'):
+                return JsonResponse({'error': 'Forbidden'}, status=403)
+            if action == "get_live_categories":
+                return JsonResponse(xc_get_live_categories(None, custom_playlist=playlist), safe=False)
+            elif action == "get_live_streams":
+                return StreamingHttpResponse(
+                    _xc_stream_live_streams(request, None, request.GET.get("category_id"), custom_playlist=playlist),
+                    content_type="application/json",
+                )
+            elif action == "get_short_epg":
+                return JsonResponse(xc_get_epg(request, None, short=True, custom_playlist=playlist), safe=False)
+            elif action == "get_simple_data_table":
+                return JsonResponse(xc_get_epg(request, None, short=False, custom_playlist=playlist), safe=False)
+            elif action == "get_vod_categories":
+                return JsonResponse(xc_get_vod_categories(None, custom_playlist=playlist), safe=False)
+            elif action == "get_vod_streams":
+                return JsonResponse(xc_get_vod_streams(request, None, request.GET.get("category_id"), custom_playlist=playlist), safe=False)
+            elif action == "get_series_categories":
+                return JsonResponse(xc_get_series_categories(None, custom_playlist=playlist), safe=False)
+            elif action == "get_series":
+                return JsonResponse(xc_get_series(request, None, request.GET.get("category_id"), custom_playlist=playlist), safe=False)
+            elif action == "get_series_info":
+                return JsonResponse(xc_get_series_info(request, None, request.GET.get("series_id"), custom_playlist=playlist), safe=False)
+            elif action == "get_vod_info":
+                return JsonResponse(xc_get_vod_info(request, None, request.GET.get("vod_id"), custom_playlist=playlist), safe=False)
+            else:
+                server_info = xc_get_info(request, custom_playlist=playlist)
+                return JsonResponse(server_info, safe=False)
+
     user = xc_get_user(request)
 
     if user is None:
@@ -2111,6 +2146,15 @@ def xc_player_api(request, full=False):
 
 
 def xc_panel_api(request):
+    username = request.GET.get("username")
+    if username:
+        from apps.output.models import CustomPlaylist
+        playlist = CustomPlaylist.objects.filter(token=username, is_active=True).first()
+        if playlist:
+            if not network_access_allowed(request, 'XC_API'):
+                return JsonResponse({'error': 'Forbidden'}, status=403)
+            return JsonResponse(xc_get_info(request, True, custom_playlist=playlist))
+
     user = xc_get_user(request)
 
     if user is None:
@@ -2133,6 +2177,13 @@ def xc_get(request):
             user_agent=user_agent,
         )
         return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    username = request.GET.get("username")
+    if username:
+        from apps.output.models import CustomPlaylist
+        playlist = CustomPlaylist.objects.filter(token=username, is_active=True).first()
+        if playlist:
+            return generate_m3u(request, custom_playlist=playlist)
 
     action = request.GET.get("action")
     user = xc_get_user(request)
@@ -2168,6 +2219,13 @@ def xc_xmltv(request):
             user_agent=user_agent,
         )
         return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    username = request.GET.get("username")
+    if username:
+        from apps.output.models import CustomPlaylist
+        playlist = CustomPlaylist.objects.filter(token=username, is_active=True).first()
+        if playlist:
+            return generate_epg(request, custom_playlist=playlist)
 
     user = xc_get_user(request)
 

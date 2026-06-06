@@ -44,7 +44,7 @@ export const formatPreviewSummary = (label, result) => {
   const { match_count, total_in_group, total_scanned, scan_limit_hit } = result;
   const matchWord = `match${match_count === 1 ? '' : 'es'}`;
   if (scan_limit_hit) {
-    return `${match_count} ${matchWord} in first ${total_scanned.toLocaleString()} streams scanned (of ${total_in_group.toLocaleString()} total)`;
+    return `${match_count} ${matchWord} in first ${total_scanned.toLocaleString('en-US')} streams scanned (of ${total_in_group.toLocaleString('en-US')} total)`;
   }
-  return `${match_count} ${label} ${matchWord} in ${total_scanned.toLocaleString()} stream${total_scanned === 1 ? '' : 's'}`;
+  return `${match_count} ${label} ${matchWord} in ${total_scanned.toLocaleString('en-US')} stream${total_scanned === 1 ? '' : 's'}`;
 };

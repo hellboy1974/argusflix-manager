@@ -160,6 +160,10 @@ vi.mock('lucide-react', () => ({
   Logs: () => <svg data-testid="icon-logs" />,
   Blocks: () => <svg data-testid="icon-blocks" />,
   MonitorCog: () => <svg data-testid="icon-monitor-cog" />,
+  Film: () => <svg data-testid="icon-film" />,
+  Tv: () => <svg data-testid="icon-tv" />,
+  ListPlus: () => <svg data-testid="icon-list-plus" />,
+  Terminal: () => <svg data-testid="icon-terminal" />,
   // StreamConnectionCard-specific icons
   ChevronDown: () => <svg data-testid="icon-chevron-down" />,
   ChevronRight: () => <svg data-testid="icon-chevron-right" />,

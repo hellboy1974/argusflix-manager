@@ -26,16 +26,22 @@ import {
   TabsPanel,
   TabsTab,
   ActionIcon,
+  Checkbox,
 } from '@mantine/core';
 import { Play, Copy, Search, Tv } from 'lucide-react';
 import { Allotment } from 'allotment';
 import 'allotment/dist/style.css';
 import { copyToClipboard } from '../utils';
+import { notifications } from '@mantine/notifications';
 import useVODStore from '../store/useVODStore';
 import useVideoStore from '../store/useVideoStore';
 import useSettingsStore from '../store/settings';
 import ErrorBoundary from '../components/ErrorBoundary';
+import CategorySidebar from '../components/CategorySidebar';
 import useLocalStorage from '../hooks/useLocalStorage';
+import API from '../api';
+import VODRegexRenameModal from '../components/modals/VODRegexRenameModal.jsx';
+
 import {
   formatDuration,
   formatStreamLabel,
@@ -611,18 +617,29 @@ const SeriesPage = () => {
   const fetchCategories = useVODStore((s) => s.fetchCategories);
 
   const [selectedSeries, setSelectedSeries] = useState(null);
-  const [categories, setCategories] = useState({});
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [searchVal, setSearchVal] = useState(filters.search || '');
 
   const [splitSizes, setSplitSizes] = useLocalStorage('series-splitter-sizes', [55, 45]);
+  const [playlists, setPlaylists] = useState([]);
+  const [selectedSeriesIds, setSelectedSeriesIds] = useState([]);
+  const [regexRenameModalOpen, setRegexRenameModalOpen] = useState(false);
+  const [regexLoading, setRegexLoading] = useState(false);
+
+  const fetchPlaylists = async () => {
+    try {
+      const data = await API.getCustomPlaylists();
+      setPlaylists(data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     fetchCategories();
+    fetchPlaylists();
   }, [fetchCategories]);
 
-  useEffect(() => {
-    setCategories(filterCategoriesToEnabled(allCategories));
-  }, [allCategories]);
 
   useEffect(() => {
     // Force filters type to series
@@ -630,6 +647,7 @@ const SeriesPage = () => {
   }, []);
 
   useEffect(() => {
+    setSelectedSeriesIds([]);
     fetchContent();
   }, [filters, currentPage, pageSize]);
 
@@ -638,154 +656,245 @@ const SeriesPage = () => {
     setFilters({ type: 'series', search: val });
   };
 
-  const handleCategoryChange = (val) => {
-    setFilters({ type: 'series', category: val || '' });
+  const handleCategorySelect = (id) => {
+    if (selectedCategoryId === id) {
+      setSelectedCategoryId(null);
+      setFilters({ type: 'series', category: '' });
+    } else {
+      setSelectedCategoryId(id);
+      const cat = allCategories[id];
+      setFilters({ type: 'series', category: cat ? cat.name : '' });
+    }
     setPage(1);
   };
 
-  const categoryOptions = getCategoryOptions(categories, { type: 'series' });
+  // Filter categories to series type
+  const categoriesList = Object.values(allCategories)
+    .filter((cat) => cat.category_type === 'series')
+    .map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      series_count: cat.series_count,
+    })).sort((a, b) => a.name.localeCompare(b.name));
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
     <ErrorBoundary>
-      <Box h="100vh" w="100%" display="flex" style={{ overflow: 'hidden' }}>
-        <Allotment
-          defaultSizes={splitSizes}
-          onChange={setSplitSizes}
-          onResize={setSplitSizes}
-          className="custom-allotment"
-          minSize={250}
-        >
-          {/* Left Pane: Table and Filters */}
-          <Flex direction="column" h="100%" p="md" style={{ backgroundColor: '#09090b', overflow: 'hidden' }}>
-            <Stack spacing="sm" mb="md">
-              <Title order={3}>Series</Title>
-              <Flex gap="sm" direction={{ base: 'column', sm: 'row' }}>
-                <TextInput
-                  placeholder="Search series..."
-                  leftSection={<Search size={14} />}
-                  value={searchVal}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  style={{ flex: 1 }}
-                />
-                <Select
-                  placeholder="All Categories"
-                  data={categoryOptions}
-                  value={filters.category}
-                  onChange={handleCategoryChange}
-                  clearable
-                  style={{ width: '220px' }}
-                />
-                <Select
-                  value={String(pageSize)}
-                  onChange={(val) => {
-                    setPageSize(Number(val));
-                    setPage(1);
-                  }}
-                  data={['10', '25', '50', '100'].map((v) => ({ value: v, label: `${v} / page` }))}
-                  style={{ width: '120px' }}
-                />
-              </Flex>
-            </Stack>
-
-            <Box flex={1} style={{ overflow: 'auto', border: '1px solid #27272a', borderRadius: '8px' }}>
-              {loading ? (
-                <Flex justify="center" align="center" h="100%">
-                  <Loader size="md" />
+      <Box h="100vh" w="100%" display="flex" p={10} style={{ overflow: 'hidden', gap: '10px' }}>
+        <CategorySidebar
+          categories={categoriesList}
+          selectedId={selectedCategoryId}
+          onSelect={handleCategorySelect}
+          onBulkAction={() => {
+            fetchCategories();
+            fetchPlaylists();
+          }}
+          type="series"
+          playlists={playlists}
+        />
+        <Box style={{ flex: 1, height: '100%', minWidth: 0 }}>
+          <Allotment
+            defaultSizes={splitSizes}
+            onChange={setSplitSizes}
+            onResize={setSplitSizes}
+            className="custom-allotment"
+            minSize={250}
+          >
+            {/* Left Pane: Table and Filters */}
+            <Flex direction="column" h="100%" p="md" style={{ backgroundColor: '#09090b', overflow: 'hidden' }}>
+              <Stack spacing="sm" mb="md">
+                <Title order={3}>Series</Title>
+                <Flex gap="sm" direction={{ base: 'column', sm: 'row' }} align="center">
+                  <TextInput
+                    placeholder="Search series..."
+                    leftSection={<Search size={14} />}
+                    value={searchVal}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  {selectedSeriesIds.length > 0 && (
+                    <Button
+                      size="xs"
+                      color="cyan"
+                      onClick={() => setRegexRenameModalOpen(true)}
+                    >
+                      Regex Rename ({selectedSeriesIds.length})
+                    </Button>
+                  )}
+                  <Select
+                    value={String(pageSize)}
+                    onChange={(val) => {
+                      setPageSize(Number(val));
+                      setPage(1);
+                    }}
+                    data={['10', '25', '50', '100'].map((v) => ({ value: v, label: `${v} / page` }))}
+                    style={{ width: '120px' }}
+                  />
                 </Flex>
-              ) : currentPageContent.length > 0 ? (
-                <Table striped highlightOnHover verticalSpacing="sm">
-                  <TableThead>
-                    <TableTr style={{ borderColor: '#27272a' }}>
-                      <TableTh style={{ width: '70px' }}>Poster</TableTh>
-                      <TableTh>Title</TableTh>
-                      <TableTh style={{ width: '80px' }}>Year</TableTh>
-                      <TableTh>Genre</TableTh>
-                    </TableTr>
-                  </TableThead>
-                  <TableTbody>
-                    {currentPageContent.map((series) => {
-                      const posterUrl = series.series_image || series.logo?.url;
-                      return (
-                        <TableTr
-                          key={series.id}
-                          style={{
-                            cursor: 'pointer',
-                            backgroundColor: selectedSeries?.id === series.id ? '#27272a' : undefined,
-                            borderColor: '#27272a',
-                          }}
-                          onClick={() => setSelectedSeries(series)}
-                        >
-                          <TableTd>
-                            {posterUrl ? (
-                              <Image
-                                src={posterUrl}
-                                height={45}
-                                width={30}
-                                fit="cover"
-                                style={{ borderRadius: '4px' }}
-                              />
-                            ) : (
-                              <Box
-                                style={{
-                                  height: 45,
-                                  width: 30,
-                                  backgroundColor: '#18181b',
-                                  borderRadius: '4px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
+              </Stack>
+
+              <Box flex={1} style={{ overflow: 'auto', border: '1px solid #27272a', borderRadius: '8px' }}>
+                {loading ? (
+                  <Flex justify="center" align="center" h="100%">
+                    <Loader size="md" />
+                  </Flex>
+                ) : currentPageContent.length > 0 ? (
+                  <Table striped highlightOnHover verticalSpacing="sm">
+                    <TableThead>
+                      <TableTr style={{ borderColor: '#27272a' }}>
+                        <TableTh style={{ width: '40px' }}>
+                          <Checkbox
+                            size="xs"
+                            checked={
+                              currentPageContent.length > 0 &&
+                              selectedSeriesIds.length === currentPageContent.length
+                            }
+                            indeterminate={
+                              selectedSeriesIds.length > 0 &&
+                              selectedSeriesIds.length < currentPageContent.length
+                            }
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedSeriesIds(currentPageContent.map((s) => s.id));
+                              } else {
+                                setSelectedSeriesIds([]);
+                              }
+                            }}
+                          />
+                        </TableTh>
+                        <TableTh style={{ width: '70px' }}>Poster</TableTh>
+                        <TableTh>Title</TableTh>
+                        <TableTh style={{ width: '80px' }}>Year</TableTh>
+                        <TableTh>Genre</TableTh>
+                      </TableTr>
+                    </TableThead>
+                    <TableTbody>
+                      {currentPageContent.map((series) => {
+                        const posterUrl = series.series_image || series.logo?.url;
+                        return (
+                          <TableTr
+                            key={series.id}
+                            style={{
+                              cursor: 'pointer',
+                              backgroundColor: selectedSeries?.id === series.id ? '#27272a' : undefined,
+                              borderColor: '#27272a',
+                            }}
+                            onClick={() => setSelectedSeries(series)}
+                          >
+                            <TableTd onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                size="xs"
+                                checked={selectedSeriesIds.includes(series.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedSeriesIds([...selectedSeriesIds, series.id]);
+                                  } else {
+                                    setSelectedSeriesIds(selectedSeriesIds.filter((id) => id !== series.id));
+                                  }
                                 }}
-                              >
-                                <Tv size={14} color="#52525b" />
-                              </Box>
-                            )}
-                          </TableTd>
-                          <TableTd>
-                            <Text size="sm" weight={500}>
-                              {series.name}
-                            </Text>
-                          </TableTd>
-                          <TableTd>
-                            <Text size="xs" c="dimmed">
-                              {series.year || '-'}
-                            </Text>
-                          </TableTd>
-                          <TableTd>
-                            <Text size="xs" c="dimmed" lineClamp={1}>
-                              {series.genre || '-'}
-                            </Text>
-                          </TableTd>
-                        </TableTr>
-                      );
-                    })}
-                  </TableTbody>
-                </Table>
-              ) : (
-                <Flex justify="center" align="center" h="100%" direction="column" p="xl">
-                  <Text size="sm" c="dimmed">
-                    No series found matching your search.
-                  </Text>
+                              />
+                            </TableTd>
+                            <TableTd>
+                              {posterUrl ? (
+                                <Image
+                                  src={posterUrl}
+                                  height={45}
+                                  width={30}
+                                  fit="cover"
+                                  style={{ borderRadius: '4px' }}
+                                />
+                              ) : (
+                                <Box
+                                  style={{
+                                    height: 45,
+                                    width: 30,
+                                    backgroundColor: '#18181b',
+                                    borderRadius: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                >
+                                  <Tv size={14} color="#52525b" />
+                                </Box>
+                              )}
+                            </TableTd>
+                            <TableTd>
+                              <Text size="sm" weight={500}>
+                                {series.name}
+                              </Text>
+                            </TableTd>
+                            <TableTd>
+                              <Text size="xs" c="dimmed">
+                                {series.year || '-'}
+                              </Text>
+                            </TableTd>
+                            <TableTd>
+                              <Text size="xs" c="dimmed" lineClamp={1}>
+                                {series.genre || '-'}
+                              </Text>
+                            </TableTd>
+                          </TableTr>
+                        );
+                      })}
+                    </TableTbody>
+                  </Table>
+                ) : (
+                  <Flex justify="center" align="center" h="100%" direction="column" p="xl">
+                    <Text size="sm" c="dimmed">
+                      No series found matching your search.
+                    </Text>
+                  </Flex>
+                )}
+              </Box>
+
+              {totalPages > 1 && (
+                <Flex justify="center" mt="md">
+                  <Pagination
+                    page={currentPage}
+                    onChange={setPage}
+                    total={totalPages}
+                    size="sm"
+                  />
                 </Flex>
               )}
-            </Box>
+            </Flex>
 
-            {totalPages > 1 && (
-              <Flex justify="center" mt="md">
-                <Pagination
-                  page={currentPage}
-                  onChange={setPage}
-                  total={totalPages}
-                  size="sm"
-                />
-              </Flex>
-            )}
-          </Flex>
-
-          {/* Right Pane: Series Details */}
-          <SeriesDetailsPanel selectedSeries={selectedSeries} />
-        </Allotment>
+            {/* Right Pane: Series Details */}
+            <SeriesDetailsPanel selectedSeries={selectedSeries} />
+          </Allotment>
+        </Box>
       </Box>
+      <VODRegexRenameModal
+        opened={regexRenameModalOpen}
+        onClose={() => setRegexRenameModalOpen(false)}
+        items={currentPageContent.filter((s) => selectedSeriesIds.includes(s.id))}
+        loading={regexLoading}
+        onApply={async (find, replace) => {
+          setRegexLoading(true);
+          try {
+            await API.bulkRegexRenameSeries({
+              series_ids: selectedSeriesIds,
+              find,
+              replace,
+            });
+            notifications.show({
+              title: 'Success',
+              message: 'Successfully renamed series',
+              color: 'green',
+            });
+            setSelectedSeriesIds([]);
+            setRegexRenameModalOpen(false);
+            fetchContent();
+          } catch (e) {
+            console.error(e);
+          } finally {
+            setRegexLoading(false);
+          }
+        }}
+        title="Regex Series Rename"
+      />
     </ErrorBoundary>
   );
 };

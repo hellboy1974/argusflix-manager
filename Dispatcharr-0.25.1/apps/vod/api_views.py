@@ -16,6 +16,7 @@ import requests
 from apps.accounts.permissions import (
     Authenticated,
     permission_classes_by_action,
+    IsAdmin,
 )
 from .models import (
     Series, VODCategory, Movie, Episode, VODLogo,
@@ -193,6 +194,101 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
             }
         }
         return Response(response_data)
+
+    @action(detail=False, methods=['post'], url_path='bulk-regex-rename', permission_classes=[IsAdmin])
+    def bulk_regex_rename(self, request):
+        """Efficiently apply regex find/replace to the name field of multiple movies."""
+        import regex as re
+        from django.db import transaction
+
+        movie_ids = request.data.get("movie_ids", [])
+        pattern = request.data.get("find", "")
+        replace = request.data.get("replace", "")
+        flags_str = request.data.get("flags", "") or ""
+
+        if not isinstance(movie_ids, list) or len(movie_ids) == 0:
+            return Response({"error": "movie_ids must be a non-empty list"}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(pattern, str) or pattern.strip() == "":
+            return Response({"error": "find (regex pattern) is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(replace, str):
+            return Response({"error": "replace must be a string"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Compile flags
+        re_flags = 0
+        if "i" in flags_str:
+             re_flags |= re.IGNORECASE
+
+        try:
+            # Translate common JS replacement tokens to Python
+            def translate_js_replacement(rep: str) -> str:
+                rep = rep.replace("$$", "$")
+                rep = rep.replace("$&", r"\g<0>")
+                rep = re.sub(r"\$<([A-Za-z_][A-Za-z0-9_]*)>", r"\\g<\1>", rep)
+                rep = re.sub(r"\$(\d+)", r"\\g<\1>", rep)
+                return rep
+
+            replacement_py = translate_js_replacement(replace)
+            converted_pattern = re.sub(r"\(\?<([^>]+)>", r"(?P<\1>", pattern)
+            compiled = re.compile(converted_pattern, flags=re_flags)
+        except Exception as e:
+            return Response({"error": f"Invalid regex pattern: {e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        movies = list(Movie.objects.filter(id__in=movie_ids))
+        if not movies:
+            return Response({"error": "No matching movies found"}, status=status.HTTP_404_NOT_FOUND)
+
+        changed = []
+        for movie in movies:
+            current = movie.name or ""
+            try:
+                new_name = compiled.sub(replacement_py, current)
+            except Exception as e:
+                logger.warning(f"Regex replacement failed for movie {movie.id}: {e}")
+                continue
+
+            if new_name != current and new_name.strip():
+                movie.name = new_name
+                changed.append(movie)
+
+        updated_count = 0
+        if changed:
+            with transaction.atomic():
+                Movie.objects.bulk_update(changed, fields=["name"], batch_size=100)
+                updated_count = len(changed)
+
+        return Response({
+            "success": True,
+            "updated_count": updated_count,
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='bulk-move', permission_classes=[IsAdmin])
+    def bulk_move(self, request):
+        """Bulk move selected movies to a target category."""
+        from django.db import transaction
+        from .models import M3UMovieRelation, VODCategory
+
+        movie_ids = request.data.get('movie_ids', [])
+        target_category_id = request.data.get('category_id')
+
+        if not movie_ids:
+            return Response({"error": "movie_ids list is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not target_category_id:
+            return Response({"error": "category_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            target_category = VODCategory.objects.get(id=target_category_id, category_type='movie')
+        except VODCategory.DoesNotExist:
+            return Response({"error": "Target movie category not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            updated_count = M3UMovieRelation.objects.filter(movie_id__in=movie_ids).update(category=target_category)
+
+        return Response({
+            "success": True,
+            "moved_count": updated_count,
+        })
+
+
 
 class EpisodeFilter(django_filters.FilterSet):
     name = django_filters.CharFilter(lookup_expr="icontains")
@@ -455,6 +551,100 @@ class SeriesViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=False, methods=['post'], url_path='bulk-regex-rename', permission_classes=[IsAdmin])
+    def bulk_regex_rename(self, request):
+        """Efficiently apply regex find/replace to the name field of multiple series."""
+        import regex as re
+        from django.db import transaction
+
+        series_ids = request.data.get("series_ids", [])
+        pattern = request.data.get("find", "")
+        replace = request.data.get("replace", "")
+        flags_str = request.data.get("flags", "") or ""
+
+        if not isinstance(series_ids, list) or len(series_ids) == 0:
+            return Response({"error": "series_ids must be a non-empty list"}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(pattern, str) or pattern.strip() == "":
+            return Response({"error": "find (regex pattern) is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(replace, str):
+            return Response({"error": "replace must be a string"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Compile flags
+        re_flags = 0
+        if "i" in flags_str:
+             re_flags |= re.IGNORECASE
+
+        try:
+            # Translate common JS replacement tokens to Python
+            def translate_js_replacement(rep: str) -> str:
+                rep = rep.replace("$$", "$")
+                rep = rep.replace("$&", r"\g<0>")
+                rep = re.sub(r"\$<([A-Za-z_][A-Za-z0-9_]*)>", r"\\g<\1>", rep)
+                rep = re.sub(r"\$(\d+)", r"\\g<\1>", rep)
+                return rep
+
+            replacement_py = translate_js_replacement(replace)
+            converted_pattern = re.sub(r"\(\?<([^>]+)>", r"(?P<\1>", pattern)
+            compiled = re.compile(converted_pattern, flags=re_flags)
+        except Exception as e:
+            return Response({"error": f"Invalid regex pattern: {e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        series_list = list(Series.objects.filter(id__in=series_ids))
+        if not series_list:
+            return Response({"error": "No matching series found"}, status=status.HTTP_404_NOT_FOUND)
+
+        changed = []
+        for series in series_list:
+            current = series.name or ""
+            try:
+                new_name = compiled.sub(replacement_py, current)
+            except Exception as e:
+                logger.warning(f"Regex replacement failed for series {series.id}: {e}")
+                continue
+
+            if new_name != current and new_name.strip():
+                series.name = new_name
+                changed.append(series)
+
+        updated_count = 0
+        if changed:
+            with transaction.atomic():
+                Series.objects.bulk_update(changed, fields=["name"], batch_size=100)
+                updated_count = len(changed)
+
+        return Response({
+            "success": True,
+            "updated_count": updated_count,
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='bulk-move', permission_classes=[IsAdmin])
+    def bulk_move(self, request):
+        """Bulk move selected series to a target category."""
+        from django.db import transaction
+        from .models import M3USeriesRelation, VODCategory
+
+        series_ids = request.data.get('series_ids', [])
+        target_category_id = request.data.get('category_id')
+
+        if not series_ids:
+            return Response({"error": "series_ids list is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not target_category_id:
+            return Response({"error": "category_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            target_category = VODCategory.objects.get(id=target_category_id, category_type='series')
+        except VODCategory.DoesNotExist:
+            return Response({"error": "Target series category not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            updated_count = M3USeriesRelation.objects.filter(series_id__in=series_ids).update(category=target_category)
+
+        return Response({
+            "success": True,
+            "moved_count": updated_count,
+        })
+
+
 
 class VODCategoryFilter(django_filters.FilterSet):
     name = django_filters.CharFilter(lookup_expr="icontains")
@@ -466,15 +656,21 @@ class VODCategoryFilter(django_filters.FilterSet):
         fields = ['name', 'category_type', 'm3u_account']
 
 
-class VODCategoryViewSet(viewsets.ReadOnlyModelViewSet):
+class VODCategoryViewSet(viewsets.ModelViewSet):
     """ViewSet for VOD Categories"""
-    queryset = VODCategory.objects.all()
     serializer_class = VODCategorySerializer
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = VODCategoryFilter
     search_fields = ['name']
     ordering = ['name']
+
+    def get_queryset(self):
+        from django.db.models import Count
+        return VODCategory.objects.annotate(
+            movie_count=Count('m3umovierelation', distinct=True),
+            series_count=Count('m3useriesrelation', distinct=True)
+        )
 
     def get_permissions(self):
         try:
@@ -534,6 +730,133 @@ class VODCategoryViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Now proceed with normal list operation
         return super().list(request, *args, **kwargs)
+
+    @action(detail=False, methods=['post'], url_path='bulk-rename')
+    def bulk_rename(self, request):
+        import regex as re
+        from django.db import transaction
+        
+        ids = request.data.get('ids', [])
+        find_pat = request.data.get('find')
+        replace_pat = request.data.get('replace', '')
+        rename_mappings = request.data.get('rename_mappings', {})
+
+        if not ids and not rename_mappings:
+            return Response({"error": "No category IDs or rename mappings provided"}, status=400)
+
+        updated_count = 0
+        merged_count = 0
+
+        with transaction.atomic():
+            if rename_mappings:
+                for cat_id, new_name in rename_mappings.items():
+                    if not new_name.strip():
+                        continue
+                    try:
+                        category = VODCategory.objects.get(id=cat_id)
+                    except VODCategory.DoesNotExist:
+                        continue
+                    
+                    if category.name == new_name:
+                        continue
+                        
+                    existing = VODCategory.objects.filter(name=new_name, category_type=category.category_type).first()
+                    if existing:
+                        if category.category_type == 'movie':
+                            M3UMovieRelation.objects.filter(category=category).update(category=existing)
+                        elif category.category_type == 'series':
+                            M3USeriesRelation.objects.filter(category=category).update(category=existing)
+                        category.delete()
+                        merged_count += 1
+                    else:
+                        category.name = new_name
+                        category.save()
+                        updated_count += 1
+            else:
+                if not find_pat:
+                    return Response({"error": "Regex find pattern is required"}, status=400)
+                try:
+                    find_re = re.compile(find_pat)
+                except re.error as e:
+                    return Response({"error": f"Invalid regex: {str(e)}"}, status=400)
+
+                categories = VODCategory.objects.filter(id__in=ids)
+                for category in categories:
+                    new_name = find_re.sub(replace_pat, category.name)
+                    if new_name == category.name or not new_name.strip():
+                        continue
+                    
+                    existing = VODCategory.objects.filter(name=new_name, category_type=category.category_type).first()
+                    if existing:
+                        if category.category_type == 'movie':
+                            M3UMovieRelation.objects.filter(category=category).update(category=existing)
+                        elif category.category_type == 'series':
+                            M3USeriesRelation.objects.filter(category=category).update(category=existing)
+                        category.delete()
+                        merged_count += 1
+                    else:
+                        category.name = new_name
+                        category.save()
+                        updated_count += 1
+
+        return Response({
+            "message": f"Successfully renamed {updated_count} categories, merged {merged_count} categories",
+            "updated_count": updated_count,
+            "merged_count": merged_count
+        })
+
+    @action(detail=False, methods=['post'], url_path='bulk-move')
+    def bulk_move(self, request):
+        from django.db import transaction
+        
+        source_ids = request.data.get('source_ids', [])
+        target_id = request.data.get('target_id')
+        target_name = request.data.get('target_name')
+
+        if not source_ids:
+            return Response({"error": "source_ids list is required"}, status=400)
+
+        with transaction.atomic():
+            first_source = VODCategory.objects.filter(id__in=source_ids).first()
+            if not first_source:
+                return Response({"error": "No source categories found"}, status=400)
+                
+            category_type = first_source.category_type
+
+            if target_id:
+                try:
+                    target_category = VODCategory.objects.get(id=target_id)
+                except VODCategory.DoesNotExist:
+                    return Response({"error": "Target category not found"}, status=400)
+            elif target_name:
+                target_category, _ = VODCategory.objects.get_or_create(name=target_name, category_type=category_type)
+            else:
+                return Response({"error": "Either target_id or target_name is required"}, status=400)
+
+            moved_count = 0
+            if target_category.category_type == 'movie':
+                moved_count = M3UMovieRelation.objects.filter(category_id__in=source_ids).update(category=target_category)
+            elif target_category.category_type == 'series':
+                moved_count = M3USeriesRelation.objects.filter(category_id__in=source_ids).update(category=target_category)
+
+            empty_categories = VODCategory.objects.filter(id__in=source_ids).exclude(id=target_category.id)
+            deleted_count = 0
+            for c in empty_categories:
+                has_relations = False
+                if c.category_type == 'movie':
+                    has_relations = M3UMovieRelation.objects.filter(category=c).exists()
+                elif c.category_type == 'series':
+                    has_relations = M3USeriesRelation.objects.filter(category=c).exists()
+                    
+                if not has_relations:
+                    c.delete()
+                    deleted_count += 1
+
+        return Response({
+            "message": f"Successfully moved {moved_count} items and cleaned up {deleted_count} empty categories",
+            "moved_count": moved_count,
+            "deleted_count": deleted_count
+        })
 
 
 class UnifiedContentViewSet(viewsets.ReadOnlyModelViewSet):

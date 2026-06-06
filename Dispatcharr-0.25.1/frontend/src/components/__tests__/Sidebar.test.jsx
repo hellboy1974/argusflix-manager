@@ -64,6 +64,10 @@ vi.mock('lucide-react', () => ({
   Package: () => <div data-testid="package-icon" />,
   Download: () => <div data-testid="download-icon" />,
   HelpCircle: () => <div data-testid="help-circle-icon" />,
+  Film: () => <div data-testid="film-icon" />,
+  Tv: () => <div data-testid="tv-icon" />,
+  ListPlus: () => <div data-testid="list-plus-icon" />,
+  Terminal: () => <div data-testid="terminal-icon" />,
 }));
 
 // Mock UserForm component
@@ -223,9 +227,18 @@ describe('Sidebar', () => {
     it('should render all admin navigation items', async () => {
       renderSidebar();
 
-      expect(screen.getByText('Channels')).toBeInTheDocument();
-      expect(screen.getByText('VODs')).toBeInTheDocument();
-      expect(screen.getByText('M3U & EPG Manager')).toBeInTheDocument();
+      // Expand Playlists & Content group
+      const mediaButton = screen.getByText('Playlists & Content');
+      fireEvent.click(mediaButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Live TV')).toBeInTheDocument();
+        expect(screen.getByText('Movies')).toBeInTheDocument();
+        expect(screen.getByText('Series')).toBeInTheDocument();
+        expect(screen.getByText('Playlists')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('Content Import')).toBeInTheDocument();
       expect(screen.getByText('TV Guide')).toBeInTheDocument();
       expect(screen.getByText('DVR')).toBeInTheDocument();
       expect(screen.getByText('Stats')).toBeInTheDocument();
@@ -242,15 +255,19 @@ describe('Sidebar', () => {
       });
     });
 
-    it('should display channel count badge', () => {
+    it('should display channel count badge', async () => {
       renderSidebar();
-      expect(screen.getByText('(3)')).toBeInTheDocument();
+      const mediaButton = screen.getByText('Playlists & Content');
+      fireEvent.click(mediaButton);
+      await waitFor(() => {
+        expect(screen.getByText('(3)')).toBeInTheDocument();
+      });
     });
 
     it('should hide labels and badges when collapsed', () => {
       renderSidebar({ collapsed: true });
 
-      expect(screen.queryByText('Channels')).not.toBeInTheDocument();
+      expect(screen.queryByText('Live TV')).not.toBeInTheDocument();
       expect(screen.queryByText('(3)')).not.toBeInTheDocument();
     });
   });
@@ -269,15 +286,23 @@ describe('Sidebar', () => {
       });
     });
 
-    it('should render limited navigation items for regular user', () => {
+    it('should render limited navigation items for regular user', async () => {
       renderSidebar();
 
-      expect(screen.getByText('Channels')).toBeInTheDocument();
+      // Expand Playlists & Content group
+      const mediaButton = screen.getByText('Playlists & Content');
+      fireEvent.click(mediaButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Live TV')).toBeInTheDocument();
+      });
       expect(screen.getByText('TV Guide')).toBeInTheDocument();
       expect(screen.getByText('Settings')).toBeInTheDocument();
 
-      expect(screen.queryByText('VODs')).not.toBeInTheDocument();
-      expect(screen.queryByText('M3U & EPG Manager')).not.toBeInTheDocument();
+      expect(screen.queryByText('Movies')).not.toBeInTheDocument();
+      expect(screen.queryByText('Series')).not.toBeInTheDocument();
+      expect(screen.queryByText('Playlists')).not.toBeInTheDocument();
+      expect(screen.queryByText('Content Import')).not.toBeInTheDocument();
       expect(screen.queryByText('DVR')).not.toBeInTheDocument();
       expect(screen.queryByText('Stats')).not.toBeInTheDocument();
       expect(screen.queryByText('Plugins')).not.toBeInTheDocument();
@@ -664,28 +689,40 @@ describe('Sidebar', () => {
   });
 
   describe('Channel Count Badge', () => {
-    it('should display 0 when no channels exist', () => {
+    it('should display 0 when no channels exist', async () => {
       useChannelsStore.mockReturnValue({});
 
       renderSidebar();
+      const mediaButton = screen.getByText('Playlists & Content');
+      fireEvent.click(mediaButton);
 
-      expect(screen.getByText('(0)')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('(0)')).toBeInTheDocument();
+      });
     });
 
-    it('should handle null channelIds gracefully', () => {
+    it('should handle null channelIds gracefully', async () => {
       useChannelsStore.mockReturnValue(null);
 
       renderSidebar();
+      const mediaButton = screen.getByText('Playlists & Content');
+      fireEvent.click(mediaButton);
 
-      expect(screen.getByText('(0)')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('(0)')).toBeInTheDocument();
+      });
     });
 
-    it('should handle array of channel IDs', () => {
+    it('should handle array of channel IDs', async () => {
       useChannelsStore.mockReturnValue(['channel-1', 'channel-2', 'channel-3']);
 
       renderSidebar();
+      const mediaButton = screen.getByText('Playlists & Content');
+      fireEvent.click(mediaButton);
 
-      expect(screen.getByText('(3)')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('(3)')).toBeInTheDocument();
+      });
     });
   });
 });

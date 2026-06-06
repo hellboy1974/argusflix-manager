@@ -868,7 +868,60 @@ export default class API {
     }
   }
 
+  // ── Provider Migration ────────────────────────────────────────────────────
+
+  /**
+   * Compute a diff between two M3U accounts.
+   * Returns { live, movies, series } each with { matched, similar, missing, new_only }.
+   */
+  static async providerDiff(sourceAccountId, targetAccountId, types = ['live', 'movies', 'series']) {
+    try {
+      const response = await request(
+        `${host}/api/channels/channels/provider-diff/`,
+        {
+          method: 'POST',
+          body: {
+            source_account_id: sourceAccountId,
+            target_account_id: targetAccountId,
+            types,
+          },
+        }
+      );
+      return response;
+    } catch (e) {
+      errorNotification('Failed to compute provider diff', e);
+      throw e;
+    }
+  }
+
+  /**
+   * Preview or apply confirmed stream-swap mappings.
+   * @param {Array}   mappings             - [{source_stream_id, target_stream_id}]
+   * @param {boolean} keepOldAsFallback    - keep old stream as fallback
+   * @param {string}  mode                 - 'preview' | 'apply'
+   */
+  static async transferMappings(mappings, keepOldAsFallback = true, mode = 'apply') {
+    try {
+      const response = await request(
+        `${host}/api/channels/channels/transfer-mappings/`,
+        {
+          method: 'POST',
+          body: {
+            mappings,
+            keep_old_as_fallback: keepOldAsFallback,
+            mode,
+          },
+        }
+      );
+      return response;
+    } catch (e) {
+      errorNotification('Failed to transfer stream mappings', e);
+      throw e;
+    }
+  }
+
   static async reorderChannel(channelId, insertAfterId) {
+
     try {
       const response = await request(
         `${host}/api/channels/channels/${channelId}/reorder/`,
@@ -3568,6 +3621,89 @@ export default class API {
     }
   }
 
+  static async bulkRenameChannelGroups(data) {
+    try {
+      return await request(`${host}/api/channels/groups/bulk-rename/`, {
+        method: 'POST',
+        body: data,
+      });
+    } catch (e) {
+      errorNotification('Failed to bulk rename channel groups', e);
+      throw e;
+    }
+  }
+
+  static async bulkMoveChannelGroups(data) {
+    try {
+      return await request(`${host}/api/channels/groups/bulk-move/`, {
+        method: 'POST',
+        body: data,
+      });
+    } catch (e) {
+      errorNotification('Failed to bulk move channels', e);
+      throw e;
+    }
+  }
+
+  static async bulkCopyChannelGroups(data) {
+    try {
+      return await request(`${host}/api/channels/groups/bulk-copy/`, {
+        method: 'POST',
+        body: data,
+      });
+    } catch (e) {
+      errorNotification('Failed to bulk copy channels', e);
+      throw e;
+    }
+  }
+
+  static async bulkRenameVODCategories(data) {
+    try {
+      return await request(`${host}/api/vod/categories/bulk-rename/`, {
+        method: 'POST',
+        body: data,
+      });
+    } catch (e) {
+      errorNotification('Failed to bulk rename categories', e);
+      throw e;
+    }
+  }
+
+  static async bulkMoveVODCategories(data) {
+    try {
+      return await request(`${host}/api/vod/categories/bulk-move/`, {
+        method: 'POST',
+        body: data,
+      });
+    } catch (e) {
+      errorNotification('Failed to bulk move VOD items', e);
+      throw e;
+    }
+  }
+
+  static async updateVODCategory(id, name) {
+    try {
+      return await request(`${host}/api/vod/categories/${id}/`, {
+        method: 'PATCH',
+        body: { name },
+      });
+    } catch (e) {
+      errorNotification('Failed to update VOD category', e);
+      throw e;
+    }
+  }
+
+  static async deleteVODCategory(id) {
+    try {
+      return await request(`${host}/api/vod/categories/${id}/`, {
+        method: 'DELETE',
+      });
+    } catch (e) {
+      errorNotification('Failed to delete VOD category', e);
+      throw e;
+    }
+  }
+
   static async getSeriesInfo(seriesId) {
     try {
       // Call the provider-info endpoint that includes episodes
@@ -3857,6 +3993,75 @@ export default class API {
       });
     } catch (e) {
       errorNotification('Failed to delete custom playlist', e);
+      throw e;
+    }
+  }
+
+  static async bulkRegexRenameMovies(data) {
+    try {
+      return await request(`${host}/api/vod/movies/bulk-regex-rename/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch (e) {
+      errorNotification('Failed to apply bulk regex rename to movies', e);
+      throw e;
+    }
+  }
+
+  static async bulkRegexRenameSeries(data) {
+    try {
+      return await request(`${host}/api/vod/series/bulk-regex-rename/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch (e) {
+      errorNotification('Failed to apply bulk regex rename to series', e);
+      throw e;
+    }
+  }
+
+  static async getChannelsPage(params = new URLSearchParams()) {
+    try {
+      return await request(`${host}/api/channels/channels/?${params.toString()}`);
+    } catch (e) {
+      errorNotification('Failed to retrieve channels page', e);
+      throw e;
+    }
+  }
+
+  static async bulkCopyChannels(data) {
+    try {
+      return await request(`${host}/api/channels/channels/bulk-copy/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch (e) {
+      errorNotification('Failed to bulk copy channels', e);
+      throw e;
+    }
+  }
+
+  static async bulkMoveMovies(data) {
+    try {
+      return await request(`${host}/api/vod/movies/bulk-move/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch (e) {
+      errorNotification('Failed to bulk move movies', e);
+      throw e;
+    }
+  }
+
+  static async bulkMoveSeries(data) {
+    try {
+      return await request(`${host}/api/vod/series/bulk-move/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch (e) {
+      errorNotification('Failed to bulk move series', e);
       throw e;
     }
   }

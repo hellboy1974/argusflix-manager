@@ -444,7 +444,15 @@ const ChannelForm = ({ channel: channelProp = null, isOpen, onClose }) => {
 
     if (channel?.epg_data_id) {
       const epgSource = epgs[tvgsById[channel.epg_data_id]?.epg_source];
-      setSelectedEPG(epgSource ? `${epgSource.id}` : '');
+      if (epgSource) {
+        if (epgSource.group_name && epgSource.group_name.trim() !== '') {
+          setSelectedEPG(`group:${epgSource.group_name.trim()}`);
+        } else {
+          setSelectedEPG(`${epgSource.id}`);
+        }
+      } else {
+        setSelectedEPG('');
+      }
     } else {
       setSelectedEPG('');
     }
@@ -454,6 +462,32 @@ const ChannelForm = ({ channel: channelProp = null, isOpen, onClose }) => {
       setLogoFilter('');
     }
   }, [defaultValues, channel, reset, epgs, tvgsById]);
+
+  // Memoize grouped and ungrouped active EPG source options
+  const sourceOptions = useMemo(() => {
+    const optionsMap = new Map();
+    Object.values(epgs)
+      .filter((epg) => epg.is_active)
+      .forEach((epg) => {
+        if (epg.group_name && epg.group_name.trim() !== '') {
+          const grpKey = `group:${epg.group_name.trim()}`;
+          if (!optionsMap.has(grpKey)) {
+            optionsMap.set(grpKey, {
+              value: grpKey,
+              label: epg.group_name.trim(),
+            });
+          }
+        } else {
+          optionsMap.set(String(epg.id), {
+            value: String(epg.id),
+            label: epg.name,
+          });
+        }
+      });
+    return Array.from(optionsMap.values()).sort((a, b) =>
+      a.label.localeCompare(b.label)
+    );
+  }, [epgs]);
 
   // Memoize logo options to prevent infinite re-renders during background loading
   const logoOptions = useMemo(() => {
@@ -479,7 +513,14 @@ const ChannelForm = ({ channel: channelProp = null, isOpen, onClose }) => {
   }
 
   const filteredTvgs = tvgs
-    .filter((tvg) => tvg.epg_source == selectedEPG)
+    .filter((tvg) => {
+      if (selectedEPG && selectedEPG.startsWith('group:')) {
+        const grpName = selectedEPG.substring(6);
+        const epgSource = epgs[tvg.epg_source];
+        return epgSource && epgSource.group_name === grpName;
+      }
+      return tvg.epg_source == selectedEPG;
+    })
     .filter(
       (tvg) =>
         tvg.name.toLowerCase().includes(tvgFilter.toLowerCase()) ||
@@ -1115,7 +1156,10 @@ const ChannelForm = ({ channel: channelProp = null, isOpen, onClose }) => {
                       const epgSource = tvg && epgs[tvg.epg_source];
                       const tvgLabel = tvg ? tvg.name || tvg.id : '';
                       if (epgSource && tvgLabel) {
-                        return `${epgSource.name} - ${tvgLabel}`;
+                        const sourceName = epgSource.group_name && epgSource.group_name.trim() !== ''
+                          ? `${epgSource.group_name.trim()} (${epgSource.name})`
+                          : epgSource.name;
+                        return `${sourceName} - ${tvgLabel}`;
                       } else if (tvgLabel) {
                         return tvgLabel;
                       } else {
@@ -1150,13 +1194,7 @@ const ChannelForm = ({ channel: channelProp = null, isOpen, onClose }) => {
                       label="Source"
                       value={selectedEPG}
                       onChange={setSelectedEPG}
-                      data={Object.values(epgs)
-                        .filter((epg) => epg.is_active)
-                        .sort((a, b) => a.name.localeCompare(b.name))
-                        .map((epg) => ({
-                          value: `${epg.id}`,
-                          label: epg.name,
-                        }))}
+                      data={sourceOptions}
                       size="xs"
                       mb="xs"
                     />
@@ -1196,11 +1234,14 @@ const ChannelForm = ({ channel: channelProp = null, isOpen, onClose }) => {
                                 setValue('epg_data_id', null);
                               } else {
                                 setValue('epg_data_id', filteredTvgs[index].id);
-                                // Also update selectedEPG to match the EPG source of the selected tvg
+                                // Also update selectedEPG to match the EPG source of the selected tvg (group or individual)
                                 if (filteredTvgs[index].epg_source) {
-                                  setSelectedEPG(
-                                    `${filteredTvgs[index].epg_source}`
-                                  );
+                                  const epgSource = epgs[filteredTvgs[index].epg_source];
+                                  if (epgSource && epgSource.group_name && epgSource.group_name.trim() !== '') {
+                                    setSelectedEPG(`group:${epgSource.group_name.trim()}`);
+                                  } else {
+                                    setSelectedEPG(`${filteredTvgs[index].epg_source}`);
+                                  }
                                 }
                               }
                               setEpgPopoverOpened(false);

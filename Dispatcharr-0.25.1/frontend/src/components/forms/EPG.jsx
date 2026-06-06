@@ -26,6 +26,7 @@ const EPG = ({ epg = null, isOpen, onClose }) => {
     mode: 'uncontrolled',
     initialValues: {
       name: '',
+      group_name: '',
       source_type: 'xmltv',
       url: '',
       api_key: '',
@@ -79,6 +80,7 @@ const EPG = ({ epg = null, isOpen, onClose }) => {
     if (epg) {
       const values = {
         name: epg.name,
+        group_name: epg.group_name || '',
         source_type: epg.source_type,
         url: epg.url,
         api_key: epg.api_key,
@@ -127,6 +129,15 @@ const EPG = ({ epg = null, isOpen, onClose }) => {
                 description="Unique identifier for this EPG source"
                 {...form.getInputProps('name')}
                 key={form.key('name')}
+              />
+
+              <TextInput
+                id="group_name"
+                name="group_name"
+                label="Group Name (e.g. Country)"
+                description="Group multiple EPG sources together in channel mappings"
+                {...form.getInputProps('group_name')}
+                key={form.key('group_name')}
               />
 
               <NativeSelect

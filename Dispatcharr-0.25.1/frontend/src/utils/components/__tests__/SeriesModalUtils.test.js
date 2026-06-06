@@ -351,9 +351,15 @@ describe('SeriesModalUtils', () => {
 
   describe('getEpisodeAirdate', () => {
     it('should format valid air date', () => {
-      const episode = { air_date: '2024-01-15' };
-      const formatted = getEpisodeAirdate(episode);
-      expect(formatted).toMatch(/1\/1[4|5]\/2024/);
+      const originalToLocaleDateString = Date.prototype.toLocaleDateString;
+      Date.prototype.toLocaleDateString = vi.fn().mockReturnValue('1/15/2024');
+      try {
+        const episode = { air_date: '2024-01-15' };
+        const formatted = getEpisodeAirdate(episode);
+        expect(formatted).toBe('1/15/2024');
+      } finally {
+        Date.prototype.toLocaleDateString = originalToLocaleDateString;
+      }
     });
 
     it('should return N/A for missing air date', () => {
