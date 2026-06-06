@@ -300,6 +300,67 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
             "moved_count": updated_count,
         })
 
+    @action(detail=False, methods=['post'], url_path='metadata-match', permission_classes=[IsAdmin])
+    def metadata_match(self, request):
+        """Matches movies against external metadata providers (TMDB, OMDb, etc.)"""
+        from .metadata_tasks import smart_match_movies
+        
+        movie_ids = request.data.get('movie_ids', [])
+        if not movie_ids:
+            return Response({"error": "movie_ids list is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            matched_count = smart_match_movies(movie_ids)
+            return Response({
+                "success": True,
+                "message": f"Successfully matched {matched_count} movies.",
+                "matched_count": matched_count
+            })
+        except Exception as e:
+            logger.error(f"Error matching metadata for movies: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], url_path='metadata-search', permission_classes=[IsAdmin])
+    def metadata_search(self, request):
+        """Manually search for metadata for a movie"""
+        from core.metadata.manager import MetadataManager
+        
+        tmdb_id = request.data.get('tmdb_id')
+        title = request.data.get('title')
+        year = request.data.get('year')
+        
+        manager = MetadataManager()
+        
+        try:
+            if tmdb_id:
+                result = manager.get_movie_by_id(tmdb_id, provider_name='tmdb')
+                return Response({"results": [result] if result else []})
+            elif title:
+                results = manager.search_movies(title, year)
+                return Response({"results": results})
+            else:
+                return Response({"error": "Either tmdb_id or title is required"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error searching metadata: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'], url_path='apply-metadata', permission_classes=[IsAdmin])
+    def apply_metadata(self, request, pk=None):
+        """Apply a specific metadata payload to a movie"""
+        from .metadata_tasks import update_movie_with_metadata
+        movie = self.get_object()
+        metadata = request.data.get('metadata')
+        
+        if not metadata:
+            return Response({"error": "metadata payload is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            changed = update_movie_with_metadata(movie, metadata, force_override=True)
+            return Response({"success": True, "changed": changed})
+        except Exception as e:
+            logger.error(f"Error applying metadata to movie {movie.id}: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 class EpisodeFilter(django_filters.FilterSet):
@@ -681,6 +742,67 @@ class SeriesViewSet(viewsets.ReadOnlyModelViewSet):
             "success": True,
             "moved_count": updated_count,
         })
+
+    @action(detail=False, methods=['post'], url_path='metadata-match', permission_classes=[IsAdmin])
+    def metadata_match(self, request):
+        """Matches series against external metadata providers (TMDB, OMDb, etc.)"""
+        from .metadata_tasks import smart_match_series
+        
+        series_ids = request.data.get('series_ids', [])
+        if not series_ids:
+            return Response({"error": "series_ids list is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            matched_count = smart_match_series(series_ids)
+            return Response({
+                "success": True,
+                "message": f"Successfully matched {matched_count} series.",
+                "matched_count": matched_count
+            })
+        except Exception as e:
+            logger.error(f"Error matching metadata for series: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], url_path='metadata-search', permission_classes=[IsAdmin])
+    def metadata_search(self, request):
+        """Manually search for metadata for a series"""
+        from core.metadata.manager import MetadataManager
+        
+        tmdb_id = request.data.get('tmdb_id')
+        title = request.data.get('title')
+        year = request.data.get('year')
+        
+        manager = MetadataManager()
+        
+        try:
+            if tmdb_id:
+                result = manager.get_series_by_id(tmdb_id, provider_name='tmdb')
+                return Response({"results": [result] if result else []})
+            elif title:
+                results = manager.search_series_list(title, year)
+                return Response({"results": results})
+            else:
+                return Response({"error": "Either tmdb_id or title is required"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error searching metadata: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'], url_path='apply-metadata', permission_classes=[IsAdmin])
+    def apply_metadata(self, request, pk=None):
+        """Apply a specific metadata payload to a series"""
+        from .metadata_tasks import update_series_with_metadata
+        series = self.get_object()
+        metadata = request.data.get('metadata')
+        
+        if not metadata:
+            return Response({"error": "metadata payload is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            changed = update_series_with_metadata(series, metadata, force_override=True)
+            return Response({"success": True, "changed": changed})
+        except Exception as e:
+            logger.error(f"Error applying metadata to series {series.id}: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 

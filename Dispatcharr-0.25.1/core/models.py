@@ -195,6 +195,7 @@ NETWORK_ACCESS_KEY = "network_access"
 SYSTEM_SETTINGS_KEY = "system_settings"
 EPG_SETTINGS_KEY = "epg_settings"
 USER_LIMITS_SETTINGS_KEY = "user_limit_settings"
+METADATA_SETTINGS_KEY = "metadata_settings"
 
 
 class CoreSettings(models.Model):
@@ -434,6 +435,17 @@ class CoreSettings(models.Model):
             "prioritize_single_client_channels": True,
             "ignore_same_channel_connections": False,
             "terminate_oldest": True,
+        })
+
+    # Metadata Settings
+    @classmethod
+    def get_metadata_settings(cls):
+        """Get all metadata provider-related settings."""
+        return cls._get_group(METADATA_SETTINGS_KEY, {
+            "tmdb_api_key": "",
+            "omdb_api_key": "",
+            "language": "de-DE",
+            "provider_priority": ["tmdb", "omdb"]
         })
 
 

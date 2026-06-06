@@ -4102,4 +4102,100 @@ export default class API {
       throw e;
     }
   }
+
+  static async matchMoviesMetadata(movieIds) {
+    try {
+      const response = await request(
+        `${host}/api/vod/movies/metadata-match/`,
+        {
+          method: 'POST',
+          body: { movie_ids: movieIds },
+        }
+      );
+      return response;
+    } catch (e) {
+      errorNotification('Failed to match movie metadata', e);
+      throw e;
+    }
+  }
+
+  static async matchSeriesMetadata(seriesIds) {
+    try {
+      const response = await request(
+        `${host}/api/vod/series/metadata-match/`,
+        {
+          method: 'POST',
+          body: { series_ids: seriesIds },
+        }
+      );
+      return response;
+    } catch (e) {
+      errorNotification('Failed to match series metadata', e);
+      throw e;
+    }
+  }
+
+  static async searchMoviesMetadata(payload) {
+    try {
+      const response = await request(
+        `${host}/api/vod/movies/metadata-search/`,
+        {
+          method: 'POST',
+          body: payload,
+        }
+      );
+      return response;
+    } catch (e) {
+      errorNotification('Failed to search movie metadata', e);
+      throw e;
+    }
+  }
+
+  static async applyMovieMetadata(movieId, metadata) {
+    try {
+      const response = await request(
+        `${host}/api/vod/movies/${movieId}/apply-metadata/`,
+        {
+          method: 'POST',
+          body: { metadata },
+        }
+      );
+      return response;
+    } catch (e) {
+      errorNotification('Failed to apply movie metadata', e);
+      throw e;
+    }
+  }
+
+  static async searchSeriesMetadata(payload) {
+    try {
+      const response = await request(
+        `${host}/api/vod/series/metadata-search/`,
+        {
+          method: 'POST',
+          body: payload,
+        }
+      );
+      return response;
+    } catch (e) {
+      errorNotification('Failed to search series metadata', e);
+      throw e;
+    }
+  }
+
+  static async applySeriesMetadata(seriesId, metadata) {
+    try {
+      const response = await request(
+        `${host}/api/vod/series/${seriesId}/apply-metadata/`,
+        {
+          method: 'POST',
+          body: { metadata },
+        }
+      );
+      return response;
+    } catch (e) {
+      errorNotification('Failed to apply series metadata', e);
+      throw e;
+    }
+  }
 }

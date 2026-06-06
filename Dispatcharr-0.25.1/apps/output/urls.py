@@ -4,6 +4,7 @@ from .views import (
     custom_m3u_endpoint, custom_epg_endpoint, custom_xc_player_api,
     custom_stream_xc, custom_stream_xc_movie, custom_stream_xc_episode
 )
+from apps.proxy.vod_proxy.views import stream_xc_timeshift
 from core.views import stream_view
 
 app_name = "output"
@@ -27,4 +28,8 @@ urlpatterns = [
     path("custom/<str:token>/live/<str:username>/<str:password>/<str:channel_id>", custom_stream_xc, name="custom_stream_xc"),
     path("custom/<str:token>/movie/<str:username>/<str:password>/<str:stream_id>.<str:extension>", custom_stream_xc_movie, name="custom_stream_xc_movie"),
     path("custom/<str:token>/series/<str:username>/<str:password>/<str:stream_id>.<str:extension>", custom_stream_xc_episode, name="custom_stream_xc_episode"),
+    
+    # Timeshift Custom Endpoints
+    path("custom/<str:token>/timeshift/<str:username>/<str:password>/<str:duration>/<str:start_time>/<str:stream_id>.<str:extension>", stream_xc_timeshift, name="custom_timeshift_stream"),
+    path("custom/<str:token>/timeshift/<str:username>/<str:password>/<str:duration>/<str:start_time>/<str:stream_id>", stream_xc_timeshift, name="custom_timeshift_stream_noext"),
 ]

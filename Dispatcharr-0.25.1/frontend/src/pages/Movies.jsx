@@ -35,6 +35,7 @@ import CategorySidebar from '../components/CategorySidebar';
 import useLocalStorage from '../hooks/useLocalStorage';
 import API from '../api';
 import VODRegexRenameModal from '../components/modals/VODRegexRenameModal.jsx';
+import ManualMetadataMatchModal from '../components/modals/ManualMetadataMatchModal.jsx';
 
 import {
   formatDuration,
@@ -438,6 +439,8 @@ const MoviesPage = () => {
   const [selectedMovieIds, setSelectedMovieIds] = useState([]);
   const [regexRenameModalOpen, setRegexRenameModalOpen] = useState(false);
   const [regexLoading, setRegexLoading] = useState(false);
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [manualMatchModalOpen, setManualMatchModalOpen] = useState(false);
 
   const fetchPlaylists = async () => {
     try {
@@ -528,13 +531,48 @@ const MoviesPage = () => {
                     style={{ flex: 1 }}
                   />
                   {selectedMovieIds.length > 0 && (
-                    <Button
-                      size="xs"
-                      color="cyan"
-                      onClick={() => setRegexRenameModalOpen(true)}
-                    >
-                      Regex Rename ({selectedMovieIds.length})
-                    </Button>
+                    <Group spacing="xs">
+                      <Button
+                        size="xs"
+                        color="cyan"
+                        onClick={() => setRegexRenameModalOpen(true)}
+                      >
+                        Regex Rename ({selectedMovieIds.length})
+                      </Button>
+                      {selectedMovieIds.length === 1 && (
+                        <Button
+                          size="xs"
+                          color="teal"
+                          onClick={() => setManualMatchModalOpen(true)}
+                        >
+                          Manual Match
+                        </Button>
+                      )}
+                      <Button
+                        size="xs"
+                        color="indigo"
+                        loading={matchLoading}
+                        onClick={async () => {
+                          setMatchLoading(true);
+                          try {
+                            const result = await API.matchMoviesMetadata(selectedMovieIds);
+                            notifications.show({
+                              title: 'Success',
+                              message: result.message || 'Successfully matched metadata',
+                              color: 'green',
+                            });
+                            setSelectedMovieIds([]);
+                            fetchContent();
+                          } catch (e) {
+                            console.error(e);
+                          } finally {
+                            setMatchLoading(false);
+                          }
+                        }}
+                      >
+                        Match Metadata ({selectedMovieIds.length})
+                      </Button>
+                    </Group>
                   )}
                   <Select
                     value={String(pageSize)}
@@ -709,6 +747,16 @@ const MoviesPage = () => {
         }}
         title="Regex Movies Rename"
       />
+      
+      {selectedMovieIds.length === 1 && (
+        <ManualMetadataMatchModal
+          opened={manualMatchModalOpen}
+          onClose={() => setManualMatchModalOpen(false)}
+          item={currentPageContent.find(m => m.id === selectedMovieIds[0])}
+          type="movie"
+          onSuccess={() => fetchContent()}
+        />
+      )}
     </ErrorBoundary>
   );
 };

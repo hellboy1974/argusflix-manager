@@ -48,6 +48,9 @@ const SystemSettingsForm = React.lazy(
 const NavOrderForm = React.lazy(
   () => import('../components/forms/settings/NavOrderForm.jsx')
 );
+const MetadataSettingsForm = React.lazy(
+  () => import('../components/forms/settings/MetadataSettingsForm.jsx')
+);
 
 const SettingsPage = () => {
   const authUser = useAuthStore((s) => s.user);
@@ -129,6 +132,19 @@ const SettingsPage = () => {
                     <Suspense fallback={<Loader />}>
                       <SystemSettingsForm
                         active={accordianValue === 'system-settings'}
+                      />
+                    </Suspense>
+                  </ErrorBoundary>
+                </AccordionPanel>
+              </AccordionItem>
+
+              <AccordionItem value="metadata-settings">
+                <AccordionControl>Metadata Providers</AccordionControl>
+                <AccordionPanel>
+                  <ErrorBoundary>
+                    <Suspense fallback={<Loader />}>
+                      <MetadataSettingsForm
+                        active={accordianValue === 'metadata-settings'}
                       />
                     </Suspense>
                   </ErrorBoundary>

@@ -10,7 +10,7 @@ import os
 from .routing import websocket_urlpatterns
 from apps.output.views import xc_player_api, xc_panel_api, xc_get, xc_xmltv
 from apps.proxy.live_proxy.views import stream_xc
-from apps.proxy.vod_proxy.views import stream_xc_movie, stream_xc_episode
+from apps.proxy.vod_proxy.views import stream_xc_movie, stream_xc_episode, stream_xc_timeshift
 
 urlpatterns = [
     # API Routes
@@ -55,6 +55,17 @@ urlpatterns = [
         "series/<str:username>/<str:password>/<str:stream_id>.<str:extension>",
         stream_xc_episode,
         name="stream_xc_episode",
+    ),
+    # XC Timeshift endpoints
+    path(
+        "timeshift/<str:username>/<str:password>/<str:duration>/<str:start_time>/<str:stream_id>.<str:extension>",
+        stream_xc_timeshift,
+        name="stream_xc_timeshift",
+    ),
+    path(
+        "timeshift/<str:username>/<str:password>/<str:duration>/<str:start_time>/<str:stream_id>",
+        stream_xc_timeshift,
+        name="stream_xc_timeshift_noext",
     ),
     # Admin
     path("admin", RedirectView.as_view(url="/admin/", permanent=True)),

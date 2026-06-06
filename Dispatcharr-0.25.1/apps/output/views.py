@@ -307,9 +307,27 @@ def generate_m3u(request, profile_name=None, user=None, custom_playlist=None):
                 f'tvc-guide-stationid="{effective_tvc_guide}" '
             )
 
+        # Extract Catchup Info
+        tv_archive = 0
+        tv_archive_duration = 0
+        first_stream = active_streams.first()
+        if first_stream:
+            custom_props = first_stream.custom_properties or {}
+            tv_archive = int(custom_props.get('tv_archive', 0))
+            tv_archive_duration = int(custom_props.get('tv_archive_duration', 0))
+
+        catchup_str = ""
+        if tv_archive == 1 and tv_archive_duration > 0:
+            if custom_playlist is not None:
+                catchup_source = f"{base_url}/output/custom/{custom_playlist.token}/timeshift/any/any/{tv_archive_duration}/{{Y}}-{{m}}-{{d}}:{{H}}-{{M}}/{channel.id}.ts"
+                catchup_str = f'catchup="xc" catchup-days="{tv_archive_duration}" catchup-source="{catchup_source}" '
+            elif is_xc_request:
+                catchup_source = f"{base_url}/timeshift/{xc_username}/{xc_password}/{tv_archive_duration}/{{Y}}-{{m}}-{{d}}:{{H}}-{{M}}/{channel.id}.ts"
+                catchup_str = f'catchup="xc" catchup-days="{tv_archive_duration}" catchup-source="{catchup_source}" '
+
         extinf_line = (
             f'#EXTINF:-1 tvg-id="{tvg_id}" tvg-name="{tvg_name}" tvg-logo="{tvg_logo}" '
-            f'tvg-chno="{formatted_channel_number}" {tvc_guide_stationid}group-title="{group_title}",{effective_name}\n'
+            f'tvg-chno="{formatted_channel_number}" {tvc_guide_stationid}{catchup_str}group-title="{group_title}",{effective_name}\n'
         )
 
         # Determine the stream URL based on request type
@@ -2403,7 +2421,10 @@ def _xc_live_streams_setup(request, user, category_id, custom_playlist=None):
     ).filter(
         Q(m3u_account__isnull=True) | Q(channel_group__isnull=True) | Q(group_enabled=True)
     )
-    channels = channels.filter(Q(streams__isnull=True) | Exists(active_streams_sub)).distinct()
+    from django.db.models import Prefetch
+    channels = channels.filter(Q(streams__isnull=True) | Exists(active_streams_sub)).distinct().prefetch_related(
+        Prefetch('streams', queryset=Stream.objects.filter(is_active=True), to_attr='active_streams_prefetched')
+    )
 
     _default_group_id = None
 
@@ -2455,6 +2476,14 @@ def _xc_channel_entry(channel, channel_num_map, _get_default_group_id, _logo_url
     effective_logo = channel.effective_logo_obj
     effective_group = channel.effective_channel_group_obj
     group_id = effective_group.id if effective_group else _get_default_group_id()
+    tv_archive = 0
+    tv_archive_duration = 0
+    if hasattr(channel, 'active_streams_prefetched') and channel.active_streams_prefetched:
+        stream = channel.active_streams_prefetched[0]
+        custom_props = stream.custom_properties or {}
+        tv_archive = int(custom_props.get('tv_archive', 0))
+        tv_archive_duration = int(custom_props.get('tv_archive_duration', 0))
+
     return {
         "num": channel_num_int,
         "name": channel.effective_name,
@@ -2470,9 +2499,9 @@ def _xc_channel_entry(channel, channel_num_map, _get_default_group_id, _logo_url
         "category_id": str(group_id),
         "category_ids": [group_id],
         "custom_sid": None,
-        "tv_archive": 0,
+        "tv_archive": tv_archive,
         "direct_source": "",
-        "tv_archive_duration": 0,
+        "tv_archive_duration": tv_archive_duration,
     }
 
 

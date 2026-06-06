@@ -1114,3 +1114,110 @@ def stream_xc_episode(request, username, password, stream_id, extension):
         return JsonResponse({"error": "Episode not found"}, status=404)
 
     return stream_vod(request._request, 'episode', episode_relation.episode.uuid, session_id, profile_id, user)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def stream_xc_timeshift(request, username, password, duration, start_time, stream_id, extension='ts'):
+    """
+    Proxy timeshift (catch-up) streams for Xtream Codes API.
+    Timeshift streams are finite recordings of past broadcasts.
+    We proxy them directly using the VOD connection manager instead of the live proxy buffer.
+    """
+    if not network_access_allowed(request, "STREAMS"):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    from apps.channels.models import Channel
+    from core.xtream_codes import Client as XCClient
+    from .utils import get_client_info
+    from .multi_worker_connection_manager import MultiWorkerVODConnectionManager
+
+    # Extract session ID from GET params (timeshift streams don't follow the redirect flow perfectly)
+    session_id = request.GET.get('session_id')
+    if not session_id:
+        import time, random
+        session_id = f"timeshift_{int(time.time() * 1000)}_{random.randint(1000, 9999)}"
+
+    # Check if username is a custom playlist token
+    from apps.output.models import CustomPlaylist
+    playlist = CustomPlaylist.objects.filter(token=username, is_active=True).first()
+    
+    user = None
+    if not playlist:
+        user = get_object_or_404(User, username=username)
+        if not network_access_allowed(request, 'STREAMS', user):
+            return JsonResponse({"error": "Forbidden"}, status=403)
+        custom_properties = user.custom_properties or {}
+        if custom_properties.get("xc_password") != password:
+            return JsonResponse({"error": "Invalid credentials"}, status=401)
+            
+        if not check_user_stream_limits(user, session_id, media_id=stream_id):
+            return JsonResponse(
+                {"error": f"Stream limit exceeded ({user.stream_limit} concurrent streams allowed)"},
+                status=429
+            )
+
+    client_ip, client_user_agent = get_client_info(request)
+
+    # Lookup Channel and its active stream
+    try:
+        channel = get_object_or_404(Channel, id=stream_id)
+        stream = channel.streams.filter(is_active=True).first()
+        if not stream:
+            return HttpResponse("No active stream available", status=404)
+        
+        m3u_account = stream.m3u_account
+        if not m3u_account or not m3u_account.is_active:
+            return HttpResponse("Provider account not active", status=404)
+            
+    except Exception as e:
+        logger.error(f"Error looking up timeshift channel: {e}")
+        return HttpResponse("Channel not found", status=404)
+
+    # Check if the stream actually supports archive
+    if stream.custom_properties.get("tv_archive") != 1:
+        logger.warning(f"Timeshift requested for channel {channel.name} without archive support")
+
+    # Fetch stream URL from the provider
+    try:
+        client = XCClient(
+            server_url=m3u_account.url,
+            username=m3u_account.username,
+            password=m3u_account.password,
+            user_agent=m3u_account.get_user_agent(),
+        )
+        target_url = client.get_timeshift_url(
+            stream_id=stream.stream_id,
+            duration=duration,
+            start_time=start_time,
+            extension=extension
+        )
+    except Exception as e:
+        logger.error(f"Error generating timeshift URL: {e}")
+        return HttpResponse("Failed to construct provider URL", status=500)
+
+    # Get M3U profile for connection slot management
+    profile_result = _get_m3u_profile(m3u_account, None, session_id)
+    if not profile_result or not profile_result[0]:
+        logger.error(f"[TIMESHIFT] No suitable M3U profile found for channel {channel.name}")
+        return HttpResponse("No available stream slots", status=503)
+
+    m3u_profile, current_connections = profile_result
+
+    # Stream the content with VOD connection manager
+    try:
+        connection_manager = MultiWorkerVODConnectionManager.get_instance()
+        response = connection_manager.stream_content_with_session(
+            session_id=session_id,
+            content_obj=channel,  # Pass Channel object; connection manager expects an object with .uuid and .name
+            stream_url=target_url,
+            m3u_profile=m3u_profile,
+            client_ip=client_ip,
+            client_user_agent=client_user_agent,
+            request=request,
+            user=user,
+        )
+        return response
+    except Exception as e:
+        logger.error(f"[TIMESHIFT] Error streaming timeshift {stream_id}: {e}", exc_info=True)
+        return HttpResponse(f"Streaming error: {str(e)}", status=500)

@@ -283,6 +283,10 @@ class Client:
         """Get the playback URL for an episode stream"""
         return f"{self.server_url}/series/{self.username}/{self.password}/{stream_id}.{container_extension}"
 
+    def get_timeshift_url(self, stream_id, duration, start_time, extension='ts'):
+        """Get the playback URL for a catch-up / timeshift stream"""
+        return f"{self.server_url}/timeshift/{self.username}/{self.password}/{duration}/{start_time}/{stream_id}.{extension}"
+
     def get_vod_stream_url(self, stream_id, container_extension='mp4'):
         """Get the playback URL for a VOD stream"""
         return f"{self.server_url}/movie/{self.username}/{self.password}/{stream_id}.{container_extension}"

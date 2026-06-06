@@ -41,6 +41,7 @@ import CategorySidebar from '../components/CategorySidebar';
 import useLocalStorage from '../hooks/useLocalStorage';
 import API from '../api';
 import VODRegexRenameModal from '../components/modals/VODRegexRenameModal.jsx';
+import ManualMetadataMatchModal from '../components/modals/ManualMetadataMatchModal.jsx';
 
 import {
   formatDuration,
@@ -625,6 +626,8 @@ const SeriesPage = () => {
   const [selectedSeriesIds, setSelectedSeriesIds] = useState([]);
   const [regexRenameModalOpen, setRegexRenameModalOpen] = useState(false);
   const [regexLoading, setRegexLoading] = useState(false);
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [manualMatchModalOpen, setManualMatchModalOpen] = useState(false);
 
   const fetchPlaylists = async () => {
     try {
@@ -714,13 +717,48 @@ const SeriesPage = () => {
                     style={{ flex: 1 }}
                   />
                   {selectedSeriesIds.length > 0 && (
-                    <Button
-                      size="xs"
-                      color="cyan"
-                      onClick={() => setRegexRenameModalOpen(true)}
-                    >
-                      Regex Rename ({selectedSeriesIds.length})
-                    </Button>
+                    <Group spacing="xs">
+                      <Button
+                        size="xs"
+                        color="cyan"
+                        onClick={() => setRegexRenameModalOpen(true)}
+                      >
+                        Regex Rename ({selectedSeriesIds.length})
+                      </Button>
+                      {selectedSeriesIds.length === 1 && (
+                        <Button
+                          size="xs"
+                          color="teal"
+                          onClick={() => setManualMatchModalOpen(true)}
+                        >
+                          Manual Match
+                        </Button>
+                      )}
+                      <Button
+                        size="xs"
+                        color="indigo"
+                        loading={matchLoading}
+                        onClick={async () => {
+                          setMatchLoading(true);
+                          try {
+                            const result = await API.matchSeriesMetadata(selectedSeriesIds);
+                            notifications.show({
+                              title: 'Success',
+                              message: result.message || 'Successfully matched metadata',
+                              color: 'green',
+                            });
+                            setSelectedSeriesIds([]);
+                            fetchContent();
+                          } catch (e) {
+                            console.error(e);
+                          } finally {
+                            setMatchLoading(false);
+                          }
+                        }}
+                      >
+                        Match Metadata ({selectedSeriesIds.length})
+                      </Button>
+                    </Group>
                   )}
                   <Select
                     value={String(pageSize)}
@@ -895,6 +933,16 @@ const SeriesPage = () => {
         }}
         title="Regex Series Rename"
       />
+      
+      {selectedSeriesIds.length === 1 && (
+        <ManualMetadataMatchModal
+          opened={manualMatchModalOpen}
+          onClose={() => setManualMatchModalOpen(false)}
+          item={currentPageContent.find(s => s.id === selectedSeriesIds[0])}
+          type="series"
+          onSuccess={() => fetchContent()}
+        />
+      )}
     </ErrorBoundary>
   );
 };
