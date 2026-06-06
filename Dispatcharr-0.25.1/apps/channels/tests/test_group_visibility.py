@@ -116,10 +116,11 @@ class ChannelGroupVisibilityTests(TestCase):
 
     def test_playlist_output_visibility(self):
         """generate_m3u should respect channel group visibility and skip channels with no active streams."""
+        from django.http import QueryDict
         # Create a mock request object
         class DummyRequest:
             method = "GET"
-            GET = {}
+            GET = QueryDict('')
             META = {}
 
         request = DummyRequest()

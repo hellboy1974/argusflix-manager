@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "All-in-One Stalker (Ministra) portal utility. Encompasses dynamic stream redirection proxying, portal testing, port scanning, subdomain checks, custom MAC generation, and high-speed range scanning.",
   "author": "Antigravity",
+  "has_ui": true,
+  "icon": "Terminal",
   "fields": [
     {
       "id": "sec_core",

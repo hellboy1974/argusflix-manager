@@ -14,7 +14,6 @@ import Stats from './pages/Stats';
 import DVR from './pages/DVR';
 import Settings from './pages/Settings';
 import PluginsPage from './pages/Plugins';
-import StalkerToolbox from './pages/StalkerToolbox';
 import PluginBrowsePage from './pages/PluginBrowse';
 import ConnectPage from './pages/Connect';
 import ConnectLogsPage from './pages/ConnectLogs';
@@ -164,7 +163,6 @@ const App = () => {
                           element={<PluginBrowsePage />}
                         />
                         <Route path="/plugins" element={<PluginsPage />} />
-                        <Route path="/stalker-toolbox" element={<StalkerToolbox />} />
                         <Route path="/connect" element={<ConnectPage />} />
                         <Route
                           path="/connect/logs"

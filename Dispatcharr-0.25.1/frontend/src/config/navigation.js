@@ -71,13 +71,6 @@ export const NAV_ITEMS = {
       { label: 'Find Plugins', icon: Download, path: '/plugins/browse' },
     ],
   },
-  stalker: {
-    id: 'stalker',
-    label: 'Stalker Toolbox',
-    icon: Terminal,
-    path: '/stalker-toolbox',
-    adminOnly: true,
-  },
   integrations: {
     id: 'integrations',
     label: 'Integrations',
@@ -117,7 +110,6 @@ export const DEFAULT_ADMIN_ORDER = [
   'dvr',
   'stats',
   'plugins',
-  'stalker',
   'integrations',
   'system',
 ];

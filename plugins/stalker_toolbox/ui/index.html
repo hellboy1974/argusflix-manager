@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stalker Portal Toolbox</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0c0a0f;
+            --card-bg: #13111a;
+            --border-color: #24212e;
+            --text-primary: #f4f4f7;
+            --text-secondary: #9f9bad;
+            --accent-color: #8b5cf6;
+            --accent-hover: #7c3aed;
+            --accent-glow: rgba(139, 92, 246, 0.25);
+            --accent-orange: #f97316;
+            --accent-orange-hover: #ea580c;
+            --accent-orange-glow: rgba(249, 115, 22, 0.25);
+            --danger-color: #ef4444;
+            --danger-hover: #dc2626;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-family-title: 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 16px;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 80% 10%, rgba(139, 92, 246, 0.05) 0%, transparent 40%),
+                              radial-gradient(circle at 10% 80%, rgba(249, 115, 22, 0.03) 0%, transparent 30%);
+            background-attachment: fixed;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            background: rgba(19, 17, 26, 0.7);
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+        }
+
+        .header-title-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title-container svg {
+            color: var(--accent-orange);
+            filter: drop-shadow(0 0 8px var(--accent-orange-glow));
+        }
+
+        .header-title {
+            margin: 0;
+            font-family: var(--font-family-title);
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .header-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(249, 115, 22, 0.2));
+            color: #d8b4fe;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            letter-spacing: 0.05em;
+        }
+
+        .badge-status {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Layout Grid */
+        .layout-grid {
+            display: grid;
+            grid-template-cols: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 1200px) {
+            .layout-grid {
+                grid-template-cols: 3fr 1fr;
+            }
+        }
+
+        /* Tabs Container */
+        .tabs-container {
+            display: flex;
+            gap: 6px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            padding-bottom: 1px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 12px 18px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background-color: rgba(255, 255, 255, 0.02);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab-btn.active {
+            color: #c084fc;
+            border-bottom: 2px solid var(--accent-color);
+            background-color: rgba(139, 92, 246, 0.03);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Card styles */
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            padding-bottom: 12px;
+        }
+
+        .card-title {
+            margin: 0;
+            font-family: var(--font-family-title);
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-desc {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin: -14px 0 20px 0;
+            line-height: 1.4;
+        }
+
+        /* Form Grid */
+        .form-grid {
+            display: grid;
+            grid-template-cols: 1fr;
+            gap: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .form-grid-2 { grid-template-columns: repeat(2, 1fr); }
+            .form-grid-3 { grid-template-columns: repeat(3, 1fr); }
+            .form-grid-4 { grid-template-columns: repeat(4, 1fr); }
+            .span-2 { grid-column: span 2; }
+            .span-3 { grid-column: span 3; }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
+        }
+
+        .form-group .description {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            opacity: 0.7;
+            margin-top: -2px;
+        }
+
+        .form-control {
+            background-color: rgba(12, 10, 15, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+            background-color: rgba(12, 10, 15, 0.9);
+        }
+
+        .form-control:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Switch */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .switch-input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+
+        .switch-slider {
+            width: 36px;
+            height: 20px;
+            background-color: var(--border-color);
+            border-radius: 20px;
+            position: relative;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .switch-slider::before {
+            content: "";
+            position: absolute;
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+
+        .switch-input:checked + .switch-slider {
+            background-color: var(--accent-color);
+        }
+
+        .switch-input:checked + .switch-slider::before {
+            transform: translateX(16px);
+        }
+
+        .switch-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: none;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+            box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-orange {
+            background-color: var(--accent-orange);
+            color: white;
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.2);
+        }
+
+        .btn-orange:hover:not(:disabled) {
+            background-color: var(--accent-orange-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: #3b374d;
+        }
+
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: var(--danger-color);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-color: var(--danger-color);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Checkbox Grid */
+        .checkbox-card {
+            background-color: rgba(12, 10, 15, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-cols: 1fr;
+            gap: 12px;
+        }
+
+        @media (min-width: 576px) {
+            .checkbox-grid { grid-template-cols: repeat(2, 1fr); }
+        }
+        @media (min-width: 768px) {
+            .checkbox-grid { grid-template-cols: repeat(3, 1fr); }
+        }
+        @media (min-width: 992px) {
+            .checkbox-grid { grid-template-cols: repeat(4, 1fr); }
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            user-select: none;
+        }
+
+        .checkbox-item input {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-color);
+        }
+
+        /* Logs console */
+        .console-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 240px;
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .console-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .console-clear-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .console-clear-btn:hover {
+            color: var(--danger-color);
+            background-color: rgba(239, 68, 68, 0.05);
+        }
+
+        .console-body {
+            flex-grow: 1;
+            background-color: #0c0a0f;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.72rem;
+            color: #10b981;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.4;
+            max-height: 250px;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Accordion / Details */
+        .accordion-item {
+            background-color: rgba(12, 10, 15, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .accordion-summary {
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: background-color 0.2s;
+        }
+
+        .accordion-summary:hover {
+            background-color: rgba(255, 255, 255, 0.01);
+        }
+
+        .accordion-content {
+            display: none;
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+            background-color: rgba(19, 17, 26, 0.4);
+        }
+
+        .accordion-item.active .accordion-content {
+            display: block;
+        }
+
+        .accordion-arrow {
+            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .accordion-item.active .accordion-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            height: 10px;
+            background-color: rgba(12, 10, 15, 0.8);
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            margin: 8px 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-orange), #f97316);
+            border-radius: 5px;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
+        }
+
+        /* Alert Banner */
+        .alert-banner {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid transparent;
+            animation: slideIn 0.3s ease;
+        }
+
+        .alert-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .alert-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .alert-info {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Spinner */
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border-left-color: currentColor;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background-color: var(--border-color);
+            margin: 16px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .divider-label {
+            background-color: var(--card-bg);
+            padding: 0 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* Scrollbar custom */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(12, 10, 15, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d2a3d;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3c3854;
+        }
+
+        /* Compact info lists */
+        .info-grid-compact {
+            display: grid;
+            grid-template-cols: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        .info-card-compact {
+            background-color: rgba(12, 10, 15, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .info-card-compact.success {
+            background-color: rgba(16, 185, 129, 0.08);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .info-card-compact-title {
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .info-card-compact-value {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .info-card-compact-desc {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            opacity: 0.8;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pill-green { background-color: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .status-pill-orange { background-color: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .status-pill-red { background-color: rgba(239, 68, 68, 0.15); color: #f87171; }
+    </style>
+</head>
+<body>
+
+    <div id="alert-banner" class="alert-banner"></div>
+
+    <div class="header">
+        <div class="header-title-container">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 20a2 2 0 0 0 .2-2.2L18 14H6L3.8 17.8A2 2 0 0 0 4 20h16Z"/>
+                <path d="M12 2v12"/>
+                <path d="m16 6-4-4-4 4"/>
+            </svg>
+            <div>
+                <h1 class="header-title">Stalker Portal Toolbox</h1>
+                <div class="header-subtitle">Erweitertes Diagnose- und MAC-Management für Stalker (Ministra) Portale</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <span class="badge">v1.0.0</span>
+            <span id="plugin-status-badge" class="badge-status">AKTIV</span>
+        </div>
+    </div>
+
+    <div class="layout-grid">
+        <!-- Main Column -->
+        <div>
+            <!-- Navigation Tabs -->
+            <div class="tabs-container">
+                <button class="tab-btn active" id="btn-detective" onclick="switchTab('detective')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    Portal Detective
+                </button>
+                <button class="tab-btn" id="btn-generator" onclick="switchTab('generator')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></svg>
+                    MAC Generator
+                </button>
+                <button class="tab-btn" id="btn-scanner" onclick="switchTab('scanner')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    MAC Range Scanner
+                </button>
+                <button class="tab-btn" id="btn-proxies" onclick="switchTab('proxies')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Proxy Pool
+                </button>
+            </div>
+
+            <!-- Tab 1: Portal Detective -->
+            <div id="panel-detective" class="tab-panel active">
+                <div class="card">
+                    <h2 class="card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        Forensischer Portal-Scan
+                    </h2>
+                    <div class="card-desc">Untersuche Stalker Server auf WAF, Portfreigaben, MAC-Bypass-Möglichkeiten und decke Admin-Panels auf.</div>
+
+                    <div class="form-grid form-grid-2">
+                        <div class="form-group span-2">
+                            <label for="detective-url">Target URL</label>
+                            <input type="text" id="detective-url" class="form-control" placeholder="http://domain.cc:8080">
+                        </div>
+                        <div class="form-group">
+                            <label for="detective-key">urlscan.io API Key (Optional)</label>
+                            <input type="text" id="detective-key" class="form-control" placeholder="Optionaler API-Key zur Abfrage co-hosted Panels">
+                        </div>
+                        <div class="form-group" style="display: flex; flex-direction: row; gap: 20px; align-items: flex-end; padding-bottom: 10px;">
+                            <label class="switch-container">
+                                <input type="checkbox" id="detective-subdomains" class="switch-input">
+                                <span class="switch-slider"></span>
+                                <span class="switch-label">Subdomains scannen</span>
+                            </label>
+                            <label class="switch-container">
+                                <input type="checkbox" id="detective-ports" class="switch-input">
+                                <span class="switch-slider"></span>
+                                <span class="switch-label">Ports scannen</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="btn-detective-run" onclick="runDetective()">
+                            Target analysieren
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Detective History -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+                        Verlauf der Untersuchungen
+                    </h2>
+                    <div id="detective-history-list" style="margin-top: 16px;">
+                        <div style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 20px;">
+                            Keine vergangenen Berichte gefunden. Starte einen Scan oben.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: MAC Generator -->
+            <div id="panel-generator" class="tab-panel">
+                <div class="card">
+                    <h2 class="card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></svg>
+                        MAC Adressen Generator
+                    </h2>
+                    <div class="card-desc">Erstelle eine Kombination aus MAC-Adressen basierend auf bekannten Hersteller-Präfixen für Stalker Panels.</div>
+
+                    <div style="margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Bekannte MAC-Präfixe wählen</label>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.7rem;" onclick="selectAllPrefixes(true)">Alle wählen</button>
+                                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.7rem; color: var(--danger-color);" onclick="selectAllPrefixes(false)">Zurücksetzen</button>
+                            </div>
+                        </div>
+                        <div class="checkbox-card">
+                            <div class="checkbox-grid" id="prefixes-grid">
+                                <!-- Predefined MACs loaded via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid form-grid-2">
+                        <div class="form-group">
+                            <label for="gen-custom-prefixes">Benutzerdefinierte MAC-Präfixe</label>
+                            <input type="text" id="gen-custom-prefixes" class="form-control" placeholder="z. B. 00:1A:7C:, 74:1A:78:">
+                            <span class="description">Mehrere Präfixe mit Komma trennen</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="gen-count">Gesamtanzahl zu generierender MACs</label>
+                            <input type="number" id="gen-count" class="form-control" value="1000" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="gen-mode">Generierungsmodus</label>
+                            <select id="gen-mode" class="form-control">
+                                <option value="random">Zufälliges Suffix (Random)</option>
+                                <option value="ascending">Sequentiell aufsteigend</option>
+                                <option value="descending">Sequentiell absteigend</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="gen-suffix-start">Suffix Start (Optional)</label>
+                            <input type="text" id="gen-suffix-start" class="form-control" placeholder="z. B. 00:00:00">
+                        </div>
+                        <div class="form-group">
+                            <label for="gen-suffix-end">Suffix Ende (Optional)</label>
+                            <input type="text" id="gen-suffix-end" class="form-control" placeholder="z. B. FF:FF:FF">
+                        </div>
+                        <div class="form-group">
+                            <label for="gen-filename">Name der Ausgabedatei</label>
+                            <input type="text" id="gen-filename" class="form-control" value="combo.txt">
+                            <span class="description">Die Datei wird im Data-Ordner von Dispatcharr gespeichert</span>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="btn-gen-run" onclick="runGenerator()">
+                            MAC-Liste erstellen
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: MAC Range Scanner -->
+            <div id="panel-scanner" class="tab-panel">
+                <div class="card">
+                    <h2 class="card-title" style="color: var(--accent-orange);">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                        MAC Range Scanner
+                    </h2>
+                    <div class="card-desc">Scannt einen bestimmten Bereich von MAC-Adressen auf dem ausgewählten Stalker Portal im Hintergrund.</div>
+
+                    <div class="form-grid form-grid-2" style="margin-bottom: 20px;">
+                        <div class="form-group">
+                            <label for="scan-portal">Ziel-Portal auswählen</label>
+                            <select id="scan-portal" class="form-control">
+                                <option value="">-- Kein Portal geladen --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="scan-mac-start">MAC Startbereich</label>
+                            <input type="text" id="scan-mac-start" class="form-control" placeholder="00:1A:79:00:00:00">
+                        </div>
+                        <div class="form-group">
+                            <label for="scan-mac-end">MAC Endbereich</label>
+                            <input type="text" id="scan-mac-end" class="form-control" placeholder="00:1A:79:00:00:FF">
+                        </div>
+                        <div class="form-group">
+                            <div style="display: grid; grid-template-cols: 1fr 1fr; gap: 10px;">
+                                <div class="form-group">
+                                    <label for="scan-threads">Threads (Parallelität)</label>
+                                    <input type="number" id="scan-threads" class="form-control" value="5" min="1" max="15">
+                                </div>
+                                <div class="form-group">
+                                    <label for="scan-cooldown">Cooldown (Sek.)</label>
+                                    <input type="number" id="scan-cooldown" class="form-control" value="1" min="0" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button class="btn btn-danger" id="btn-scan-stop" style="display: none;" onclick="stopScan()">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+                            Scan stoppen
+                        </button>
+                        <button class="btn btn-orange" id="btn-scan-start" onclick="startScan()">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            Range Scan starten
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Scanner Status Activity -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h2 class="card-title">Scanner Aktivität</h2>
+                        <span id="scanner-status-pill" class="status-pill status-pill-orange" style="display: none;">Scanne...</span>
+                    </div>
+
+                    <div id="scanner-running-info" style="display: none; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 6px;">
+                            <span id="scan-progress-label" style="color: var(--text-secondary);">Fortschritt: 0 / 0 MACs</span>
+                            <span id="scan-hits-label" style="font-weight: 700; color: var(--success-color);">0 Aktive Abos gefunden</span>
+                        </div>
+                        <div class="progress-container">
+                            <div id="scan-progress-bar" class="progress-bar"></div>
+                        </div>
+                        <div style="font-size: 0.8rem; margin-top: 8px;">
+                            Aktuelle MAC: <code id="scan-current-mac" style="color: var(--accent-orange);">-</code>
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Aktive Abonnements Gefunden</div>
+                    <div class="checkbox-card" style="max-height: 250px; background-color: rgba(12, 10, 15, 0.9);">
+                        <ul id="scan-results-list" style="margin: 0; padding-left: 16px; font-family: monospace; font-size: 0.8rem; line-height: 1.6; color: #4ade80;">
+                            <li style="color: var(--text-secondary); font-family: var(--font-family); font-size: 0.75rem; list-style-type: none; margin-left: -16px;">
+                                Keine aktiven Abos im aktuellen Lauf gefunden. Ergebnisse werden ebenfalls in <code>/data/stalker_scan_results.txt</code> gespeichert.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: Proxy Pool -->
+            <div id="panel-proxies" class="tab-panel">
+                <div class="card">
+                    <h2 class="card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        Proxy Rotator Einstellungen
+                    </h2>
+                    <div class="card-desc">Sichere Verbindungsabfragen über rotierende HTTP- und SOCKS-Proxies absichern. SOCKS5h wird für DNS-Routing über Proxy empfohlen.</div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="proxies-paste">Proxies Liste (Paste Bin)</label>
+                            <textarea id="proxies-paste" class="form-control" rows="8" placeholder="socks5h://user:pass@1.2.3.4:1080&#10;192.168.1.50:8080&#10;http://10.20.30.40:3128" style="font-family: monospace; font-size: 0.8rem; resize: vertical;"></textarea>
+                            <span class="description">Format: Ein Proxy pro Zeile. Ohne Schema wird socks5h:// angenommen.</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="proxy-urls">Proxy Listen URLs (z.B. GitHub)</label>
+                            <textarea id="proxy-urls" class="form-control" rows="3" placeholder="https://raw.githubusercontent.com/user/repo/main/socks5.txt" style="font-family: monospace; font-size: 0.8rem; resize: vertical;"></textarea>
+                            <span class="description">Links zu Textdateien mit Proxies, eine URL pro Zeile. Diese werden alle 5 Minuten neu geladen und gecacht.</span>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="btn-proxies-save" onclick="saveProxyConfig()">
+                            Proxy-Konfiguration speichern
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column / Sidebar -->
+        <div>
+            <!-- Handshake Proxy Card -->
+            <div class="card">
+                <h2 class="card-title" style="margin-bottom: 12px;">Handshake Proxy Status</h2>
+                <div class="card-desc" style="margin-bottom: 12px;">Der integrierte Proxy lauscht auf M3U Anfragen.</div>
+                
+                <div class="divider" style="margin: 8px 0 16px 0;"><span class="divider-label">Einstellungen</span></div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="proxy-port">Local Proxy Port</label>
+                        <input type="number" id="proxy-port" class="form-control" value="8282" style="padding: 6px 10px;">
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: center; background-color: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 10px; font-weight: 700; color: #10b981; font-size: 0.85rem;">
+                        PROXY ONLINE
+                    </div>
+                </div>
+            </div>
+
+            <!-- Execution Logs Card -->
+            <div class="card" style="display: flex; flex-direction: column; min-height: 340px;">
+                <div class="console-container">
+                    <div class="console-header">
+                        <span class="console-title">Job Logs</span>
+                        <button class="console-clear-btn" onclick="clearLogs()" title="Logs leeren">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
+                    <div id="console-output" class="console-body">Bereit für Aktionen...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Predefined list of MAC prefixes
+        const PREDEFINED_PREFIXES = [
+            { value: '00:1A:79:', label: '00:1A:79: (Standard MAG)' },
+            { value: '74:1A:79:', label: '74:1A:79: (Newer MAG)' },
+            { value: 'D4:CF:F9:', label: 'D4:CF:F9: (Newer MAG)' },
+            { value: '00:1A:78:', label: '00:1A:78: (Older MAG)' },
+            { value: '00:1E:B8:', label: '00:1E:B8: (Infomir)' },
+            { value: '00:01:5F:', label: '00:01:5F:' },
+            { value: '00:02:F2:', label: '00:02:F2:' },
+            { value: '00:03:93:', label: '00:03:93:' },
+            { value: '00:03:FF:', label: '00:03:FF:' },
+            { value: '00:04:4F:', label: '00:04:4F:' },
+            { value: '00:05:69:', label: '00:05:69:' },
+            { value: '00:05:9A:', label: '00:05:9A:' },
+            { value: '00:07:AB:', label: '00:07:AB:' },
+            { value: '00:09:18:', label: '00:09:18:' },
+            { value: '00:09:C7:', label: '00:09:C7:' },
+            { value: '00:09:DF:', label: '00:09:DF:' },
+            { value: '00:0A:27:', label: '00:0A:27:' },
+            { value: '00:0C:29:', label: '00:0C:29:' },
+            { value: '00:0E:50:', label: '00:0E:50:' },
+            { value: '00:0E:8F:', label: '00:0E:8F:' },
+            { value: '00:0F:4B:', label: '00:0F:4B:' },
+            { value: '00:11:D8:', label: '00:11:D8:' },
+            { value: '00:13:E8:', label: '00:13:E8:' },
+            { value: '00:14:22:', label: '00:14:22:' },
+            { value: '00:15:AD:', label: '00:15:AD:' },
+            { value: '00:16:3E:', label: '00:16:3E:' },
+            { value: '00:18:82:', label: '00:18:82:' },
+            { value: '00:18:BD:', label: '00:18:BD:' },
+            { value: '00:19:66:', label: '00:19:66:' },
+            { value: '00:19:E0:', label: '00:19:E0:' },
+            { value: '00:1A:70:', label: '00:1A:70:' },
+            { value: '00:1A:E9:', label: '00:1A:E9:' },
+            { value: '00:1B:79:', label: '00:1B:79:' },
+            { value: '00:1B:EA:', label: '00:1B:EA:' },
+            { value: '00:1C:14:', label: '00:1C:14:' },
+            { value: '00:1C:19:', label: '00:1C:19:' },
+            { value: '00:1C:42:', label: '00:1C:42:' },
+            { value: '00:1C:79:', label: '00:1C:79:' },
+            { value: '00:1D:20:', label: '00:1D:20:' },
+            { value: '00:1D:79:', label: '00:1D:79:' },
+            { value: '00:1D:D5:', fill: 'none', label: '00:1D:D5:' },
+            { value: '00:1E:79:', label: '00:1E:79:' },
+            { value: '00:1E:8A:', label: '00:1E:8A:' },
+            { value: '00:1F:16:', label: '00:1F:16:' },
+            { value: '00:1F:33:', label: '00:1F:33:' },
+            { value: '00:1F:3A:', label: '00:1F:3A:' },
+            { value: '00:1F:79:', label: '00:1F:79:' },
+            { value: '00:20:91:', label: '00:20:91:' },
+            { value: '00:21:5C:', label: '00:21:5C:' },
+            { value: '00:22:93:', label: '00:22:93:' },
+            { value: '00:23:45:', label: '00:23:45:' },
+            { value: '00:24:D4:', label: '00:24:D4:' },
+            { value: '00:25:90:', label: '00:25:90:' },
+            { value: '00:26:75:', label: '00:26:75:' },
+            { value: '00:2A:01:', label: '00:2A:01:' },
+            { value: '00:2A:79:', label: '00:2A:79:' },
+            { value: '00:30:18:', label: '00:30:18:' },
+            { value: '00:40:96:', label: '00:40:96:' },
+            { value: '00:50:56:', label: '00:50:56:' },
+            { value: '00:60:2F:', label: '00:60:2F:' },
+            { value: '00:90:0B:', label: '00:90:0B:' },
+            { value: '00:A0:C9:', label: '00:A0:C9:' },
+            { value: '00:A1:79:', label: '00:A1:79:' },
+            { value: '00:D0:D0:', label: '00:D0:D0:' },
+            { value: '00:E0:4C:', label: '00:E0:4C:' },
+            { value: '04:D6:AA:', label: '04:D6:AA:' },
+            { value: '08:00:27:', label: '08:00:27:' },
+            { value: '08:05:81:', label: '08:05:81:' },
+            { value: '08:9E:08:', label: '08:9E:08:' },
+            { value: '0C:47:C9:', label: '0C:47:C9:' },
+            { value: '10:27:BE:', label: '10:27:BE:' },
+            { value: '11:33:01:', label: '11:33:01:' },
+            { value: '18:C8:E7:', label: '18:C8:E7:' },
+            { value: '1A:00:6A:', label: '1A:00:6A:' },
+            { value: '1A:00:FB:', label: '1A:00:FB:' },
+            { value: '30:87:30:', label: '30:87:30:' },
+            { value: '33:44:CF:', label: '33:44:CF:' },
+            { value: '55:93:EA:', label: '55:93:EA:' },
+            { value: '68:FF:7B:', label: '68:FF:7B:' },
+            { value: 'A0:BB:3E:', label: 'A0:BB:3E:' },
+            { value: 'BC:2F:D0:', label: 'BC:2F:D0:' },
+            { value: 'DC:9A:2F:', label: 'DC:9A:2F:' },
+            { value: 'E0:37:17:', label: 'E0:37:17:' }
+        ];
+
+        // Retrieve JWT Token & API Key info from URL query params
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const pathParts = window.location.pathname.split('/');
+        const pluginKey = pathParts[4] || 'stalker_toolbox';
+
+        let settings = {};
+        let portals = [];
+        let pollingInterval = null;
+
+        // On Page Load
+        window.addEventListener('DOMContentLoaded', () => {
+            renderPrefixCheckboxes();
+            if (!token) {
+                showAlert('error', 'Kein Authentifizierungstoken empfangen. Bitte lade die Seite über das Hauptmenü neu.');
+                return;
+            }
+            loadPluginConfig();
+            
+            // Start polling for scanner status
+            pollingInterval = setInterval(fetchScannerStatus, 2000);
+            
+            // Event listener on Port changes to auto save
+            document.getElementById('proxy-port').addEventListener('change', (e) => {
+                const port = parseInt(e.target.value);
+                if (port > 0) {
+                    saveFields({ proxy_port: port });
+                }
+            });
+        });
+
+        // Fetch configs
+        async function loadPluginConfig() {
+            try {
+                const response = await fetch('/api/plugins/plugins/', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Konfigurationen konnten nicht geladen werden.');
+                const data = await response.json();
+                
+                const myPlugin = (data.plugins || []).find(p => p.key === pluginKey);
+                if (myPlugin) {
+                    settings = myPlugin.settings || {};
+                    applySettingsToUI();
+                } else {
+                    showAlert('error', 'Das Plugin konnte in Dispatcharr nicht gefunden werden.');
+                }
+            } catch (e) {
+                showAlert('error', 'Fehler beim Laden des Plugins: ' + e.message);
+            }
+        }
+
+        // Apply loaded settings properties to inputs
+        function applySettingsToUI() {
+            // Detective Settings
+            document.getElementById('detective-url').value = settings.detective_url || '';
+            document.getElementById('detective-key').value = settings.detective_urlscan_key || '';
+            document.getElementById('detective-subdomains').checked = !!settings.detective_scan_subdomains;
+            document.getElementById('detective-ports').checked = !!settings.detective_scan_ports;
+            
+            // Generator Settings
+            const prefixesStr = settings.gen_prefixes || '00:1A:79:';
+            const parts = prefixesStr.split(',').map(p => p.trim()).filter(Boolean);
+            
+            // Check matching checkboxes
+            document.querySelectorAll('.prefix-checkbox').forEach(cb => {
+                cb.checked = parts.includes(cb.value);
+            });
+            
+            // Build custom prefixes string
+            const knownValues = PREDEFINED_PREFIXES.map(kp => kp.value);
+            const custom = parts.filter(p => !knownValues.includes(p)).join(', ');
+            document.getElementById('gen-custom-prefixes').value = custom;
+            
+            document.getElementById('gen-count').value = settings.gen_count ?? 1000;
+            document.getElementById('gen-mode').value = settings.gen_mode || 'random';
+            document.getElementById('gen-suffix-start').value = settings.gen_suffix_start || '';
+            document.getElementById('gen-suffix-end').value = settings.gen_suffix_end || '';
+            document.getElementById('gen-filename').value = settings.gen_filename || 'combo.txt';
+
+            // Scanner Settings
+            document.getElementById('scan-mac-start').value = settings.scan_mac_start || '00:1A:79:00:00:00';
+            document.getElementById('scan-mac-end').value = settings.scan_mac_end || '00:1A:79:00:00:FF';
+            document.getElementById('scan-threads').value = settings.scan_threads ?? 5;
+            document.getElementById('scan-cooldown').value = settings.scan_cooldown ?? 1.0;
+
+            // Proxies
+            document.getElementById('proxies-paste').value = settings.proxies_paste || '';
+            document.getElementById('proxy-urls').value = settings.proxy_urls || '';
+
+            // Right Sidebar Port
+            document.getElementById('proxy-port').value = settings.proxy_port || 8282;
+
+            // Load Portals for Scanner Select
+            if (settings.portals_json) {
+                try {
+                    portals = JSON.parse(settings.portals_json);
+                } catch(e) {
+                    portals = [];
+                }
+            } else {
+                portals = [];
+            }
+            populatePortalsDropdown();
+            
+            // Render target analysis history
+            renderDetectiveHistory();
+        }
+
+        // Render Predefined Prefixes list
+        function renderPrefixCheckboxes() {
+            const grid = document.getElementById('prefixes-grid');
+            grid.innerHTML = '';
+            PREDEFINED_PREFIXES.forEach(p => {
+                grid.innerHTML += `
+                    <label class="checkbox-item">
+                        <input type="checkbox" class="prefix-checkbox" value="${p.value}" onchange="recalculatePrefixes()">
+                        <span>${p.label}</span>
+                    </label>
+                `;
+            });
+        }
+
+        // Select All / Deselect All Prefixes
+        function selectAllPrefixes(val) {
+            document.querySelectorAll('.prefix-checkbox').forEach(cb => {
+                cb.checked = val;
+            });
+            recalculatePrefixes();
+        }
+
+        // Aggregate checkboxes & custom input values into gen_prefixes
+        function recalculatePrefixes() {
+            const selected = [];
+            document.querySelectorAll('.prefix-checkbox:checked').forEach(cb => {
+                selected.push(cb.value);
+            });
+            const customVal = document.getElementById('gen-custom-prefixes').value;
+            const customParts = customVal.split(',').map(p => p.trim()).filter(Boolean);
+            const combined = [...selected, ...customParts].join(',');
+            settings.gen_prefixes = combined;
+        }
+
+        // Listen on custom input changes to aggregate
+        document.getElementById('gen-custom-prefixes').addEventListener('input', recalculatePrefixes);
+
+        // Populate Portals Select Dropdown for Scanner
+        function populatePortalsDropdown() {
+            const select = document.getElementById('scan-portal');
+            select.innerHTML = '<option value="">-- Portal wählen --</option>';
+            portals.forEach(p => {
+                if (p.active !== false) {
+                    const selectedAttr = (settings.scan_portal === p.name) ? 'selected' : '';
+                    select.innerHTML += `<option value="${escapeHtml(p.name)}" ${selectedAttr}>${escapeHtml(p.name)} (${escapeHtml(p.url)})</option>`;
+                }
+            });
+        }
+
+        // Save specific settings parameters to backend
+        async function saveFields(updatedFields) {
+            try {
+                const fullSettings = { ...settings, ...updatedFields };
+                const response = await fetch(`/api/plugins/plugins/${pluginKey}/settings/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ settings: fullSettings })
+                });
+                
+                if (!response.ok) throw new Error('Fehler beim Speichern der Einstellungen.');
+                const result = await response.json();
+                
+                // Update local settings object
+                settings = result.settings || {};
+                return true;
+            } catch(e) {
+                showAlert('error', e.message);
+                return false;
+            }
+        }
+
+        // Action Trigger
+        async function executeAction(actionId, params = {}) {
+            log(`Führe Aktion aus: ${actionId}...`);
+            try {
+                const response = await fetch(`/api/plugins/plugins/${pluginKey}/run/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ action: actionId, params: params })
+                });
+
+                if (!response.ok) throw new Error('API Fehler bei der Verbindung.');
+                const data = await response.json();
+
+                if (data.success) {
+                    const msg = data.result?.message || 'Aktion erfolgreich ausgeführt.';
+                    log(`[SUCCESS] ${msg}`);
+                    showAlert('success', msg.split('\n')[0]);
+                    
+                    // Reload config to get updated lists (e.g. portals configs, detective history)
+                    await loadPluginConfig();
+                } else {
+                    const err = data.error || 'Aktion fehlgeschlagen.';
+                    log(`[ERROR] ${err}`);
+                    showAlert('error', String(err));
+                }
+            } catch(e) {
+                log(`[ERROR] ${e.message}`);
+                showAlert('error', e.message);
+            }
+        }
+
+        // Action 1: Portal Detective Run
+        async function runDetective() {
+            const url = document.getElementById('detective-url').value.trim();
+            const key = document.getElementById('detective-key').value.trim();
+            const subdomains = document.getElementById('detective-subdomains').checked;
+            const ports = document.getElementById('detective-ports').checked;
+
+            if (!url) {
+                showAlert('error', 'Bitte trage eine gültige Ziel-URL ein.');
+                return;
+            }
+
+            const btn = document.getElementById('btn-detective-run');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Analysiere...';
+
+            // Save settings values first
+            const saved = await saveFields({
+                detective_url: url,
+                detective_urlscan_key: key,
+                detective_scan_subdomains: subdomains,
+                detective_scan_ports: ports
+            });
+
+            if (saved) {
+                await executeAction('run_detective');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = 'Target analysieren';
+        }
+
+        // Action 2: MAC List Generator Run
+        async function runGenerator() {
+            recalculatePrefixes(); // Ensure prefixes gathered
+            
+            const btn = document.getElementById('btn-gen-run');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Generiere...';
+
+            const count = parseInt(document.getElementById('gen-count').value);
+            const mode = document.getElementById('gen-mode').value;
+            const start = document.getElementById('gen-suffix-start').value.trim();
+            const end = document.getElementById('gen-suffix-end').value.trim();
+            const file = document.getElementById('gen-filename').value.trim();
+
+            const saved = await saveFields({
+                gen_count: count,
+                gen_mode: mode,
+                gen_suffix_start: start,
+                gen_suffix_end: end,
+                gen_filename: file
+            });
+
+            if (saved) {
+                await executeAction('run_generator');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = 'MAC-Liste erstellen';
+        }
+
+        // Action 3: Start Range Scanner
+        async function startScan() {
+            const portal = document.getElementById('scan-portal').value;
+            const start = document.getElementById('scan-mac-start').value.trim();
+            const end = document.getElementById('scan-mac-end').value.trim();
+            const threads = parseInt(document.getElementById('scan-threads').value);
+            const cooldown = parseFloat(document.getElementById('scan-cooldown').value);
+
+            if (!portal) {
+                showAlert('error', 'Bitte wähle ein Portal aus.');
+                return;
+            }
+            if (!start || !end) {
+                showAlert('error', 'Start- und End-MAC Adresse sind erforderlich.');
+                return;
+            }
+
+            const btn = document.getElementById('btn-scan-start');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Starte Scan...';
+
+            const saved = await saveFields({
+                scan_portal: portal,
+                scan_mac_start: start,
+                scan_mac_end: end,
+                scan_threads: threads,
+                scan_cooldown: cooldown
+            });
+
+            if (saved) {
+                await executeAction('scan_macs');
+                setTimeout(fetchScannerStatus, 1000);
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Range Scan starten';
+        }
+
+        // Action 4: Stop Scan
+        async function stopScan() {
+            const btn = document.getElementById('btn-scan-stop');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Stoppe...';
+            
+            try {
+                const response = await fetch(`/api/plugins/plugins/${pluginKey}/run/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ action: 'stop_plugin', params: {} })
+                });
+                
+                log('Stopp-Anfrage gesendet.');
+                setTimeout(fetchScannerStatus, 1500);
+            } catch(e) {
+                log('Fehler beim Stoppen des Scanners: ' + e.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Action 5: Save Proxy Config
+        async function saveProxyConfig() {
+            const btn = document.getElementById('btn-proxies-save');
+            btn.disabled = true;
+            
+            const paste = document.getElementById('proxies-paste').value;
+            const urls = document.getElementById('proxy-urls').value;
+
+            const saved = await saveFields({
+                proxies_paste: paste,
+                proxy_urls: urls
+            });
+
+            if (saved) {
+                showAlert('success', 'Proxy-Pool Konfiguration erfolgreich gespeichert.');
+            }
+
+            btn.disabled = false;
+        }
+
+        // Poll Scanner Status Action
+        async function fetchScannerStatus() {
+            if (!token) return;
+            try {
+                const response = await fetch(`/api/plugins/plugins/${pluginKey}/run/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ action: 'get_scan_status', params: {} })
+                });
+
+                if (!response.ok) return;
+                const data = await response.json();
+
+                if (data.success && data.result) {
+                    updateScannerUI(data.result);
+                }
+            } catch (e) {
+                // Fail silently during background polling
+            }
+        }
+
+        // Update Scanner Progress UI Elements
+        function updateScannerUI(statusObj) {
+            const isRunning = statusObj.running;
+            
+            const btnStart = document.getElementById('btn-scan-start');
+            const btnStop = document.getElementById('btn-scan-stop');
+            const statusPill = document.getElementById('scanner-status-pill');
+            const runInfo = document.getElementById('scanner-running-info');
+
+            if (isRunning) {
+                btnStart.style.display = 'none';
+                btnStop.style.display = 'flex';
+                statusPill.style.display = 'inline-flex';
+                runInfo.style.display = 'block';
+
+                // Update Progress metrics
+                document.getElementById('scan-progress-label').innerText = `Fortschritt: ${statusObj.checked} / ${statusObj.total} MACs`;
+                document.getElementById('scan-hits-label').innerText = `${statusObj.active_found} Aktive Abos gefunden`;
+                document.getElementById('scan-current-mac').innerText = statusObj.current_mac || 'Prüfe...';
+                
+                const percent = statusObj.total > 0 ? (statusObj.checked / statusObj.total) * 100 : 0;
+                document.getElementById('scan-progress-bar').style.width = `${percent}%`;
+            } else {
+                btnStart.style.display = 'flex';
+                btnStop.style.display = 'none';
+                statusPill.style.display = 'none';
+                runInfo.style.display = 'none';
+            }
+
+            // Results List update
+            const results = statusObj.results || [];
+            const resultsList = document.getElementById('scan-results-list');
+            if (results.length > 0) {
+                resultsList.innerHTML = '';
+                results.forEach(line => {
+                    resultsList.innerHTML += `<li><code>${escapeHtml(line)}</code></li>`;
+                });
+            } else if (!isRunning) {
+                resultsList.innerHTML = `<li style="color: var(--text-secondary); font-family: var(--font-family); font-size: 0.75rem; list-style-type: none; margin-left: -16px;">Keine aktiven Abos im aktuellen Lauf gefunden.</li>`;
+            }
+        }
+
+        // Render target history reports list
+        function renderDetectiveHistory() {
+            const container = document.getElementById('detective-history-list');
+            const history = settings.detective_history || {};
+            const keys = Object.keys(history).sort((a,b) => history[b].timestamp.localeCompare(history[a].timestamp));
+
+            if (keys.length === 0) {
+                container.innerHTML = `<div style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 20px;">Keine vergangenen Berichte gefunden.</div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            keys.forEach((url, index) => {
+                const item = history[url];
+                const cleanUrlId = 'item-' + index;
+                
+                const isSuccess = item.status_code === 200;
+                const badgeCode = isSuccess ? `<span class="status-pill status-pill-green">HTTP 200</span>` : `<span class="status-pill status-pill-orange">HTTP ${item.status_code || 'N/A'}</span>`;
+                const sslBadge = item.ssl_valid === 'Yes' ? `<span class="status-pill status-pill-green">SSL Ok</span>` : `<span class="status-pill status-pill-red">No SSL</span>`;
+                
+                // Fingerprints rendering
+                let fingerHtml = '';
+                if (item.stb_fingerprints && item.stb_fingerprints.length > 0) {
+                    item.stb_fingerprints.forEach(model => {
+                        const parts = model.split(' -> ');
+                        const name = parts[0];
+                        const statusText = parts[1] || '';
+                        const works = statusText.includes('Authorization succeeded') || statusText.includes('Profile returned') || statusText.includes('success');
+                        
+                        fingerHtml += `
+                            <div style="background-color: ${works ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255, 255, 255, 0.01)'}; border: 1px solid ${works ? 'rgba(16, 185, 129, 0.2)' : 'var(--border-color)'}; border-radius: 6px; padding: 8px;">
+                                <div style="font-size: 0.72rem; font-weight: 700;">${escapeHtml(name)}</div>
+                                <div style="font-size: 0.65rem; color: ${works ? '#34d399' : 'var(--text-secondary)'}; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${escapeHtml(statusText)}</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    fingerHtml = '<div style="font-size: 0.75rem; color: var(--text-secondary); grid-column: span 3;">Keine STB Fingerprints aufgezeichnet.</div>';
+                }
+
+                // Open ports rendering
+                let portsHtml = '';
+                if (item.open_ports && Object.keys(item.open_ports).length > 0) {
+                    Object.keys(item.open_ports).forEach(port => {
+                        portsHtml += `<div style="font-size: 0.75rem;"><b>Port ${port}:</b> ${escapeHtml(item.open_ports[port])}</div>`;
+                    });
+                } else {
+                    portsHtml = '<div style="font-size: 0.75rem; color: var(--text-secondary);">Keine offenen Ports gefunden oder Portscan übersprungen.</div>';
+                }
+
+                // Subdomains rendering
+                let subsHtml = '';
+                if (item.subdomains && item.subdomains.length > 0) {
+                    subsHtml = '<ul style="margin: 0; padding-left: 16px; font-family: monospace; font-size: 0.75rem;">';
+                    item.subdomains.forEach(sub => {
+                        subsHtml += `<li>${escapeHtml(sub)}</li>`;
+                    });
+                    subsHtml += '</ul>';
+                } else {
+                    subsHtml = '<div style="font-size: 0.75rem; color: var(--text-secondary);">Keine Subdomains gefunden.</div>';
+                }
+
+                // Admin probes rendering
+                let probesHtml = '';
+                if (item.admin_probes && item.admin_probes.length > 0) {
+                    probesHtml = '<ul style="margin: 0; padding-left: 16px; font-family: monospace; font-size: 0.75rem;">';
+                    item.admin_probes.forEach(probe => {
+                        probesHtml += `<li><code>${escapeHtml(probe)}</code></li>`;
+                    });
+                    probesHtml += '</ul>';
+                } else {
+                    probesHtml = '<div style="font-size: 0.75rem; color: var(--text-secondary);">Keine Admin-Pages gefunden.</div>';
+                }
+
+                // Co-hosted
+                let coHtml = '';
+                if (item.co_hosted_portals && item.co_hosted_portals.length > 0) {
+                    coHtml = '<ul style="margin: 0; padding-left: 16px; font-size: 0.75rem; line-height: 1.5;">';
+                    item.co_hosted_portals.forEach(co => {
+                        coHtml += `<li><a href="${escapeHtml(co)}" target="_blank" style="color: var(--accent-color); text-decoration: none;">${escapeHtml(co)}</a></li>`;
+                    });
+                    coHtml += '</ul>';
+                } else {
+                    coHtml = '<div style="font-size: 0.75rem; color: var(--text-secondary);">Keine co-hosted Portals gefunden.</div>';
+                }
+
+                container.innerHTML += `
+                    <div class="accordion-item" id="${cleanUrlId}">
+                        <div class="accordion-summary" onclick="toggleAccordion('${cleanUrlId}')">
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                <div style="font-family: monospace; font-size: 0.8rem; word-break: break-all; max-width: 480px;">${escapeHtml(url)}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-secondary);">Scan-Zeitpunkt: ${item.timestamp}</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                ${badgeCode}
+                                ${sslBadge}
+                                <span class="accordion-arrow">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="accordion-content">
+                            <div style="display: grid; grid-template-cols: 1fr; gap: 16px; margin-bottom: 16px;">
+                                <div style="display: grid; grid-template-cols: 1fr; gap: 16px;">
+                                    <div style="background-color: rgba(12, 10, 15, 0.9); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px;">
+                                        <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">Server Details</div>
+                                        <div style="font-size: 0.78rem; line-height: 1.6;">
+                                            <div><b>IP-Adresse:</b> ${escapeHtml(item.ip_address || 'Unbekannt')}</div>
+                                            <div><b>Reverse DNS:</b> ${escapeHtml(item.reverse_dns || 'N/A')}</div>
+                                            <div><b>Software:</b> ${escapeHtml(item.server_banner || 'Unbekannt')}</div>
+                                            <div><b>WAF/Schutz:</b> ${escapeHtml(item.protections || 'Keine erkannt')}</div>
+                                        </div>
+                                    </div>
+                                    <div style="background-color: rgba(12, 10, 15, 0.9); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px;">
+                                        <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">Offene Ports</div>
+                                        ${portsHtml}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="divider"><span class="divider-label">STB Login Fingerprints (00:1A:79:XX:XX:XX)</span></div>
+                            <div style="display: grid; grid-template-cols: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px;">
+                                ${fingerHtml}
+                            </div>
+
+                            <div style="display: grid; grid-template-cols: 1fr; gap: 16px;">
+                                <div style="background-color: rgba(12, 10, 15, 0.9); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px;">
+                                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">Gefundene Subdomains</div>
+                                    ${subsHtml}
+                                </div>
+                                <div style="background-color: rgba(12, 10, 15, 0.9); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px;">
+                                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">Admin Interface Probes</div>
+                                    ${probesHtml}
+                                </div>
+                                <div style="background-color: rgba(12, 10, 15, 0.9); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px;">
+                                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">Co-Hosted Portale (urlscan)</div>
+                                    ${coHtml}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Accordion Toggle
+        function toggleAccordion(id) {
+            const item = document.getElementById(id);
+            const isActive = item.classList.contains('active');
+            
+            // Close all
+            document.querySelectorAll('.accordion-item').forEach(el => el.classList.remove('active'));
+            
+            if (!isActive) {
+                item.classList.add('active');
+            }
+        }
+
+        // Tab Switcher logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${tabId}`).classList.add('active');
+
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+            document.getElementById(`panel-${tabId}`).classList.add('active');
+        }
+
+        // Alert message
+        function showAlert(type, message) {
+            const banner = document.getElementById('alert-banner');
+            banner.className = `alert-banner alert-${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}`;
+            banner.innerHTML = `<span>${escapeHtml(message)}</span>`;
+            banner.style.display = 'flex';
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 6000);
+        }
+
+        // Local Logs Console
+        function log(message) {
+            const output = document.getElementById('console-output');
+            const now = new Date().toLocaleTimeString();
+            output.innerText += `[${now}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('console-output').innerText = 'Logs geleert. Bereit...\n';
+        }
+
+        // Html Escape Helper
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
