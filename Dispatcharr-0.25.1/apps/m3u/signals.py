@@ -40,20 +40,11 @@ def create_or_update_refresh_task(sender, instance, created, update_fields=None,
     task_name = f"m3u_account-refresh-{instance.id}"
     should_be_enabled = instance.is_active
 
-    # Read cron_expression from transient attribute set by the serializer.
-    # If not set (e.g. save came from a task updating status/last_message),
-    # preserve the existing crontab so we don't accidentally revert to interval.
-    if hasattr(instance, "_cron_expression"):
-        cron_expr = instance._cron_expression
-    else:
-        cron_expr = ""
-        try:
-            existing_task = instance.refresh_task
-            if existing_task and existing_task.crontab:
-                ct = existing_task.crontab
-                cron_expr = f"{ct.minute} {ct.hour} {ct.day_of_month} {ct.month_of_year} {ct.day_of_week}"
-        except Exception:
-            pass
+    # Read cron_expression from the model field.
+    cron_expr = instance.cron_expression or ""
+    if not cron_expr and instance.refresh_task and instance.refresh_task.crontab:
+        ct = instance.refresh_task.crontab
+        cron_expr = f"{ct.minute} {ct.hour} {ct.day_of_month} {ct.month_of_year} {ct.day_of_week}"
 
     task = create_or_update_periodic_task(
         task_name=task_name,

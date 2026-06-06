@@ -19,6 +19,7 @@ import {
   Film,
   Tv,
   ListPlus,
+  Clock,
 } from 'lucide-react';
 
 export const NAV_ITEMS = {
@@ -82,6 +83,13 @@ export const NAV_ITEMS = {
       { label: 'Logs', icon: Logs, path: '/connect/logs' },
     ],
   },
+  automations: {
+    id: 'automations',
+    label: 'Automations',
+    icon: Clock,
+    path: '/automations',
+    adminOnly: true,
+  },
   system: {
     id: 'system',
     label: 'System',
@@ -107,6 +115,7 @@ export const NAV_ITEMS = {
 export const DEFAULT_ADMIN_ORDER = [
   'media',
   'connections',
+  'automations',
   'guide',
   'dvr',
   'stats',

@@ -37,6 +37,7 @@ class EPGSource(models.Model):
     extracted_file_path = models.CharField(max_length=1024, blank=True, null=True,
                                          help_text="Path to extracted XML file after decompression")
     refresh_interval = models.IntegerField(default=0)
+    cron_expression = models.CharField(max_length=100, blank=True, null=True, help_text="Cron expression for periodic sync")
     refresh_task = models.ForeignKey(
         PeriodicTask, on_delete=models.SET_NULL, null=True, blank=True
     )

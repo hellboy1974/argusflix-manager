@@ -230,16 +230,6 @@ class M3UAccountSerializer(serializers.ModelSerializer):
         data["auto_enable_new_groups_vod"] = custom_props.get("auto_enable_new_groups_vod", True)
         data["auto_enable_new_groups_series"] = custom_props.get("auto_enable_new_groups_series", True)
 
-        # Derive cron_expression from the linked PeriodicTask's crontab (single source of truth)
-        # But first check if we have a transient _cron_expression (from create/update before signal runs)
-        cron_expr = ""
-        if hasattr(instance, '_cron_expression'):
-            cron_expr = instance._cron_expression
-        elif instance.refresh_task_id and instance.refresh_task and instance.refresh_task.crontab:
-            ct = instance.refresh_task.crontab
-            cron_expr = f"{ct.minute} {ct.hour} {ct.day_of_month} {ct.month_of_year} {ct.day_of_week}"
-        data["cron_expression"] = cron_expr
-
         # Surface default profile's exp_date for the form.
         # Use prefetch cache (obj.profiles.all()) to avoid an extra query per account.
         # Always emit a Z-suffix UTC string so JS new Date() never misinterprets it as local.
@@ -256,17 +246,6 @@ class M3UAccountSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Pop exp_date — it's written to the default profile, not the account
         exp_date = validated_data.pop("exp_date", "__NOT_SET__")
-
-        # Pop cron_expression before it reaches model fields
-        # If not present (partial update), preserve the existing cron from the PeriodicTask
-        if "cron_expression" in validated_data:
-            cron_expr = validated_data.pop("cron_expression")
-        else:
-            cron_expr = ""
-            if instance.refresh_task_id and instance.refresh_task and instance.refresh_task.crontab:
-                ct = instance.refresh_task.crontab
-                cron_expr = f"{ct.minute} {ct.hour} {ct.day_of_month} {ct.month_of_year} {ct.day_of_week}"
-        instance._cron_expression = cron_expr
 
         # Handle enable_vod preference and auto_enable_new_groups settings
         enable_vod = validated_data.pop("enable_vod", None)
@@ -353,9 +332,6 @@ class M3UAccountSerializer(serializers.ModelSerializer):
         # Pop exp_date — it's written to the default profile after creation
         exp_date = validated_data.pop("exp_date", None)
 
-        # Pop cron_expression — it's not a model field
-        cron_expr = validated_data.pop("cron_expression", "")
-
         # Handle enable_vod preference and auto_enable_new_groups settings during creation
         enable_vod = validated_data.pop("enable_vod", False)
         proxy_url = validated_data.pop("proxy_url", "") or ""
@@ -378,7 +354,6 @@ class M3UAccountSerializer(serializers.ModelSerializer):
         # Build instance manually so we can attach transient attr before save triggers signal
         instance = M3UAccount(**validated_data)
         instance.proxy_url = proxy_url.strip()
-        instance._cron_expression = cron_expr
         instance.save()
 
         # Write exp_date through to the default profile created by post_save signal

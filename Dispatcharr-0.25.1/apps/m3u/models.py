@@ -89,6 +89,7 @@ class M3UAccount(models.Model):
     password = models.CharField(max_length=255, null=True, blank=True)
     custom_properties = models.JSONField(default=dict, blank=True, null=True)
     refresh_interval = models.IntegerField(default=0)
+    cron_expression = models.CharField(max_length=100, blank=True, null=True, help_text="Cron expression for periodic sync")
     refresh_task = models.ForeignKey(
         PeriodicTask, on_delete=models.SET_NULL, null=True, blank=True
     )

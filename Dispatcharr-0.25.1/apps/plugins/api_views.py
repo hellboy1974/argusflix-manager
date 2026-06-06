@@ -1414,9 +1414,15 @@ class PluginRepoSettingsAPIView(PluginAuthMixin, APIView):
             return Response({"refresh_interval_hours": 6})
 
     @extend_schema(
-        description="Update the plugin repository refresh interval (hours). Set to 0 to disable automatic refresh.",
-        request=inline_serializer(name="PluginRepoSettingsRequest", fields={"refresh_interval_hours": serializers.IntegerField()}),
-        responses={200: inline_serializer(name="PluginRepoSettingsUpdated", fields={"refresh_interval_hours": serializers.IntegerField()})},
+        description="Update the plugin repository refresh interval (hours) and/or cron expression. Set to 0 to disable automatic refresh.",
+        request=inline_serializer(name="PluginRepoSettingsRequest", fields={
+            "refresh_interval_hours": serializers.IntegerField(),
+            "cron_expression": serializers.CharField(required=False, allow_blank=True)
+        }),
+        responses={200: inline_serializer(name="PluginRepoSettingsUpdated", fields={
+            "refresh_interval_hours": serializers.IntegerField(),
+            "cron_expression": serializers.CharField(required=False, allow_blank=True)
+        })},
     )
     def put(self, request):
         from core.models import CoreSettings
@@ -1424,6 +1430,8 @@ class PluginRepoSettingsAPIView(PluginAuthMixin, APIView):
         from .tasks import PLUGIN_REPO_REFRESH_TASK_NAME
 
         interval = request.data.get("refresh_interval_hours", 6)
+        cron_expression = request.data.get("cron_expression", "")
+        
         try:
             interval = int(interval)
             if interval < 0:
@@ -1435,17 +1443,21 @@ class PluginRepoSettingsAPIView(PluginAuthMixin, APIView):
             key="plugin_repo_settings",
             defaults={
                 "name": "Plugin Repo Settings",
-                "value": {"refresh_interval_hours": interval},
+                "value": {
+                    "refresh_interval_hours": interval,
+                    "cron_expression": cron_expression
+                },
             },
         )
 
-        if interval == 0:
+        if interval == 0 and not cron_expression:
             delete_periodic_task(PLUGIN_REPO_REFRESH_TASK_NAME)
         else:
             create_or_update_periodic_task(
                 task_name=PLUGIN_REPO_REFRESH_TASK_NAME,
                 celery_task_path="apps.plugins.tasks.refresh_plugin_repos",
                 interval_hours=interval,
+                cron_expression=cron_expression,
                 enabled=True,
             )
 
