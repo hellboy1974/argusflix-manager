@@ -154,6 +154,21 @@ class StreamViewSet(viewsets.ModelViewSet):
         # Exclude streams from inactive M3U accounts
         qs = qs.exclude(m3u_account__is_active=False)
 
+        # Exclude streams whose group relation is disabled (enabled=False)
+        from apps.channels.models import ChannelGroupM3UAccount
+        from django.db.models import Exists, OuterRef, Q
+
+        enabled_groups = ChannelGroupM3UAccount.objects.filter(
+            m3u_account=OuterRef('m3u_account'),
+            channel_group=OuterRef('channel_group'),
+            enabled=True
+        )
+        qs = qs.annotate(
+            group_enabled=Exists(enabled_groups)
+        ).filter(
+            Q(m3u_account__isnull=True) | Q(channel_group__isnull=True) | Q(group_enabled=True)
+        )
+
         assigned = self.request.query_params.get("assigned")
         if assigned is not None:
             qs = qs.filter(channels__id=assigned)
@@ -1116,6 +1131,27 @@ class ChannelViewSet(viewsets.ModelViewSet):
                 q_filters &= Q(hidden_from_output=True)
             elif visibility_filter != "all":
                 q_filters &= Q(hidden_from_output=False)
+
+                # Filter out channels where all streams are disabled or inactive
+                from apps.channels.models import ChannelGroupM3UAccount, Stream
+                from django.db.models import Exists, OuterRef
+
+                enabled_groups_sub = ChannelGroupM3UAccount.objects.filter(
+                    m3u_account=OuterRef('m3u_account'),
+                    channel_group=OuterRef('channel_group'),
+                    enabled=True
+                )
+                active_streams_sub = Stream.objects.filter(
+                    channels=OuterRef('pk'),
+                    is_active=True
+                ).filter(
+                    Q(m3u_account__isnull=True) | Q(m3u_account__is_active=True)
+                ).annotate(
+                    group_enabled=Exists(enabled_groups_sub)
+                ).filter(
+                    Q(m3u_account__isnull=True) | Q(channel_group__isnull=True) | Q(group_enabled=True)
+                )
+                q_filters &= Q(streams__isnull=True) | Exists(active_streams_sub)
 
         if self.request.user.user_level < 10:
             filters["user_level__lte"] = self.request.user.user_level

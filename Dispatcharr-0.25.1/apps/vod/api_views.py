@@ -98,9 +98,21 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
             return [Authenticated()]
 
     def get_queryset(self):
-        # Only return movies that have active M3U relations
+        # Only return movies that have active M3U relations AND whose category relation is enabled
+        from django.db.models import Exists, OuterRef
+        from apps.vod.models import M3UVODCategoryRelation, M3UMovieRelation
+
+        enabled_categories = M3UVODCategoryRelation.objects.filter(
+            m3u_account=OuterRef('m3u_account'),
+            category=OuterRef('category'),
+            enabled=True
+        )
+
         return Movie.objects.filter(
-            m3u_relations__m3u_account__is_active=True
+            m3u_relations__m3u_account__is_active=True,
+            m3u_relations__id__in=M3UMovieRelation.objects.annotate(
+                category_enabled=Exists(enabled_categories)
+            ).filter(category_enabled=True).values('id')
         ).distinct().select_related('logo').prefetch_related('m3u_relations__m3u_account')
 
     @action(detail=True, methods=['get'], url_path='providers')
@@ -350,9 +362,23 @@ class EpisodeViewSet(viewsets.ReadOnlyModelViewSet):
             return [Authenticated()]
 
     def get_queryset(self):
+        from django.db.models import Exists, OuterRef
+        from apps.vod.models import M3UVODCategoryRelation, M3UEpisodeRelation
+
+        enabled_categories = M3UVODCategoryRelation.objects.filter(
+            m3u_account=OuterRef('series_relation__m3u_account'),
+            category=OuterRef('series_relation__category'),
+            enabled=True
+        )
+
         return Episode.objects.select_related(
-            'series', 'm3u_account'
-        ).filter(m3u_account__is_active=True)
+            'series'
+        ).filter(
+            m3u_relations__m3u_account__is_active=True,
+            m3u_relations__id__in=M3UEpisodeRelation.objects.annotate(
+                category_enabled=Exists(enabled_categories)
+            ).filter(category_enabled=True).values('id')
+        )
 
 
 class SeriesViewSet(viewsets.ReadOnlyModelViewSet):
@@ -374,9 +400,21 @@ class SeriesViewSet(viewsets.ReadOnlyModelViewSet):
             return [Authenticated()]
 
     def get_queryset(self):
-        # Only return series that have active M3U relations
+        # Only return series that have active M3U relations AND whose category relation is enabled
+        from django.db.models import Exists, OuterRef
+        from apps.vod.models import M3UVODCategoryRelation, M3USeriesRelation
+
+        enabled_categories = M3UVODCategoryRelation.objects.filter(
+            m3u_account=OuterRef('m3u_account'),
+            category=OuterRef('category'),
+            enabled=True
+        )
+
         return Series.objects.filter(
-            m3u_relations__m3u_account__is_active=True
+            m3u_relations__m3u_account__is_active=True,
+            m3u_relations__id__in=M3USeriesRelation.objects.annotate(
+                category_enabled=Exists(enabled_categories)
+            ).filter(category_enabled=True).values('id')
         ).distinct().select_related('logo').prefetch_related('episodes', 'm3u_relations__m3u_account')
 
     @action(detail=True, methods=['get'], url_path='providers')
@@ -666,10 +704,20 @@ class VODCategoryViewSet(viewsets.ModelViewSet):
     ordering = ['name']
 
     def get_queryset(self):
-        from django.db.models import Count
+        from django.db.models import Count, Exists, OuterRef, Q
+        from apps.vod.models import M3UVODCategoryRelation
+
+        enabled_relations = M3UVODCategoryRelation.objects.filter(
+            category=OuterRef('pk'),
+            m3u_account__is_active=True,
+            enabled=True
+        )
+
         return VODCategory.objects.annotate(
             movie_count=Count('m3umovierelation', distinct=True),
             series_count=Count('m3useriesrelation', distinct=True)
+        ).filter(
+            Q(m3u_relations__isnull=True) | Exists(enabled_relations)
         )
 
     def get_permissions(self):

@@ -636,6 +636,33 @@ class Channel(models.Model):
         redis_client.decr(profile_connections_key)
         return (False, new_count - 1)
 
+    def get_active_streams(self):
+        """
+        Returns a queryset of active streams for this channel, filtering out
+        streams from inactive accounts or disabled channel groups.
+        """
+        from django.db.models import Exists, OuterRef, Q
+        from apps.channels.models import ChannelGroupM3UAccount
+
+        # Start with streams that are active and not from inactive accounts
+        qs = self.streams.filter(is_active=True).filter(
+            Q(m3u_account__isnull=True) | Q(m3u_account__is_active=True)
+        )
+
+        # Check if the channel group is enabled for the account
+        # Skip this check if m3u_account or channel_group is null
+        enabled_groups = ChannelGroupM3UAccount.objects.filter(
+            m3u_account=OuterRef('m3u_account'),
+            channel_group=OuterRef('channel_group'),
+            enabled=True
+        )
+
+        return qs.annotate(
+            group_enabled=Exists(enabled_groups)
+        ).filter(
+            Q(m3u_account__isnull=True) | Q(channel_group__isnull=True) | Q(group_enabled=True)
+        ).order_by("channelstream__order")
+
     def get_stream(self, requester=None):
         """
         Finds an available stream for the requested channel and returns the selected stream and profile.
@@ -675,7 +702,7 @@ class Channel(models.Model):
         has_active_profiles = False
 
         # Iterate through channel streams and their profiles
-        for stream in self.streams.filter(is_active=True).order_by("channelstream__order"):
+        for stream in self.get_active_streams():
             # Retrieve the M3U account associated with the stream.
             m3u_account = stream.m3u_account
             if not m3u_account:

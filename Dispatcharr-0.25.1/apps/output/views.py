@@ -259,6 +259,10 @@ def generate_m3u(request, profile_name=None, user=None, custom_playlist=None):
     # Start building M3U content
     channel_count = 0
     for channel in channels:
+        active_streams = channel.get_active_streams()
+        if not active_streams.exists():
+            continue
+
         channel_count += 1
         effective_group = channel.effective_channel_group_obj
         effective_logo = channel.effective_logo_obj
@@ -316,8 +320,7 @@ def generate_m3u(request, profile_name=None, user=None, custom_playlist=None):
             stream_url = f"{base_url}/live/{xc_username}/{xc_password}/{channel.id}{xc_qs_suffix}"
         elif use_direct_urls:
             # Try to get the first stream's direct URL
-            all_streams = channel.streams.all()
-            first_stream = all_streams[0] if all_streams else None
+            first_stream = active_streams[0] if active_streams else None
             if first_stream and first_stream.url:
                 # Use the direct stream URL
                 stream_url = first_stream.url
@@ -1424,6 +1427,26 @@ def generate_epg(request, profile_name=None, user=None, custom_playlist=None):
             .order_by("effective_channel_number")
         )
 
+        from apps.channels.models import ChannelGroupM3UAccount, Stream
+        from django.db.models import Exists, OuterRef, Q
+
+        enabled_groups_sub = ChannelGroupM3UAccount.objects.filter(
+            m3u_account=OuterRef('m3u_account'),
+            channel_group=OuterRef('channel_group'),
+            enabled=True
+        )
+        active_streams_sub = Stream.objects.filter(
+            channels=OuterRef('pk'),
+            is_active=True
+        ).filter(
+            Q(m3u_account__isnull=True) | Q(m3u_account__is_active=True)
+        ).annotate(
+            group_enabled=Exists(enabled_groups_sub)
+        ).filter(
+            Q(m3u_account__isnull=True) | Q(channel_group__isnull=True) | Q(group_enabled=True)
+        )
+        channels = channels.filter(Q(streams__isnull=True) | Exists(active_streams_sub)).distinct()
+
 
         # For dummy EPG, use either the specified value or default to 3 days
         dummy_days = num_days if num_days > 0 else 3
@@ -2362,6 +2385,26 @@ def _xc_live_streams_setup(request, user, category_id, custom_playlist=None):
         .order_by("effective_channel_number")
     )
 
+    from apps.channels.models import ChannelGroupM3UAccount, Stream
+    from django.db.models import Exists, OuterRef, Q
+
+    enabled_groups_sub = ChannelGroupM3UAccount.objects.filter(
+        m3u_account=OuterRef('m3u_account'),
+        channel_group=OuterRef('channel_group'),
+        enabled=True
+    )
+    active_streams_sub = Stream.objects.filter(
+        channels=OuterRef('pk'),
+        is_active=True
+    ).filter(
+        Q(m3u_account__isnull=True) | Q(m3u_account__is_active=True)
+    ).annotate(
+        group_enabled=Exists(enabled_groups_sub)
+    ).filter(
+        Q(m3u_account__isnull=True) | Q(channel_group__isnull=True) | Q(group_enabled=True)
+    )
+    channels = channels.filter(Q(streams__isnull=True) | Exists(active_streams_sub)).distinct()
+
     _default_group_id = None
 
     def _get_default_group_id():
@@ -2663,12 +2706,14 @@ def xc_get_vod_categories(user, custom_playlist=None):
         categories = VODCategory.objects.filter(
             category_type='movie',
             id__in=mapped_cat_ids,
-            m3umovierelation__m3u_account__is_active=True
+            m3u_relations__m3u_account__is_active=True,
+            m3u_relations__enabled=True
         ).distinct().order_by(Lower("name"))
     else:
         categories = VODCategory.objects.filter(
             category_type='movie',
-            m3umovierelation__m3u_account__is_active=True
+            m3u_relations__m3u_account__is_active=True,
+            m3u_relations__enabled=True
         ).distinct().order_by(Lower("name"))
 
     for category in categories:
@@ -2684,12 +2729,24 @@ def xc_get_vod_categories(user, custom_playlist=None):
 def xc_get_vod_streams(request, user, category_id=None, custom_playlist=None):
     """Get VOD streams (movies) for XtreamCodes API"""
     from apps.vod.models import Movie, M3UMovieRelation
-    from django.db.models import Prefetch
+    from django.db.models import Prefetch, Exists, OuterRef
+    from apps.vod.models import M3UVODCategoryRelation
+
+    enabled_categories = M3UVODCategoryRelation.objects.filter(
+        m3u_account=OuterRef('m3u_account'),
+        category=OuterRef('category'),
+        enabled=True
+    )
 
     streams = []
 
     # All authenticated users get access to VOD from all active M3U accounts
-    filters = {"m3u_relations__m3u_account__is_active": True}
+    filters = {
+        "m3u_relations__m3u_account__is_active": True,
+        "m3u_relations__id__in": M3UMovieRelation.objects.annotate(
+            category_enabled=Exists(enabled_categories)
+        ).filter(category_enabled=True).values('id')
+    }
 
     if custom_playlist is not None:
         mapped_cat_ids = list(custom_playlist.vod_mappings.values_list('vod_category_id', flat=True))
@@ -2711,6 +2768,10 @@ def xc_get_vod_streams(request, user, category_id=None, custom_playlist=None):
             'm3u_relations',
             queryset=M3UMovieRelation.objects.filter(
                 m3u_account__is_active=True
+            ).annotate(
+                category_enabled=Exists(enabled_categories)
+            ).filter(
+                category_enabled=True
             ).select_related('m3u_account', 'category').order_by('-m3u_account__priority', 'id'),
             to_attr='active_relations'
         )
@@ -2767,12 +2828,14 @@ def xc_get_series_categories(user, custom_playlist=None):
         categories = VODCategory.objects.filter(
             category_type='series',
             id__in=mapped_cat_ids,
-            m3useriesrelation__m3u_account__is_active=True
+            m3u_relations__m3u_account__is_active=True,
+            m3u_relations__enabled=True
         ).distinct().order_by(Lower("name"))
     else:
         categories = VODCategory.objects.filter(
             category_type='series',
-            m3useriesrelation__m3u_account__is_active=True
+            m3u_relations__m3u_account__is_active=True,
+            m3u_relations__enabled=True
         ).distinct().order_by(Lower("name"))
 
     for category in categories:
@@ -2788,6 +2851,8 @@ def xc_get_series_categories(user, custom_playlist=None):
 def xc_get_series(request, user, category_id=None, custom_playlist=None):
     """Get series list for XtreamCodes API"""
     from apps.vod.models import M3USeriesRelation
+    from django.db.models import Exists, OuterRef
+    from apps.vod.models import M3UVODCategoryRelation
 
     series_list = []
 
@@ -2807,8 +2872,16 @@ def xc_get_series(request, user, category_id=None, custom_playlist=None):
         if category_id:
             filters["category_id"] = category_id
 
-    # Get series relations instead of series directly
-    series_relations = M3USeriesRelation.objects.filter(**filters).select_related(
+    enabled_categories = M3UVODCategoryRelation.objects.filter(
+        m3u_account=OuterRef('m3u_account'),
+        category=OuterRef('category'),
+        enabled=True
+    )
+
+    # Get series relations instead of series directly, checking enabled category
+    series_relations = M3USeriesRelation.objects.filter(**filters).annotate(
+        category_enabled=Exists(enabled_categories)
+    ).filter(category_enabled=True).select_related(
         'series', 'series__logo', 'category', 'm3u_account'
     )
 
@@ -2858,6 +2931,17 @@ def xc_get_series_info(request, user, series_id, custom_playlist=None):
 
     try:
         series_relation = M3USeriesRelation.objects.select_related('series', 'series__logo').get(**filters)
+        
+        # Check if category is enabled
+        from apps.vod.models import M3UVODCategoryRelation
+        category_enabled = M3UVODCategoryRelation.objects.filter(
+            m3u_account=series_relation.m3u_account,
+            category=series_relation.category,
+            enabled=True
+        ).exists()
+        if not category_enabled:
+            raise Http404()
+            
         series = series_relation.series
     except M3USeriesRelation.DoesNotExist:
         raise Http404()
@@ -2910,9 +2994,22 @@ def xc_get_series_info(request, user, series_id, custom_playlist=None):
 
         # Get the highest priority relation for this episode (for container_extension, video/audio/bitrate)
         from apps.vod.models import M3UEpisodeRelation
+        from django.db.models import Exists, OuterRef
+        from apps.vod.models import M3UVODCategoryRelation
+
+        enabled_categories_sub = M3UVODCategoryRelation.objects.filter(
+            m3u_account=OuterRef('series_relation__m3u_account'),
+            category=OuterRef('series_relation__category'),
+            enabled=True
+        )
+
         best_relation = M3UEpisodeRelation.objects.filter(
             episode=episode,
             m3u_account__is_active=True
+        ).annotate(
+            category_enabled=Exists(enabled_categories_sub)
+        ).filter(
+            category_enabled=True
         ).select_related('m3u_account').order_by('-m3u_account__priority', 'id').first()
 
         video = audio = bitrate = None
@@ -3073,7 +3170,23 @@ def xc_get_vod_info(request, user, vod_id, custom_playlist=None):
 
     try:
         # Order by account priority to get the best relation when multiple exist
-        movie_relation = M3UMovieRelation.objects.select_related('movie', 'movie__logo').filter(**filters).order_by('-m3u_account__priority', 'id').first()
+        from django.db.models import Exists, OuterRef
+        from apps.vod.models import M3UVODCategoryRelation
+
+        enabled_categories_sub = M3UVODCategoryRelation.objects.filter(
+            m3u_account=OuterRef('m3u_account'),
+            category=OuterRef('category'),
+            enabled=True
+        )
+
+        movie_relation = M3UMovieRelation.objects.select_related('movie', 'movie__logo').filter(
+            **filters
+        ).annotate(
+            category_enabled=Exists(enabled_categories_sub)
+        ).filter(
+            category_enabled=True
+        ).order_by('-m3u_account__priority', 'id').first()
+
         if not movie_relation:
             raise Http404()
         movie = movie_relation.movie
