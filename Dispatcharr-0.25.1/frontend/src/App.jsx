@@ -25,6 +25,8 @@ import CustomPlaylistsPage from './pages/CustomPlaylists';
 import EPGMapping from './pages/EPGMapping';
 import Automations from './pages/Automations';
 import Toolbox from './pages/Toolbox';
+import MediaServersPage from './pages/MediaServers';
+import ArgusDevicesPage from './pages/ArgusDevices';
 import useAuthStore from './store/auth';
 import FloatingVideo from './components/FloatingVideo';
 import { WebsocketProvider } from './WebSocket';
@@ -172,6 +174,8 @@ const App = () => {
                           path="/connect/logs"
                           element={<ConnectLogsPage />}
                         />
+                        <Route path="/mediaservers" element={<MediaServersPage />} />
+                        <Route path="/devices" element={<ArgusDevicesPage />} />
                         <Route path="/users" element={<Users />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/logos" element={<LogosPage />} />

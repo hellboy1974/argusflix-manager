@@ -4195,4 +4195,106 @@ export default class API {
       throw e;
     }
   }
+
+  // --- Media Servers API ---
+
+  static async getMediaServers() {
+    try {
+      return await request(`${host}/api/mediaservers/`);
+    } catch (e) {
+      errorNotification('Failed to retrieve media servers', e);
+      return [];
+    }
+  }
+
+  static async addMediaServer(payload) {
+    try {
+      return await request(`${host}/api/mediaservers/`, {
+        method: 'POST',
+        body: payload,
+      });
+    } catch (e) {
+      errorNotification('Failed to add media server', e);
+      throw e;
+    }
+  }
+
+  static async updateMediaServer(id, payload) {
+    try {
+      return await request(`${host}/api/mediaservers/${id}/`, {
+        method: 'PATCH',
+        body: payload,
+      });
+    } catch (e) {
+      errorNotification('Failed to update media server', e);
+      throw e;
+    }
+  }
+
+  static async deleteMediaServer(id) {
+    try {
+      return await request(`${host}/api/mediaservers/${id}/`, {
+        method: 'DELETE',
+      });
+    } catch (e) {
+      errorNotification('Failed to delete media server', e);
+      throw e;
+    }
+  }
+
+  static async testMediaServerConnection(id) {
+    try {
+      return await request(`${host}/api/mediaservers/${id}/test_connection/`, {
+        method: 'POST',
+      });
+    } catch (e) {
+      errorNotification('Connection test failed', e);
+      throw e;
+    }
+  }
+
+  // --- Argus Devices API ---
+
+  static async getArgusDevices() {
+    try {
+      return await request(`${host}/api/devices/devices/`);
+    } catch (e) {
+      errorNotification('Failed to retrieve devices', e);
+      return [];
+    }
+  }
+
+  static async generateDevicePairingCode() {
+    try {
+      return await request(`${host}/api/devices/devices/generate_pairing_code/`, {
+        method: 'POST',
+      });
+    } catch (e) {
+      errorNotification('Failed to generate pairing code', e);
+      throw e;
+    }
+  }
+
+  static async sendDeviceCommand(id, command, payload) {
+    try {
+      return await request(`${host}/api/devices/devices/${id}/send_command/`, {
+        method: 'POST',
+        body: { command, payload },
+      });
+    } catch (e) {
+      errorNotification('Failed to send command to device', e);
+      throw e;
+    }
+  }
+
+  static async deleteArgusDevice(id) {
+    try {
+      return await request(`${host}/api/devices/devices/${id}/`, {
+        method: 'DELETE',
+      });
+    } catch (e) {
+      errorNotification('Failed to delete device', e);
+      throw e;
+    }
+  }
 }

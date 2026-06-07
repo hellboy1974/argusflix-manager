@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Die ultimative Admin-Toolbox für Dispatcharr. Vereint Stream-Checker, Senderlogo-Grabber, Logo-Cleanup, Kanalnamen-Optimierer, EPG-Healer, Kanal-Duplikate-Merger und Backup/Restore-Werkzeuge.",
   "author": "Antigravity",
+  "has_ui": true,
+  "icon": "MonitorCog",
+  "admin_only": true,
   "fields": [
     {
       "id": "info_sec_1",

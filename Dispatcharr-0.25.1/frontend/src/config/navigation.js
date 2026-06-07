@@ -20,6 +20,8 @@ import {
   Tv,
   ListPlus,
   Clock,
+  Server,
+  Smartphone,
 } from 'lucide-react';
 
 export const NAV_ITEMS = {
@@ -81,6 +83,8 @@ export const NAV_ITEMS = {
     paths: [
       { label: 'Webhooks & Scripts', icon: Webhook, path: '/connect' },
       { label: 'Logs', icon: Logs, path: '/connect/logs' },
+      { label: 'Media Servers', icon: Server, path: '/mediaservers' },
+      { label: 'Argus Devices', icon: Smartphone, path: '/devices' },
     ],
   },
   automations: {

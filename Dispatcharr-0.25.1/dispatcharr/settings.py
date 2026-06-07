@@ -97,6 +97,8 @@ INSTALLED_APPS = [
     "django_filters",
     "django_celery_beat",
     "apps.plugins",
+    "apps.mediaservers.apps.MediaserversConfig",
+    "apps.devices.apps.DevicesConfig",
 ]
 
 # EPG Processing optimization settings

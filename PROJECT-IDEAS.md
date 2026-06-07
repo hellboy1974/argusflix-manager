@@ -159,3 +159,34 @@ Implementierung einer vollständigen Mehrsprachigkeit (z. B. Deutsch und Englisc
   - **Lokalisierungs-Kompilierung:** Übersetzung über Standard-Übersetzungsdateien (`django.po` / `django.mo`), die mittels Djangos `makemessages` und `compilemessages` verwaltet werden.
 
 
+---
+
+## 📱 Projekt 11: Argus IPTV Player Companion-System (Device Management)
+
+Ausbau von Dispatcharr Reloaded zu einem zentralen Management-Backend (MDM) für den kommenden "Argus IPTV Player" (Android TV App).
+
+### 🛠️ Technische Umsetzung
+* **Backend (Django) & Architektur:**
+  * **Pairing-System:** Ein sicheres Kopplungsverfahren mittels Server-URL (lokal oder VPS) und generiertem API-Key/Token, welches in der Argus-App eingetragen wird.
+  * **Live-Kommunikation (WebSockets):** Integration von `Django Channels` für eine dauerhafte, bidirektionale Verbindung zwischen Dispatcharr und dem Fernseher. Dies ermöglicht Echtzeit-Push-Kommandos hinter NAT-Routern.
+  * **Provider-Transfer:** Konvertierung von Zugangsdaten (Stalker, Xtream, M3U, Custom Playlists) in strukturierte JSON-Payloads, die direkt an die gekoppelte Argus-App gepusht werden.
+  * **Remote Backup & Restore:** API-Endpoints für das Empfangen verschlüsselter SQLite-App-Backups vom Fernseher und das Senden von Restore-Befehlen an den TV.
+* **Frontend (React) - Device Manager:**
+  * Eine neue Sidebar-Kategorie ("Argus Geräte") zur Übersicht aller gekoppelten TVs (Status, IP, installierte Playlisten).
+  * Eine grafische Oberfläche, um gezielt Playlisten zu pushen und Backups zu erstellen/wiederherzustellen.
+* **App-Technologie (Empfehlung für Argus):**
+  * Natives Android (Kotlin) kombiniert mit **Jetpack Compose for TV** für die UI und **ExoPlayer** für maximale Performance bei IPTV-Streams.
+
+---
+
+## 🎬 Projekt 12: Media-Server-Management (Plex / Emby / Jellyfin)
+
+Integration und Verwaltung von Drittanbieter-Mediaservern, damit deren Zugänge komfortabel über Dispatcharr gesammelt und an externe Clients (wie den Argus IPTV Player) übergeben werden können.
+
+### 🛠️ Technische Umsetzung
+* **Backend (Django):**
+  * Neues Datenmodell zur Speicherung von Server-Typ (Plex, Emby, Jellyfin), Basis-URL und Authentication-Tokens.
+  * API-Routen für "Connection Checks", um die Erreichbarkeit der Mediaserver und die Gültigkeit der Tokens zu verifizieren.
+* **Frontend (React):**
+  * Eine Einstellungsseite zur Verwaltung dieser Mediaserver-Profile.
+  * Ein Klick-Mechanismus ("An Argus senden"), der die Zugangsdaten über das WebSocket-System aus Projekt 11 direkt in die lokale Datenbank der Android TV App pusht.
