@@ -40,6 +40,12 @@ class Plugin:
             return self._backup_db(settings_dict, plugin_logger)
         elif action == "restore_db":
             return self._restore_db(settings_dict, plugin_logger)
+        elif action == "optimize_db":
+            return self._optimize_db(settings_dict, plugin_logger)
+        elif action == "clear_logs":
+            return self._clear_logs(settings_dict, plugin_logger)
+        elif action == "check_vpn":
+            return self._check_vpn(settings_dict, plugin_logger)
 
         return {"status": "error", "message": f"Unbekannte Aktion: {action}"}
 
@@ -582,3 +588,105 @@ class Plugin:
             "status": "ok",
             "message": f"Backup '{backup_name}' wurde erfolgreich wiederhergestellt! Bitte starten Sie das Backend neu, um die Änderungen zu laden."
         }
+
+    # ----------------------------------------------------------------------
+    # 9. ACTION: Datenbank Optimieren (VACUUM)
+    # ----------------------------------------------------------------------
+    def _optimize_db(self, settings_dict, plugin_logger):
+        from django.db import connection
+        try:
+            base_dir = Path(settings.BASE_DIR)
+            db_file = base_dir / "dispatcharr.db"
+            size_before = 0
+            if db_file.exists():
+                size_before = os.path.getsize(db_file)
+                
+            cursor = connection.cursor()
+            plugin_logger.info("Admin Toolbox: Führe VACUUM auf SQLite Datenbank aus...")
+            cursor.execute("VACUUM")
+            
+            size_after = 0
+            if db_file.exists():
+                size_after = os.path.getsize(db_file)
+                
+            saved_mb = max(0, (size_before - size_after) / (1024 * 1024))
+            
+            return {
+                "status": "ok",
+                "message": f"Datenbank erfolgreich optimiert. Eingesparter Speicherplatz: {saved_mb:.2f} MB."
+            }
+        except Exception as e:
+            plugin_logger.error(f"Fehler bei VACUUM: {e}")
+            return {"status": "error", "message": f"Datenbank-Optimierung fehlgeschlagen: {e}"}
+
+    # ----------------------------------------------------------------------
+    # 10. ACTION: Alte Logs bereinigen
+    # ----------------------------------------------------------------------
+    def _clear_logs(self, settings_dict, plugin_logger):
+        import time
+        from pathlib import Path
+        
+        base_dir = Path(settings.BASE_DIR)
+        logs_dir = base_dir / "data" / "logs"
+        
+        if not logs_dir.exists():
+            return {"status": "ok", "message": "Kein Logs-Ordner gefunden, nichts zu löschen."}
+            
+        now = time.time()
+        # 7 days = 604800 seconds
+        cutoff = now - 604800
+        deleted_count = 0
+        freed_bytes = 0
+        
+        try:
+            for f in logs_dir.glob("*.log*"):
+                if f.is_file():
+                    if f.stat().st_mtime < cutoff:
+                        freed_bytes += f.stat().st_size
+                        f.unlink()
+                        deleted_count += 1
+                        
+            freed_mb = freed_bytes / (1024 * 1024)
+            plugin_logger.info(f"Admin Toolbox: {deleted_count} alte Log-Dateien gelöscht ({freed_mb:.2f} MB freigegeben).")
+            return {
+                "status": "ok",
+                "message": f"Logs bereinigt. {deleted_count} Dateien entfernt ({freed_mb:.2f} MB freigegeben)."
+            }
+        except Exception as e:
+            plugin_logger.error(f"Fehler beim Bereinigen der Logs: {e}")
+            return {"status": "error", "message": f"Fehler beim Löschen der Logs: {e}"}
+
+    # ----------------------------------------------------------------------
+    # 11. ACTION: VPN-Verbindung prüfen
+    # ----------------------------------------------------------------------
+    def _check_vpn(self, settings_dict, plugin_logger):
+        import urllib.request
+        import json
+        try:
+            req = urllib.request.Request(
+                "http://ip-api.com/json/", 
+                headers={"User-Agent": "Dispatcharr-Admin-Toolbox-Plugin/1.0.0"}
+            )
+            with urllib.request.urlopen(req, timeout=5) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                if data.get("status") == "success":
+                    ip = data.get("query")
+                    country = data.get("country")
+                    isp = data.get("isp")
+                    return {
+                        "status": "ok",
+                        "vpn_active": True,
+                        "ip": ip,
+                        "country": country,
+                        "isp": isp,
+                        "message": f"Verbindung aktiv (IP: {ip}, Land: {country})"
+                    }
+                else:
+                    raise Exception("Invalid response from ip-api")
+        except Exception as e:
+            plugin_logger.warning(f"Admin Toolbox VPN-Check fehlgeschlagen: {e}")
+            return {
+                "status": "ok",
+                "vpn_active": False,
+                "message": "Verbindung fehlgeschlagen (VPN Tunnel down oder Offline)"
+            }

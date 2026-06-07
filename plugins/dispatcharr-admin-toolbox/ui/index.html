@@ -450,33 +450,29 @@
 
             <!-- Module 2: VPN-Guard -->
             <div id="tab-vpn-guard" class="tab-panel">
-                 <div class="mockup-notice">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    <div><strong>Modul in Entwicklung:</strong> UI-Mockup für Gluetun / Wireguard Integration.</div>
-                </div>
-
-                <div class="card" style="display: flex; gap: 40px; align-items: center;">
+                <div class="card" style="display: flex; gap: 40px; align-items: center;" id="vpn-guard-content">
                     <div style="flex-shrink: 0; position: relative;">
-                        <div style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid var(--success-color); display: flex; align-items: center; justify-content: center;">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <div id="vpn-guard-icon" style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid var(--text-secondary); display: flex; align-items: center; justify-content: center;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                         </div>
                     </div>
                     <div>
-                        <h2 style="margin: 0 0 8px 0; font-size: 1.5rem;">VPN Tunnel ist <span style="color: var(--success-color)">Aktiv</span></h2>
-                        <p style="color: var(--text-secondary); margin: 0 0 20px 0;">Alle ausgehenden Provider-Verbindungen sind verschlüsselt und geroutet.</p>
+                        <h2 style="margin: 0 0 8px 0; font-size: 1.5rem;" id="vpn-guard-title">Prüfe VPN Tunnel...</h2>
+                        <p style="color: var(--text-secondary); margin: 0 0 20px 0;" id="vpn-guard-desc">Ermittle ausgehende IP-Adresse und Geo-Location.</p>
                         
                         <div style="display: flex; gap: 20px; font-size: 0.9rem;">
                             <div>
                                 <span style="color: var(--text-secondary); display: block; margin-bottom: 4px;">Aktuelle IP</span>
-                                <code>185.xxx.xxx.12 (Schweiz)</code>
+                                <code id="vpn-guard-ip">Lädt...</code>
                             </div>
                             <div>
-                                <span style="color: var(--text-secondary); display: block; margin-bottom: 4px;">Kill-Switch Status</span>
-                                <span style="color: var(--success-color); font-weight: 600;">Scharfgestellt</span>
+                                <span style="color: var(--text-secondary); display: block; margin-bottom: 4px;">ISP / Provider</span>
+                                <span style="color: var(--text-secondary); font-weight: 600;" id="vpn-guard-isp">Lädt...</span>
                             </div>
                         </div>
                     </div>
                 </div>
+                <button class="btn btn-primary" style="margin-top: 16px;" onclick="checkVPNStatus(this)">Status aktualisieren</button>
             </div>
 
             <!-- Module 3: Provider-Auditor -->
@@ -588,11 +584,6 @@
 
             <!-- Module 6: DB-Optimizer -->
             <div id="tab-db-optimizer" class="tab-panel">
-                <div class="mockup-notice">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    <div><strong>Modul in Entwicklung:</strong> UI-Mockup. Die tatsächliche SQLite VACUUM-Logik wird in einem späteren Update verbunden.</div>
-                </div>
-
                 <div class="card">
                     <div class="card-header">
                         <div>
@@ -602,16 +593,14 @@
                     </div>
                     <div style="display: flex; gap: 40px;">
                         <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
-                            <h3 style="margin: 0 0 10px 0;">Datenbank Größe</h3>
-                            <div style="font-size: 2rem; font-weight: 700; color: var(--accent-color); margin-bottom: 5px;">42.5 MB</div>
-                            <p style="margin: 0 0 20px 0; color: var(--text-secondary); font-size: 0.85rem;">Potenzielle Einsparung: ~12 MB</p>
-                            <button class="btn btn-primary" style="width: 100%;" disabled>Jetzt Optimieren (VACUUM)</button>
+                            <h3 style="margin: 0 0 10px 0;">Datenbank Optimieren</h3>
+                            <p style="margin: 0 0 20px 0; color: var(--text-secondary); font-size: 0.85rem;">Führt einen VACUUM-Befehl aus, um die dispatcharr.db zu verkleinern.</p>
+                            <button class="btn btn-primary" style="width: 100%;" onclick="runLegacyAction('optimize_db', this)">Jetzt Optimieren (VACUUM)</button>
                         </div>
                         <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
-                            <h3 style="margin: 0 0 10px 0;">System Logs</h3>
-                            <div style="font-size: 2rem; font-weight: 700; color: var(--warning-color); margin-bottom: 5px;">1.2 GB</div>
-                            <p style="margin: 0 0 20px 0; color: var(--text-secondary); font-size: 0.85rem;">Logs älter als 7 Tage</p>
-                            <button class="btn btn-outline" style="width: 100%;" disabled>Alte Logs löschen</button>
+                            <h3 style="margin: 0 0 10px 0;">System Logs Bereinigen</h3>
+                            <p style="margin: 0 0 20px 0; color: var(--text-secondary); font-size: 0.85rem;">Logs älter als 7 Tage aus dem Verzeichnis /data/logs/ löschen.</p>
+                            <button class="btn btn-outline" style="width: 100%;" onclick="runLegacyAction('clear_logs', this)">Alte Logs löschen</button>
                         </div>
                     </div>
                 </div>
@@ -710,6 +699,10 @@
             if (targetPanel) {
                 targetPanel.classList.add('active');
             }
+            
+            if (tabId === 'vpn-guard') {
+                checkVPNStatus();
+            }
         }
 
         // Toast Notification System
@@ -777,7 +770,8 @@
 
                 const data = await response.json();
                 if (data.success) {
-                    showToast(`Aktion erfolgreich ausgeführt!`, 'success');
+                    const msg = (data.result && data.result.message) ? data.result.message : 'Aktion erfolgreich ausgeführt!';
+                    showToast(msg, 'success');
                 } else {
                     throw new Error(data.error || 'Aktion fehlgeschlagen.');
                 }
@@ -787,6 +781,57 @@
             } finally {
                 buttonElement.disabled = false;
                 buttonElement.innerText = originalText;
+            }
+        }
+
+        async function checkVPNStatus(buttonElement = null) {
+            if (!token) return;
+            
+            if (buttonElement) {
+                buttonElement.disabled = true;
+                buttonElement.innerText = 'Prüfe...';
+            }
+            
+            try {
+                const response = await fetch('/api/plugins/plugins/dispatcharr-admin-toolbox/run/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ action: 'check_vpn', params: {} })
+                });
+
+                if (!response.ok) throw new Error('API Fehler');
+                
+                const data = await response.json();
+                const res = data.result;
+                
+                if (res && res.vpn_active) {
+                    document.getElementById('vpn-guard-icon').style.borderColor = 'var(--success-color)';
+                    document.getElementById('vpn-guard-icon').innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>';
+                    document.getElementById('vpn-guard-title').innerHTML = 'VPN Tunnel ist <span style="color: var(--success-color)">Aktiv / Verbunden</span>';
+                    document.getElementById('vpn-guard-desc').innerText = 'Alle ausgehenden Provider-Verbindungen nutzen diese IP.';
+                    document.getElementById('vpn-guard-ip').innerText = `${res.ip} (${res.country})`;
+                    document.getElementById('vpn-guard-isp').innerText = res.isp || 'Unbekannt';
+                    document.getElementById('vpn-guard-isp').style.color = 'var(--success-color)';
+                } else {
+                    document.getElementById('vpn-guard-icon').style.borderColor = 'var(--danger-color)';
+                    document.getElementById('vpn-guard-icon').innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--danger-color)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+                    document.getElementById('vpn-guard-title').innerHTML = 'VPN Tunnel ist <span style="color: var(--danger-color)">Offline</span>';
+                    document.getElementById('vpn-guard-desc').innerText = 'Verbindung konnte nicht hergestellt werden. (Gluetun Kill-Switch blockiert?)';
+                    document.getElementById('vpn-guard-ip').innerText = 'Unbekannt';
+                    document.getElementById('vpn-guard-isp').innerText = 'Nicht erreichbar';
+                    document.getElementById('vpn-guard-isp').style.color = 'var(--danger-color)';
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('vpn-guard-ip').innerText = 'Fehler beim Prüfen';
+            } finally {
+                if (buttonElement) {
+                    buttonElement.disabled = false;
+                    buttonElement.innerText = 'Status aktualisieren';
+                }
             }
         }
     </script>
