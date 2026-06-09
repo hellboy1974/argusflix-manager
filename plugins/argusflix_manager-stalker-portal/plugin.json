@@ -1,0 +1,173 @@
+{
+  "name": "Stalker Portals Integrator",
+  "version": "1.2.0",
+  "description": "Integrate Stalker IPTV portals using URL and MAC address. Translates portals into standard M3U accounts and VOD libraries with selective sync, pre-import category/keyword filters, random testing, scheduling, and new entry markers.",
+  "author": "Antigravity",
+  "help_url": "",
+  "fields": [
+    {
+      "id": "single_portal_section",
+      "label": "--- Single Portal Configuration ---",
+      "type": "info",
+      "description": "Configure a single portal here. If you want multiple portals, use the JSON list field below."
+    },
+    {
+      "id": "portal_name",
+      "label": "Portal Name",
+      "type": "string",
+      "default": "Stalker Portal",
+      "help_text": "A friendly name for this portal."
+    },
+    {
+      "id": "portal_url",
+      "label": "Portal URL",
+      "type": "string",
+      "default": "",
+      "placeholder": "http://example.com/c/ or http://example.com/portal.php",
+      "help_text": "The portal endpoint."
+    },
+    {
+      "id": "mac_address",
+      "label": "MAC Address",
+      "type": "string",
+      "default": "",
+      "placeholder": "00:1A:79:XX:XX:XX",
+      "help_text": "Your MAG device MAC address (should start with 00:1A:79)."
+    },
+    {
+      "id": "user_agent",
+      "label": "User-Agent Override",
+      "type": "string",
+      "default": "",
+      "help_text": "Optional: Override the default MAG User-Agent."
+    },
+    {
+      "id": "multi_portal_section",
+      "label": "--- Multiple Portals Configuration ---",
+      "type": "info",
+      "description": "Configure multiple portals. Enter either a simple text list or a JSON array. If either is non-empty, the single portal settings above are ignored."
+    },
+    {
+      "id": "portals_list",
+      "label": "Portals List (One per line)",
+      "type": "text",
+      "default": "",
+      "placeholder": "Name | URL | MAC | User-Agent (optional)",
+      "help_text": "Format: Name | URL | MAC | User-Agent (optional). Example: Portal 1 | http://example.com/c/ | 00:1A:79:11:22:33"
+    },
+    {
+      "id": "portals_json",
+      "label": "Portals JSON List (Alternative)",
+      "type": "text",
+      "default": "[]",
+      "help_text": "Example: [{\"name\": \"Portal 1\", \"url\": \"http://example.com/c/\", \"mac\": \"00:1A:79:11:22:33\"}]"
+    },
+    {
+      "id": "sync_filters_section",
+      "label": "--- Detailed Sync Content Selection ---",
+      "type": "info",
+      "description": "Choose exactly what components of the portal you want to synchronize."
+    },
+    {
+      "id": "sync_live_tv",
+      "label": "Synchronize Live TV",
+      "type": "boolean",
+      "default": true,
+      "help_text": "If enabled, Live TV channels from Stalker portals will be synchronized."
+    },
+    {
+      "id": "sync_movies",
+      "label": "Synchronize Movies (VOD)",
+      "type": "boolean",
+      "default": true,
+      "help_text": "If enabled, VOD movies from Stalker portals will be synchronized."
+    },
+    {
+      "id": "sync_series",
+      "label": "Synchronize TV Series",
+      "type": "boolean",
+      "default": true,
+      "help_text": "If enabled, TV Series and all their episodes will be synchronized."
+    },
+    {
+      "id": "pre_filters_section",
+      "label": "--- Pre-Import Sync Filters (Category & Keywords) ---",
+      "type": "info",
+      "description": "Exclude or include categories and title keywords before import. Filtering happens prior to stream testing, saving time."
+    },
+    {
+      "id": "category_whitelist",
+      "label": "Category Whitelist",
+      "type": "string",
+      "default": "",
+      "placeholder": "Action, Sports, Comedy",
+      "help_text": "Comma-separated list of categories to import. If empty, all categories are allowed."
+    },
+    {
+      "id": "category_blacklist",
+      "label": "Category Blacklist",
+      "type": "string",
+      "default": "",
+      "placeholder": "Adult, XXX, Radio, News",
+      "help_text": "Comma-separated list of categories to completely skip."
+    },
+    {
+      "id": "title_blacklist",
+      "label": "Title Keyword Blacklist",
+      "type": "string",
+      "default": "",
+      "placeholder": "SD, Backup, 3D",
+      "help_text": "Comma-separated list of keywords. Channels, movies, or series containing these in their title will be ignored."
+    },
+    {
+      "id": "mark_new_entries",
+      "label": "Mark New Entries with 🆕",
+      "type": "boolean",
+      "default": true,
+      "help_text": "If enabled, newly imported channels, movies, and series will be prefixed with 🆕 in their names."
+    },
+    {
+      "id": "testing_section",
+      "label": "--- Testing Configuration ---",
+      "type": "info",
+      "description": "Configure the random stream testing settings."
+    },
+    {
+      "id": "test_sample_size",
+      "label": "Test Sample Size",
+      "type": "number",
+      "default": 5,
+      "help_text": "Number of random items of each type (channels, movies, episodes) to test and import."
+    },
+    {
+      "id": "scheduling_section",
+      "label": "--- Automatic Daily Sync Schedule ---",
+      "type": "info",
+      "description": "Configure when you want this plugin to automatically synchronize in the background."
+    },
+    {
+      "id": "cron_schedule",
+      "label": "Cron Sync Schedule",
+      "type": "string",
+      "default": "0 3 * * *",
+      "help_text": "A standard 5-field crontab expression. Default '0 3 * * *' triggers sync every night at 3:00 AM."
+    },
+    {
+      "id": "local_stream_host",
+      "label": "Local Stream Host",
+      "type": "string",
+      "default": "http://127.0.0.1:5656",
+      "help_text": "The address where ArgusFlix is locally accessible. Use http://127.0.0.1:5656 for local dev or http://web:9191 for docker."
+    }
+  ],
+  "actions": [
+    {
+      "id": "sync",
+      "label": "Sync & Test Stalker Portal",
+      "description": "Connects to Stalker portals, fetches all selected channels/movies/series, filters them, selects a random sample of each, tests their streams, and imports the working ones into ArgusFlix.",
+      "button_label": "Sync & Test",
+      "button_variant": "filled",
+      "button_color": "blue"
+    }
+  ]
+}

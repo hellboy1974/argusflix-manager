@@ -1,0 +1,13 @@
+diff a/ArgusFlix-0.25.1/apps/epg/models.py b/ArgusFlix-0.25.1/apps/epg/models.py	(rejected hunks)
+@@ -30,7 +30,10 @@ class EPGSource(models.Model):
+     name = models.CharField(max_length=255, unique=True)
+     source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES)
+     url = models.URLField(max_length=1000, blank=True, null=True)  # For XMLTV
+-    api_key = models.CharField(max_length=255, blank=True, null=True)  # For Schedules Direct
++    username = models.CharField(max_length=255, blank=True, null=True,
++                               help_text='Username for credential-based EPG sources (e.g. Schedules Direct)')
++    password = models.CharField(max_length=255, blank=True, null=True,
++                               help_text='Password for credential-based EPG sources (e.g. Schedules Direct)')
+     is_active = models.BooleanField(default=True)
+     file_path = models.CharField(max_length=1024, blank=True, null=True)
+     extracted_file_path = models.CharField(max_length=1024, blank=True, null=True,

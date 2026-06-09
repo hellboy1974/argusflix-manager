@@ -10,10 +10,10 @@ if (Test-Path "angina_aio.py") {
 }
 
 # Use the .venv Python to run PyInstaller
-$PyInstallerPath = "..\Dispatcharr-0.25.1\.venv\Scripts\pyinstaller.exe"
+$PyInstallerPath = "..\ArgusFlix-0.25.1\.venv\Scripts\pyinstaller.exe"
 if (-Not (Test-Path $PyInstallerPath)) {
     # Fallback if run from root
-    $PyInstallerPath = "Dispatcharr-0.25.1\.venv\Scripts\pyinstaller.exe"
+    $PyInstallerPath = "ArgusFlix-0.25.1\.venv\Scripts\pyinstaller.exe"
 }
 
 Write-Host "Compiling Angina_AIO.exe using PyInstaller..." -ForegroundColor Cyan

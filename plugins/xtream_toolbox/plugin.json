@@ -1,7 +1,7 @@
 {
   "name": "Xtream Toolbox",
   "version": "1.0.0",
-  "description": "Manage, test, and import Xtream Codes IPTV panels into Dispatcharr.",
+  "description": "Manage, test, and import Xtream Codes IPTV panels into ArgusFlix.",
   "has_ui": true,
   "icon": "Wrench",
   "admin_only": true,
@@ -38,7 +38,7 @@
     {
       "id": "import_panel",
       "label": "Import Panel",
-      "description": "Creates a new Xtream Codes source in Dispatcharr and starts syncing",
+      "description": "Creates a new Xtream Codes source in ArgusFlix and starts syncing",
       "fields": [
         {
           "id": "name",

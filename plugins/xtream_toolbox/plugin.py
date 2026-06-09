@@ -13,7 +13,7 @@ requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.
 class Plugin:
     name = "Xtream Toolbox"
     version = "1.0.0"
-    description = "Manage, test, and import Xtream Codes IPTV panels into Dispatcharr."
+    description = "Manage, test, and import Xtream Codes IPTV panels into ArgusFlix."
     has_ui = True
     icon = "Wrench"
     admin_only = True

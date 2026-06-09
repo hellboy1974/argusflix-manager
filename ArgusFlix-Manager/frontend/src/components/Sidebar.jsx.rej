@@ -1,0 +1,19 @@
+diff a/ArgusFlix-0.25.1/frontend/src/components/Sidebar.jsx b/ArgusFlix-0.25.1/frontend/src/components/Sidebar.jsx	(rejected hunks)
+@@ -1,4 +1,4 @@
+-import React, { useRef, useState, useMemo } from 'react';
++import React, { useState, useMemo } from 'react';
+ import { Link, useLocation } from 'react-router-dom';
+ import { copyToClipboard } from '../utils';
+ import {
+@@ -161,10 +161,9 @@ const Sidebar = ({ collapsed, toggleDrawer, drawerWidth, miniDrawerWidth }) => {
+   const getNavOrder = useAuthStore((s) => s.getNavOrder);
+   const getHiddenNav = useAuthStore((s) => s.getHiddenNav);
+ 
+-  const publicIPRef = useRef(null);
+-
+   const [userFormOpen, setUserFormOpen] = useState(false);
+   const [aboutOpen, setAboutOpen] = useState(false);
++  const [ipRevealed, setIpRevealed] = useState(false);
+ 
+   const closeUserForm = () => setUserFormOpen(false);
+ 

@@ -230,7 +230,7 @@
     {
       "id": "sync_channels",
       "label": "Sync Playlists",
-      "description": "Fetches channels from active portals and registers them as M3U Accounts in Dispatcharr.",
+      "description": "Fetches channels from active portals and registers them as M3U Accounts in ArgusFlix.",
       "button_label": "Sync Playlists",
       "button_variant": "filled",
       "button_color": "blue"

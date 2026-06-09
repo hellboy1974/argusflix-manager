@@ -1,0 +1,185 @@
+diff a/ArgusFlix-0.25.1/frontend/src/components/forms/User.jsx b/ArgusFlix-0.25.1/frontend/src/components/forms/User.jsx	(rejected hunks)
+@@ -48,52 +46,15 @@ const User = ({ user = null, isOpen, onClose }) => {
+   const [, setEnableXC] = useState(false);
+   const [selectedProfiles, setSelectedProfiles] = useState(new Set());
+   const [generating, setGenerating] = useState(false);
+-  const [generatedKey, setGeneratedKey] = useState(null);
++  const [_generatedKey, setGeneratedKey] = useState(null);
+   const [userAPIKey, setUserAPIKey] = useState(user?.api_key || null);
+ 
+   const theme = useMantineTheme();
+ 
+   const form = useForm({
+     mode: 'uncontrolled',
+-    initialValues: {
+-      username: '',
+-      first_name: '',
+-      last_name: '',
+-      email: '',
+-      user_level: '0',
+-      stream_limit: 0,
+-      password: '',
+-      xc_password: '',
+-      output_format: '',
+-      output_profile: '',
+-      channel_profiles: [],
+-      hide_adult_content: false,
+-      epg_days: 0,
+-      epg_prev_days: 0,
+-      allowed_ips: [],
+-    },
+-
+-    validate: (values) => ({
+-      username: !values.username
+-        ? 'Username is required'
+-        : values.user_level == USER_LEVELS.STREAMER &&
+-            !values.username.match(/^[a-z0-9]+$/i)
+-          ? 'Streamer username must be alphanumeric'
+-          : null,
+-      password:
+-        !user && !values.password && values.user_level != USER_LEVELS.STREAMER
+-          ? 'Password is required'
+-          : null,
+-      xc_password:
+-        values.xc_password && !values.xc_password.match(/^[a-z0-9]+$/i)
+-          ? 'XC password must be alphanumeric'
+-          : null,
+-      allowed_ips: (values.allowed_ips || []).some(
+-        (t) => !isValidNetworkEntry(t)
+-      )
+-        ? 'Invalid IP address or CIDR range'
+-        : null,
+-    }),
++    initialValues: getFormInitialValues(),
++    validate: getFormValidators(user),
+   });
+ 
+   const onChannelProfilesChange = (values) => {
+@@ -110,65 +71,18 @@ const User = ({ user = null, isOpen, onClose }) => {
+   };
+ 
+   const onSubmit = async () => {
+-    const values = form.getValues();
++    const payload = formValuesToPayload(form.getValues(), user);
+ 
+-    const customProps = user?.custom_properties || {};
+-
+-    customProps.xc_password = values.xc_password || '';
+-    delete values.xc_password;
+-
+-    customProps.output_format = values.output_format || null;
+-    delete values.output_format;
+-
+-    customProps.output_profile = values.output_profile
+-      ? parseInt(values.output_profile, 10)
+-      : null;
+-    delete values.output_profile;
+-
+-    customProps.hide_adult_content = values.hide_adult_content || false;
+-    delete values.hide_adult_content;
+-
+-    customProps.epg_days = values.epg_days || 0;
+-    delete values.epg_days;
+-    customProps.epg_prev_days = values.epg_prev_days || 0;
+-    delete values.epg_prev_days;
+-
+-    values.custom_properties = customProps;
+-
+-    // Serialize per-user network restrictions into custom_properties (same list for all types)
+-    const joined = (values.allowed_ips || []).join(',');
+-    delete values.allowed_ips;
+-    const allowed_networks = {};
+-    if (joined)
+-      NETWORK_KEYS.forEach((key) => {
+-        allowed_networks[key] = joined;
+-      });
+-    customProps.allowed_networks = allowed_networks;
+-
+-    if (values.channel_profiles.includes('0')) {
+-      values.channel_profiles = [];
+-    }
+-
+-    if (!user && values.user_level == USER_LEVELS.STREAMER) {
+-      values.password = Math.random().toString(36).slice(2);
++    if (!user && payload.user_level == USER_LEVELS.STREAMER) {
++      payload.password = Math.random().toString(36).slice(2);
+     }
+ 
+     if (!user) {
+-      await API.createUser(values);
++      await createUser(payload);
+     } else {
+-      if (!values.password) {
+-        delete values.password;
+-      }
+-
+-      const response = await API.updateUser(
+-        user.id,
+-        values,
+-        isAdmin ? false : authUser.id === user.id
+-      );
+-
+-      if (user.id == authUser.id) {
+-        setUser(response);
+-      }
++      if (!payload.password) delete payload.password;
++      const response = await updateUser(user.id, payload, isAdmin, authUser);
++      if (user.id == authUser.id) setUser(response);
+     }
+ 
+     form.reset();
+@@ -178,38 +92,9 @@ const User = ({ user = null, isOpen, onClose }) => {
+ 
+   useEffect(() => {
+     if (user?.id) {
+-      const customProps = user.custom_properties || {};
+-      const networks = customProps.allowed_networks || {};
+-
+-      form.setValues({
+-        username: user.username,
+-        first_name: user.first_name || '',
+-        last_name: user.last_name || '',
+-        email: user.email,
+-        user_level: `${user.user_level}`,
+-        stream_limit: user.stream_limit || 0,
+-        channel_profiles:
+-          user.channel_profiles.length > 0
+-            ? user.channel_profiles.map((id) => `${id}`)
+-            : ['0'],
+-        xc_password: customProps.xc_password || '',
+-        output_format: customProps.output_format || '',
+-        output_profile: customProps.output_profile
+-          ? `${customProps.output_profile}`
+-          : '',
+-        hide_adult_content: customProps.hide_adult_content || false,
+-        epg_days: customProps.epg_days || 0,
+-        epg_prev_days: customProps.epg_prev_days || 0,
+-        allowed_ips: [
+-          ...new Set(
+-            NETWORK_KEYS.flatMap((key) =>
+-              networks[key] ? networks[key].split(',').filter(Boolean) : []
+-            )
+-          ),
+-        ],
+-      });
+-
+-      if (customProps.xc_password) {
++      form.setValues(userToFormValues(user));
++
++      if (user.custom_properties?.xc_password) {
+         setEnableXC(true);
+       }
+ 
+@@ -375,10 +261,10 @@ const User = ({ user = null, isOpen, onClose }) => {
+                   key={form.key('hide_adult_content')}
+                 />
+               </Stack>
+-            </Tabs.Panel>
++            </TabsPanel>
+           )}
+ 
+-          <Tabs.Panel value="epg">
++          <TabsPanel value="epg">
+             <Stack gap="sm">
+               <Text size="sm" c="dimmed">
+                 These defaults apply when no URL parameters are specified and

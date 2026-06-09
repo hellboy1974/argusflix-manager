@@ -1,4 +1,4 @@
-# Dispatcharr Reloaded 🚀
+# ArgusFlix Manager 🚀
 
 <p align="center">
   <b>The Ultimate IPTV & Media Proxy Management Platform</b><br>
@@ -9,7 +9,7 @@
 
 ## 🇬🇧 English
 
-**Dispatcharr Reloaded** is a next-generation IPTV management, proxy, and companion platform. Built upon a robust **Django/Python** backend with WebSockets and a modern **React (Mantine UI)** frontend, it is designed to centralize and manage media streams, player devices, and IPTV portal testing tools.
+**ArgusFlix Manager** is a next-generation IPTV management, proxy, and companion platform. Built upon a robust **Django/Python** backend with WebSockets and a modern **React (Mantine UI)** frontend, it is designed to centralize and manage media streams, player devices, and IPTV portal testing tools.
 
 ### 🌟 Core Features
 
@@ -20,7 +20,7 @@
 2. **Argus Device Companion System**
    - **Smart Pairing:** Connect your Android TV app (*Argus IPTV Player*) via a secure 6-digit code.
    - **Remote Control:** Send real-time commands to paired TVs using WebSockets.
-   - **Granular Backups & Restores:** Manage cloud backups for Playlists, Media Servers, App Settings, and Watch History directly from the Dispatcharr dashboard.
+   - **Granular Backups & Restores:** Manage cloud backups for Playlists, Media Servers, App Settings, and Watch History directly from the ArgusFlix dashboard.
 
 3. **Media Server Integration**
    - Centralized hub for managing third-party media servers (Plex, Emby, Jellyfin).
@@ -45,7 +45,7 @@
 
 ## 🇩🇪 Deutsch
 
-**Dispatcharr Reloaded** ist eine hochmoderne Verwaltungs-, Proxy- und Companion-Plattform für IPTV. Basierend auf einem leistungsstarken **Django/Python** Backend (mit WebSockets) und einem modernen **React (Mantine UI)** Frontend, wurde es entwickelt, um Medien-Streams, Endgeräte und IPTV-Portal-Tools zentral zu verwalten.
+**ArgusFlix Manager** ist eine hochmoderne Verwaltungs-, Proxy- und Companion-Plattform für IPTV. Basierend auf einem leistungsstarken **Django/Python** Backend (mit WebSockets) und einem modernen **React (Mantine UI)** Frontend, wurde es entwickelt, um Medien-Streams, Endgeräte und IPTV-Portal-Tools zentral zu verwalten.
 
 ### 🌟 Kernfunktionen
 
@@ -56,7 +56,7 @@
 2. **Argus Device Companion System**
    - **Smart Pairing:** Verbinde deine Android TV-App (*Argus IPTV Player*) über einen sicheren 6-stelligen Code.
    - **Fernsteuerung:** Sende über WebSockets Echtzeit-Befehle an gekoppelte Fernsehgeräte.
-   - **Detaillierte Backups & Restores:** Verwalte Cloud-Backups für Playlists, Media Server, App-Einstellungen und Watch-Historie direkt über das Dispatcharr-Dashboard.
+   - **Detaillierte Backups & Restores:** Verwalte Cloud-Backups für Playlists, Media Server, App-Einstellungen und Watch-Historie direkt über das ArgusFlix-Dashboard.
 
 3. **Media Server Integration**
    - Zentraler Hub zur Verwaltung von externen Media-Servern (Plex, Emby, Jellyfin).

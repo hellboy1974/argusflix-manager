@@ -1,0 +1,99 @@
+diff a/ArgusFlix-0.25.1/frontend/src/components/forms/EPG.jsx b/ArgusFlix-0.25.1/frontend/src/components/forms/EPG.jsx	(rejected hunks)
+@@ -28,7 +669,8 @@ const EPG = ({ epg = null, isOpen, onClose }) => {
+       name: '',
+       source_type: 'xmltv',
+       url: '',
+-      api_key: '',
++      username: '',
++      password: '',
+       is_active: true,
+       refresh_interval: 24,
+       cron_expression: '',
+@@ -44,52 +686,60 @@ const EPG = ({ epg = null, isOpen, onClose }) => {
+   const onSubmit = async () => {
+     const values = form.getValues();
+ 
+-    // Determine which schedule type is active based on field values
+     const hasCronExpression =
+       values.cron_expression && values.cron_expression.trim() !== '';
+ 
+-    // Clear the field that isn't active based on actual field values
+     if (hasCronExpression) {
+       values.refresh_interval = 0;
+     } else {
+       values.cron_expression = '';
+     }
+ 
+-    if (epg?.id) {
+-      // Validate that we have a valid EPG object before updating
+-      if (!epg || typeof epg !== 'object' || !epg.id) {
+-        showNotification({
+-          title: 'Error',
+-          message: 'Invalid EPG data. Please close and reopen this form.',
+-          color: 'red',
+-        });
+-        return;
+-      }
++    const existingId = epg?.id || savedEpgId;
+ 
+-      await updateEPG(values, epg);
++    if (existingId) {
++      const epgObj = epg || { id: existingId };
++      await updateEPG(values, epgObj);
++      onClose();
+     } else {
+-      await addEPG(values);
++      const payload = { ...values };
++      if (payload.source_type === 'schedules_direct') {
++        payload.custom_properties = {
++          logo_style: 'dark',
++          poster_style: 'sd_recommended',
++        };
++      }
++      const result = await addEPG(payload);
++      if (result?.id) {
++        setSavedEpgId(result.id);
++        setSdCustomProps(
++          result.custom_properties || payload.custom_properties || {}
++        );
++      } else {
++        form.reset();
++        onClose();
++      }
+     }
+-
+-    form.reset();
+-    onClose();
+   };
+ 
+   useEffect(() => {
+     if (epg) {
++      const storedEpg = useEPGsStore.getState().epgs[epg.id] || epg;
+       const values = {
+-        name: epg.name,
+-        source_type: epg.source_type,
+-        url: epg.url,
+-        api_key: epg.api_key,
+-        is_active: epg.is_active,
+-        refresh_interval: epg.refresh_interval,
+-        cron_expression: epg.cron_expression || '',
+-        priority: epg.priority ?? 0,
++        name: storedEpg.name,
++        source_type: storedEpg.source_type,
++        url: storedEpg.url,
++        username: storedEpg.username || '',
++        password: storedEpg.password || '',
++        is_active: storedEpg.is_active,
++        refresh_interval: storedEpg.refresh_interval,
++        cron_expression: storedEpg.cron_expression || '',
++        priority: storedEpg.priority ?? 0,
+       };
+       form.setValues(values);
+-      setSourceType(epg.source_type);
+-      // Determine schedule type from existing data - check both fields
++      setSourceType(storedEpg.source_type);
++      setSavedEpgId(storedEpg.id);
++      setSdCustomProps(storedEpg.custom_properties || {});
+       setScheduleType(
+         epg.cron_expression && epg.cron_expression.trim() !== ''
+           ? 'cron'

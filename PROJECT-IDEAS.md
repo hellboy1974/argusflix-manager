@@ -1,4 +1,4 @@
-# 📝 Projektentwurf: Die sieben geplanten Dispatcharr- & Script-Erweiterungen
+# 📝 Projektentwurf: Die sieben geplanten ArgusFlix- & Script-Erweiterungen
 
 Dieses Dokument dient als Ideen- und Architektur-Speicher für die sieben geplanten Projekte. Wir dokumentieren hier die technischen Konzepte, um sie nacheinander strukturiert umzusetzen.
 
@@ -60,15 +60,15 @@ Erweiterung der Navigationseinstellungen, um dem Benutzer eine vollständige Kon
 
 ### 🛠️ Technische Umsetzung
 * **Backend (Django):** 
-  * Erweiterung des `User`-Modells ([models.py](file:///c:/Users/sheng/Documents/dispatcharr_reloaded/Dispatcharr-0.25.1/apps/accounts/models.py)) um ein neues Feld/Berechtigung `can_edit_navigation` (Boolean, standardmäßig `False` für Streamer/Standard-User, `True` für Admins) oder als Eigenschaft in `custom_properties`.
+  * Erweiterung des `User`-Modells ([models.py](file:///c:/Users/sheng/Documents/argusflix_manager_reloaded/ArgusFlix-0.25.1/apps/accounts/models.py)) um ein neues Feld/Berechtigung `can_edit_navigation` (Boolean, standardmäßig `False` für Streamer/Standard-User, `True` für Admins) oder als Eigenschaft in `custom_properties`.
   * Erweiterung des `custom_properties` JSON-Feldes um:
     * `navLabels`: Ein Mapping von Menü-ID zu neuem Namen (z. B. `{"channels": "Meine Kanäle"}`).
     * `navIcons`: Ein Mapping von Menü-ID zu einem Lucide-Icon-Namen (z. B. `{"vods": "Film"}`).
 * **Frontend (React):**
   * **Icon-Registry:** Eine vordefinierte Liste/Map von nutzbaren Lucide-Icons im Frontend, um String-Namen dynamisch in React-Komponenten aufzulösen.
-  * **Navigations-Config ([navigation.js](file:///c:/Users/sheng/Documents/dispatcharr_reloaded/Dispatcharr-0.25.1/frontend/src/config/navigation.js)):** Dynamisches Überschreiben von `label` und `icon` der Navigationsobjekte anhand der im User-Profil ([auth.jsx](file:///c:/Users/sheng/Documents/dispatcharr_reloaded/Dispatcharr-0.25.1/frontend/src/store/auth.jsx)) gespeicherten Preferences.
-  * **Einstellungs-UI ([NavOrderForm.jsx](file:///c:/Users/sheng/Documents/dispatcharr_reloaded/Dispatcharr-0.25.1/frontend/src/components/forms/settings/NavOrderForm.jsx)):** Die Einstellungsseite prüft, ob der User Admin-Rechte besitzt ODER `can_edit_navigation === true` ist. Falls nicht, wird das Bearbeitungs-Formular ausgeblendet.
-  * **Admin-User-Verwaltung ([Users.jsx](file:///c:/Users/sheng/Documents/dispatcharr_reloaded/Dispatcharr-0.25.1/frontend/src/pages/Users.jsx)):** In der Benutzerverwaltung können Administratoren über ein Kontrollkästchen / eine Switch-Option pro Benutzer festlegen, ob dieser das Recht besitzt, seine eigenen Menüeinträge anzupassen.
+  * **Navigations-Config ([navigation.js](file:///c:/Users/sheng/Documents/argusflix_manager_reloaded/ArgusFlix-0.25.1/frontend/src/config/navigation.js)):** Dynamisches Überschreiben von `label` und `icon` der Navigationsobjekte anhand der im User-Profil ([auth.jsx](file:///c:/Users/sheng/Documents/argusflix_manager_reloaded/ArgusFlix-0.25.1/frontend/src/store/auth.jsx)) gespeicherten Preferences.
+  * **Einstellungs-UI ([NavOrderForm.jsx](file:///c:/Users/sheng/Documents/argusflix_manager_reloaded/ArgusFlix-0.25.1/frontend/src/components/forms/settings/NavOrderForm.jsx)):** Die Einstellungsseite prüft, ob der User Admin-Rechte besitzt ODER `can_edit_navigation === true` ist. Falls nicht, wird das Bearbeitungs-Formular ausgeblendet.
+  * **Admin-User-Verwaltung ([Users.jsx](file:///c:/Users/sheng/Documents/argusflix_manager_reloaded/ArgusFlix-0.25.1/frontend/src/pages/Users.jsx)):** In der Benutzerverwaltung können Administratoren über ein Kontrollkästchen / eine Switch-Option pro Benutzer festlegen, ob dieser das Recht besitzt, seine eigenen Menüeinträge anzupassen.
 
 ---
 
@@ -77,13 +77,13 @@ Erweiterung der Navigationseinstellungen, um dem Benutzer eine vollständige Kon
 Vereinheitlichung der Benutzeroberflächen für die drei Kern-Medienbereiche. VODs und Serien werden aus der gemeinsamen VODs-Seite herausgelöst, erhalten eigene Menüeinträge mit passenden Icons und werden optisch an das übersichtliche Split-Layout der Live-TV (Channels)-Seite angepasst.
 
 ### 🛠️ Technische Umsetzung
-* **Frontend-Navigation ([navigation.js](file:///c:/Users/sheng/Documents/dispatcharr_reloaded/Dispatcharr-0.25.1/frontend/src/config/navigation.js)):**
+* **Frontend-Navigation ([navigation.js](file:///c:/Users/sheng/Documents/argusflix_manager_reloaded/ArgusFlix-0.25.1/frontend/src/config/navigation.js)):**
   * Aufteilung des `vods`-Eintrags in zwei separate Root-Einträge:
     * **Movies / VODs:** z. B. Icon `Film` oder `Video`, Pfad `/movies`.
     * **Series / Serien:** z. B. Icon `Tv` oder `Clapperboard`, Pfad `/series`.
-* **Frontend-Routing ([App.jsx](file:///c:/Users/sheng/Documents/dispatcharr_reloaded/Dispatcharr-0.25.1/frontend/src/App.jsx)):**
+* **Frontend-Routing ([App.jsx](file:///c:/Users/sheng/Documents/argusflix_manager_reloaded/ArgusFlix-0.25.1/frontend/src/App.jsx)):**
   * Erstellung neuer Routen `/movies` und `/series` anstelle der generischen `/vods`-Route.
-* **UI Layout (Basierend auf [Channels.jsx](file:///c:/Users/sheng/Documents/dispatcharr_reloaded/Dispatcharr-0.25.1/frontend/src/pages/Channels.jsx)):**
+* **UI Layout (Basierend auf [Channels.jsx](file:///c:/Users/sheng/Documents/argusflix_manager_reloaded/ArgusFlix-0.25.1/frontend/src/pages/Channels.jsx)):**
   * **Unified Grid/Table Split-View (Allotment):**
     * Verwendung des `Allotment`-Splitters in den neuen Seiten.
     * **Linke Spalte:** Eine übersichtliche, durchsuch- und filterbare Tabelle aller Filme bzw. Serien (analog zur `ChannelsTable` in Live-TV).
@@ -101,8 +101,8 @@ Ermöglicht die Erstellung und den Export von benutzerdefinierten Playlists, die
 ### 🛠️ Technische Umsetzung
 * **Backend (Django & Apps):**
   * **Daten-Aggregation:** Integration einer Abfragelogik, die Kanäle, VODs und Serien aus Stalker-Modulen (`apps/plugins`) und Xtream-Modulen (`apps/m3u` / custom apps) importieren kann.
-  * **Dynamic Sync & Cron-Scheduler:** Ein Hintergrund-Task-System (z. B. via Celery/Django-Q oder Cron-Jobs), das Upstream-Quellen zeitgesteuert oder manuell abgleicht. Wenn ein Upstream-Provider einen Stream-Link erneuert (z. B. durch geänderte Session-Tokens oder Server-Routing), werden die betroffenen Live-Kanäle, Filme und Serien in der Dispatcharr-Datenbank automatisch auf den neuesten Stand gebracht, um Link-Ausfälle zu vermeiden.
-  * **Export-Endpunkte ([urls.py](file:///c:/Users/sheng/Documents/dispatcharr_reloaded/Dispatcharr-0.25.1/apps/output/urls.py) & [views.py](file:///c:/Users/sheng/Documents/dispatcharr_reloaded/Dispatcharr-0.25.1/apps/output/views.py)):**
+  * **Dynamic Sync & Cron-Scheduler:** Ein Hintergrund-Task-System (z. B. via Celery/Django-Q oder Cron-Jobs), das Upstream-Quellen zeitgesteuert oder manuell abgleicht. Wenn ein Upstream-Provider einen Stream-Link erneuert (z. B. durch geänderte Session-Tokens oder Server-Routing), werden die betroffenen Live-Kanäle, Filme und Serien in der ArgusFlix-Datenbank automatisch auf den neuesten Stand gebracht, um Link-Ausfälle zu vermeiden.
+  * **Export-Endpunkte ([urls.py](file:///c:/Users/sheng/Documents/argusflix_manager_reloaded/ArgusFlix-0.25.1/apps/output/urls.py) & [views.py](file:///c:/Users/sheng/Documents/argusflix_manager_reloaded/ArgusFlix-0.25.1/apps/output/views.py)):**
     * Generierung dynamischer `.m3u` / `.m3u8` Playlist-Dateien.
     * Bereitstellung einer Xtream-Codes-kompatiblen API-Emulation (`/player_api.php`), damit Endgeräte die Stream-Typen (Live, Movie, Series) und EPG-Daten vollautomatisch zuordnen können.
   * **Session- & Token-Caching:** Da Stalker-Portale oft sitzungsbasierte Port-Links verwenden, verwaltet das Backend temporäre Streaming-URLs transparent im Hintergrund und liefert sie über einen internen Proxy aus.
@@ -163,12 +163,12 @@ Implementierung einer vollständigen Mehrsprachigkeit (z. B. Deutsch und Englisc
 
 ## 📱 Projekt 11: Argus IPTV Player Companion-System (Device Management)
 
-Ausbau von Dispatcharr Reloaded zu einem zentralen Management-Backend (MDM) für den kommenden "Argus IPTV Player" (Android TV App).
+Ausbau von ArgusFlix Manager zu einem zentralen Management-Backend (MDM) für den kommenden "Argus IPTV Player" (Android TV App).
 
 ### 🛠️ Technische Umsetzung
 * **Backend (Django) & Architektur:**
   * **Pairing-System:** Ein sicheres Kopplungsverfahren mittels Server-URL (lokal oder VPS) und generiertem API-Key/Token, welches in der Argus-App eingetragen wird.
-  * **Live-Kommunikation (WebSockets):** Integration von `Django Channels` für eine dauerhafte, bidirektionale Verbindung zwischen Dispatcharr und dem Fernseher. Dies ermöglicht Echtzeit-Push-Kommandos hinter NAT-Routern.
+  * **Live-Kommunikation (WebSockets):** Integration von `Django Channels` für eine dauerhafte, bidirektionale Verbindung zwischen ArgusFlix und dem Fernseher. Dies ermöglicht Echtzeit-Push-Kommandos hinter NAT-Routern.
   * **Provider-Transfer:** Konvertierung von Zugangsdaten (Stalker, Xtream, M3U, Custom Playlists) in strukturierte JSON-Payloads, die direkt an die gekoppelte Argus-App gepusht werden.
   * **Remote Backup & Restore:** API-Endpoints für das Empfangen verschlüsselter SQLite-App-Backups vom Fernseher und das Senden von Restore-Befehlen an den TV.
 * **Frontend (React) - Device Manager:**
@@ -181,7 +181,7 @@ Ausbau von Dispatcharr Reloaded zu einem zentralen Management-Backend (MDM) für
 
 ## 🎬 Projekt 12: Media-Server-Management (Plex / Emby / Jellyfin)
 
-Integration und Verwaltung von Drittanbieter-Mediaservern, damit deren Zugänge komfortabel über Dispatcharr gesammelt und an externe Clients (wie den Argus IPTV Player) übergeben werden können.
+Integration und Verwaltung von Drittanbieter-Mediaservern, damit deren Zugänge komfortabel über ArgusFlix gesammelt und an externe Clients (wie den Argus IPTV Player) übergeben werden können.
 
 ### 🛠️ Technische Umsetzung
 * **Backend (Django):**

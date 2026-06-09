@@ -1053,7 +1053,7 @@ def test_stb_login_fingerprint(url, mac, model, proxy=None):
         return f"Failed Connection ({e})"
 
 # ==============================================================================
-# Dispatcharr Plugin Hooks
+# ArgusFlix Plugin Hooks
 # ==============================================================================
 class Plugin:
     name = "Stalker Portal Toolbox"
@@ -1842,7 +1842,7 @@ class Plugin:
                 
             cfg.settings["detective_history"] = history
             cfg.save()
-            logger.info("Saved Portal Detective results to Dispatcharr SQLite Database.")
+            logger.info("Saved Portal Detective results to ArgusFlix SQLite Database.")
         except Exception as db_err:
             logger.error(f"Failed to save detective report to Django SQLite database: {db_err}")
 
