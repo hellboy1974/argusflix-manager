@@ -17,6 +17,65 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+check_and_set_static_ip() {
+    echo -e "${YELLOW}Checking network configuration...${NC}"
+    
+    # Identify default interface
+    INTERFACE=$(ip route | awk '/default/ {print $5}' | head -n 1)
+    if [ -z "$INTERFACE" ]; then
+        echo -e "${RED}Could not find default network interface.${NC}"
+        return
+    fi
+
+    # Check if DHCP is active (looking at netplan for Ubuntu >= 18.04)
+    if grep -E -qR "dhcp4:\s*(true|yes)" /etc/netplan/ 2>/dev/null; then
+        CURRENT_IP=$(ip -4 addr show dev $INTERFACE | awk '/inet / {print $2}')
+        echo -e "${YELLOW}Current IP address is $CURRENT_IP (DHCP).${NC}"
+        read -p "Do you want to change this to a static/fixed IP? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            read -p "Enter static IP with subnet mask (e.g., 192.168.1.50/24): " STATIC_IP
+            read -p "Enter Gateway IP (e.g., 192.168.1.1): " GATEWAY
+            read -p "Enter DNS Server (e.g., 8.8.8.8): " DNS_SERVERS
+
+            NETPLAN_FILE=$(ls /etc/netplan/*.yaml | head -n 1)
+            if [ -n "$NETPLAN_FILE" ]; then
+                # Backup existing configuration
+                cp "$NETPLAN_FILE" "${NETPLAN_FILE}.bak"
+                
+                # Write new configuration
+                cat > "$NETPLAN_FILE" <<EOF
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    $INTERFACE:
+      dhcp4: no
+      addresses:
+        - $STATIC_IP
+      routes:
+        - to: default
+          via: $GATEWAY
+      nameservers:
+        addresses: [$DNS_SERVERS]
+EOF
+                echo -e "${YELLOW}Applying new network settings via netplan...${NC}"
+                netplan apply
+                echo -e "${GREEN}Static IP configured successfully.${NC}"
+                sleep 2
+            else
+                echo -e "${RED}No netplan configuration found. Cannot set static IP automatically.${NC}"
+            fi
+        fi
+    else
+        CURRENT_IP=$(ip -4 addr show dev $INTERFACE | awk '/inet / {print $2}')
+        echo -e "${GREEN}Network is not using DHCP or using an unsupported manager. Current IP: $CURRENT_IP${NC}"
+    fi
+}
+
+# Run the IP check
+check_and_set_static_ip
+
 # 1. System Updates and Dependencies
 echo -e "${YELLOW}Updating system packages...${NC}"
 apt-get update
