@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     container_name: argusflix_manager
     ports:
-      - 9191:9191
+      - "${APP_PORT:-9191}:9191"
     volumes:
       - argusflix_manager_data:/data
     environment:

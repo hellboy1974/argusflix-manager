@@ -51,7 +51,11 @@ else
     cd $INSTALL_DIR
 fi
 
-# 4. Generate .env file
+# 4. Prompt for Port Configuration
+read -p "Which port should ArgusFlix Manager use? [Default: 8000]: " APP_PORT
+APP_PORT=${APP_PORT:-8000}
+
+# 5. Generate .env file
 ENV_FILE="$INSTALL_DIR/.env"
 if [ ! -f "$ENV_FILE" ]; then
     echo -e "${YELLOW}Generating .env file with secure defaults...${NC}"
@@ -78,7 +82,8 @@ REDIS_PORT=6379
 REDIS_PASSWORD=$REDIS_PASSWORD
 
 # ArgusFlix Settings
-API_BASE_URL=http://localhost:8000
+API_BASE_URL=http://localhost:$APP_PORT
+APP_PORT=$APP_PORT
 MEDIA_URL=/media/
 STATIC_URL=/static/
 EOF
@@ -89,25 +94,28 @@ fi
 
 # 5. Start Docker Containers
 echo -e "${YELLOW}Starting Docker containers...${NC}"
-docker compose up -d --build
+# Use the AIO docker-compose file
+COMPOSE_CMD="docker compose -f docker/docker-compose.aio.yml"
+
+$COMPOSE_CMD up -d --build
 
 # Wait for database to be ready
-echo -e "${YELLOW}Waiting for database to initialize (15 seconds)...${NC}"
+echo -e "${YELLOW}Waiting for application to initialize (15 seconds)...${NC}"
 sleep 15
 
 # 6. Run Migrations and Load Fixtures
 echo -e "${YELLOW}Applying database migrations...${NC}"
-docker compose exec -T web python manage.py migrate
+$COMPOSE_CMD exec -T argusflix_manager python manage.py migrate
 
 if [ -f "fixtures.json" ]; then
     echo -e "${YELLOW}Loading EPG Pre-Seeding and default fixtures...${NC}"
-    docker compose exec -T web python manage.py loaddata fixtures.json
+    $COMPOSE_CMD exec -T argusflix_manager python manage.py loaddata fixtures.json
 fi
 
 echo -e "${YELLOW}Collecting static files...${NC}"
-docker compose exec -T web python manage.py collectstatic --noinput
+$COMPOSE_CMD exec -T argusflix_manager python manage.py collectstatic --noinput
 
 echo -e "${GREEN}================================================================${NC}"
 echo -e "${GREEN}ArgusFlix Manager installation complete!${NC}"
-echo -e "${GREEN}The Manager should now be accessible at http://<your-server-ip>:8000${NC}"
+echo -e "${GREEN}The Manager should now be accessible at http://<your-server-ip>:$APP_PORT${NC}"
 echo -e "${GREEN}================================================================${NC}"
