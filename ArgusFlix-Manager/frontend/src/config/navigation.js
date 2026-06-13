@@ -28,6 +28,7 @@ import {
   Settings2,
   LayoutTemplate,
   RefreshCw,
+  Radio,
 } from 'lucide-react';
 
 export const NAV_ITEMS = {
@@ -59,6 +60,13 @@ export const NAV_ITEMS = {
       { id: 'movies', label: 'Movies', icon: Film, path: '/movies' },
       { id: 'series', label: 'Series', icon: Tv, path: '/series' },
     ],
+  },
+  radio: {
+    id: 'radio',
+    label: 'Radio',
+    icon: Radio,
+    path: '/radio',
+    adminOnly: false,
   },
   settings_admin: {
     id: 'settings_admin',

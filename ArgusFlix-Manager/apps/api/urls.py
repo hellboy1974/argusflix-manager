@@ -17,9 +17,7 @@ urlpatterns = [
     path('devices/', include(('apps.devices.api_urls', 'devices'), namespace='devices')),
     path('appbuilder/', include(('apps.appbuilder.urls', 'appbuilder'), namespace='appbuilder')),
     path('output/', include(('apps.output.api_urls', 'output'), namespace='output')),
-    #path('player/', include(('apps.player.api_urls', 'player'), namespace='player')),
-    #path('settings/', include(('apps.settings.api_urls', 'settings'), namespace='settings')),
-    #path('streams/', include(('apps.streams.api_urls', 'streams'), namespace='streams')),
+    path('radio/', include(('apps.radio.api_urls', 'radio'), namespace='radio')),
 
 
 

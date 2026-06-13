@@ -399,8 +399,23 @@ Vollautomatisierte Installations-Routinen für den ArgusFlix Manager und Vorkonf
 * **Unraid Community Template:** Eine Unraid-kompatible XML-Datei (`argusflix.xml`), die alle Ports, Volumes und Environment-Variablen für ein echtes "One-Click"-Deployment über die Unraid Web-GUI vorbereitet.
 * **EPG Fixtures Pre-Loading:** Erweiterung der `fixtures.json` um eine vom User vordefinierte, nach Ländern gruppierte Liste von XMLTV/EPG-URLs. Nach der automatisierten Installation lädt der Manager diese Fixtures direkt in die Datenbank. Der Nutzer wählt bei der Sender-Zuweisung nur noch die Gruppe (z.B. "Deutschland") und hat direkt Zugriff auf alle vorkonfigurierten EPG-Daten.
 
-### Projekt 14: App UI fr Profil-Auswahl & PIN-Schutz
+### Projekt 14: App UI für Profil-Auswahl & PIN-Schutz
 *   **Konzept:** Umsetzung der Cloud-Profile in der Android TV App.
 *   **Profilauswahl:** Beim Start der App (oder beim Wechsel) soll ein ansprechender Bildschirm zur Auswahl des aktiven Profils angezeigt werden.
-*   **PIN-Schutz:** Wenn im Manager fr ein Profil eine 4-stellige PIN hinterlegt wurde, muss die App einen Nummernblock oder einen einfachen PIN-Dialog einblenden. Erst bei korrekter Eingabe wird das Profil aktiv.
-*   **Sync:** Nach der Profilwahl werden Watch History und Favoriten des gewhlten Profils heruntergeladen bzw. lokal synchronisiert.
+*   **PIN-Schutz:** Wenn im Manager für ein Profil eine 4-stellige PIN hinterlegt wurde, muss die App einen Nummernblock oder einen einfachen PIN-Dialog einblenden. Erst bei korrekter Eingabe wird das Profil aktiv.
+*   **Sync:** Nach der Profilwahl werden Watch History und Favoriten des gewählten Profils heruntergeladen bzw. lokal synchronisiert.
+
+---
+
+## 📻 Projekt 15: Internetradio Integration (Chora-Vorbild)
+
+Zentrale Verwaltung von Internetradio-Sendern im ArgusFlix Manager und nahtlose Synchronisation an die ArgusFlix App mit speziellem Audio-Fokus.
+
+### 🛠 Technische Umsetzung
+* **Backend (Django):**
+  * **Neues Modul:** `RadioStation` Modell zur Speicherung von Stream-URLs, Logos, Sendername und Metadaten/Genres.
+  * **Manager-UI:** Eine neue Oberfläche im React-Frontend zur Verwaltung (Hinzufügen, Sortieren, Gruppieren) von Internetradios.
+  * **Sync-Schnittstelle:** Bereitstellung der Radio-Liste als dynamische M3U-Playlist oder über den bestehenden WebSocket/API-Kanal an die App.
+* **Frontend (React / Android App):**
+  * **Wiedergabe:** Nutzung von `Media3` (ExoPlayer), um MP3, AAC und HLS Audio-Streams nativ abzuspielen.
+  * **App-UI:** Umsetzung eines neuen Radio-Bereichs (ähnlich wie Chora) mit Kacheln für Senderlogos und einer TV-freundlichen "Now Playing"-Ansicht für Audio-Content.

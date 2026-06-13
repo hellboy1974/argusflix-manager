@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     "apps.vod.apps.VODConfig",
     "apps.connect.apps.ConnectConfig",
     "apps.devices.apps.DevicesConfig",
+    "apps.radio.apps.RadioConfig",
     "core",
     "daphne",
     "drf_spectacular",
