@@ -83,14 +83,34 @@ Build custom integrations using ArgusFlix's robust plugin system. Automate tasks
 
 ## 🚀 Get Started in Minutes
 
+### 🐧 Ubuntu / Debian Auto-Installer (New!)
+
+For a completely automated, "One-Click" setup on a fresh Ubuntu or Debian server:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/hellboy1974/argusflix-manager/main/install_ubuntu.sh | sudo bash
+```
+> This intelligent script automatically installs Docker, clones the repository, generates secure passwords (`.env`), sets up the database, and pre-seeds the system with 48 country-specific EPG fixtures!
+
+---
+
+### 📦 Unraid Community Application (New!)
+
+You can now easily install ArgusFlix Manager natively in Unraid:
+1. Copy the `docker-templates/argusflix.xml` file into your Unraid flash drive at `config/plugins/dockerMan/templates-user/`.
+2. Open the Unraid GUI -> **Docker** tab -> **Add Container**.
+3. Select **ArgusFlix-Manager** from the User Templates dropdown.
+
+---
+
 ### 🐳 Quick Start with Docker (Recommended)
 
 ```bash
 docker pull ghcr.io/argusflix_manager/argusflix_manager:latest
 docker run -d \
-  -p 9191:9191 \
+  -p 8000:8000 \
   --name argusflix_manager \
-  -v argusflix_manager_data:/data \
+  -v argusflix_manager_data:/app/data \
   ghcr.io/argusflix_manager/argusflix_manager:latest
 ```
 

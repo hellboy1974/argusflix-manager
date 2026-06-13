@@ -46,3 +46,46 @@ class User(AbstractUser):
         Returns the permissions assigned to the user and their groups.
         """
         return self.user_permissions.all() | Permission.objects.filter(group__user=self)
+
+
+class Profile(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='profiles')
+    name = models.CharField(max_length=100)
+    avatar_url = models.URLField(max_length=500, blank=True, null=True)
+    pin = models.CharField(max_length=10, blank=True, null=True, help_text="Numeric PIN for profile protection")
+    is_kids_profile = models.BooleanField(default=False)
+    layout_profile = models.ForeignKey("appbuilder.AppProfile", on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_profiles", help_text="Custom UI Layout Profile")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.name}"
+
+
+class WatchHistory(models.Model):
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='watch_history')
+    content_type = models.CharField(max_length=50) # 'movie', 'series', 'live'
+    content_id = models.CharField(max_length=100)
+    progress_seconds = models.IntegerField(default=0)
+    duration_seconds = models.IntegerField(default=0)
+    last_watched = models.DateTimeField(auto_now=True)
+    completed = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('profile', 'content_type', 'content_id')
+
+    def __str__(self):
+        return f"{self.profile.name} - {self.content_type}:{self.content_id}"
+
+
+class Favorite(models.Model):
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='favorites')
+    content_type = models.CharField(max_length=50)
+    content_id = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('profile', 'content_type', 'content_id')
+
+    def __str__(self):
+        return f"{self.profile.name} favors {self.content_type}:{self.content_id}"
