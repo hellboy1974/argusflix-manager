@@ -120,6 +120,19 @@ class DeviceBackupViewSet(viewsets.ModelViewSet):
                 return Response({'error': 'Device not found'}, status=404)
         return super().create(request, *args, **kwargs)
 
+    @action(detail=False, methods=['get'])
+    def latest(self, request):
+        device_id_str = request.query_params.get('device_id')
+        if not device_id_str:
+            return Response({'error': 'device_id parameter is required'}, status=400)
+        
+        backup = self.queryset.filter(device__device_id=device_id_str).first()
+        if not backup:
+            return Response({'error': 'No backups found for this device'}, status=404)
+            
+        serializer = self.get_serializer(backup)
+        return Response(serializer.data)
+
 class KeymapProfileViewSet(viewsets.ModelViewSet):
     from .models import KeymapProfile
     from .serializers import KeymapProfileSerializer

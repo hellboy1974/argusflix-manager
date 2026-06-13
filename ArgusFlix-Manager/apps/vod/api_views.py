@@ -56,10 +56,11 @@ class MovieFilter(django_filters.FilterSet):
     year = django_filters.NumberFilter()
     year_gte = django_filters.NumberFilter(field_name="year", lookup_expr="gte")
     year_lte = django_filters.NumberFilter(field_name="year", lookup_expr="lte")
+    is_active = django_filters.BooleanFilter()
 
     class Meta:
         model = Movie
-        fields = ['name', 'm3u_account', 'category', 'year']
+        fields = ['name', 'm3u_account', 'category', 'year', 'is_active']
 
     def filter_category(self, queryset, name, value):
         """Custom category filter that handles 'name|type' format"""
@@ -78,7 +79,7 @@ class MovieFilter(django_filters.FilterSet):
             return queryset.filter(m3u_relations__category__name=value)
 
 
-class MovieViewSet(viewsets.ReadOnlyModelViewSet):
+class MovieViewSet(viewsets.ModelViewSet):
     """ViewSet for Movie content"""
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
@@ -89,6 +90,28 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['name', 'description', 'genre']
     ordering_fields = ['name', 'year', 'created_at']
     ordering = ['name']
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['post'])
+    def bulk_delete(self, request):
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'detail': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        Movie.objects.filter(uuid__in=ids).update(is_active=False)
+        return Response({'status': 'deleted'})
+
+    @action(detail=False, methods=['post'])
+    def bulk_restore(self, request):
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'detail': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        Movie.objects.filter(uuid__in=ids).update(is_active=True)
+        return Response({'status': 'restored'})
 
     def get_permissions(self):
         try:
@@ -219,10 +242,11 @@ class EpisodeFilter(django_filters.FilterSet):
     m3u_account = django_filters.NumberFilter(field_name="m3u_account__id")
     season_number = django_filters.NumberFilter()
     episode_number = django_filters.NumberFilter()
+    is_active = django_filters.BooleanFilter()
 
     class Meta:
         model = Episode
-        fields = ['name', 'series', 'm3u_account', 'season_number', 'episode_number']
+        fields = ['name', 'series', 'm3u_account', 'season_number', 'episode_number', 'is_active']
 
 
 class SeriesFilter(django_filters.FilterSet):
@@ -232,10 +256,11 @@ class SeriesFilter(django_filters.FilterSet):
     year = django_filters.NumberFilter()
     year_gte = django_filters.NumberFilter(field_name="year", lookup_expr="gte")
     year_lte = django_filters.NumberFilter(field_name="year", lookup_expr="lte")
+    is_active = django_filters.BooleanFilter()
 
     class Meta:
         model = Series
-        fields = ['name', 'm3u_account', 'category', 'year']
+        fields = ['name', 'm3u_account', 'category', 'year', 'is_active']
 
     def filter_category(self, queryset, name, value):
         """Custom category filter that handles 'name|type' format"""
@@ -254,7 +279,7 @@ class SeriesFilter(django_filters.FilterSet):
             return queryset.filter(m3u_relations__category__name=value)
 
 
-class EpisodeViewSet(viewsets.ReadOnlyModelViewSet):
+class EpisodeViewSet(viewsets.ModelViewSet):
     """ViewSet for Episode content"""
     queryset = Episode.objects.all()
     serializer_class = EpisodeSerializer
@@ -265,6 +290,28 @@ class EpisodeViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'season_number', 'episode_number', 'created_at']
     ordering = ['series__name', 'season_number', 'episode_number']
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['post'])
+    def bulk_delete(self, request):
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'detail': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        Episode.objects.filter(uuid__in=ids).update(is_active=False)
+        return Response({'status': 'deleted'})
+
+    @action(detail=False, methods=['post'])
+    def bulk_restore(self, request):
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'detail': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        Episode.objects.filter(uuid__in=ids).update(is_active=True)
+        return Response({'status': 'restored'})
 
     def get_permissions(self):
         try:
@@ -278,7 +325,7 @@ class EpisodeViewSet(viewsets.ReadOnlyModelViewSet):
         ).filter(m3u_account__is_active=True)
 
 
-class SeriesViewSet(viewsets.ReadOnlyModelViewSet):
+class SeriesViewSet(viewsets.ModelViewSet):
     """ViewSet for Series management"""
     queryset = Series.objects.all()
     serializer_class = SeriesSerializer
@@ -289,6 +336,28 @@ class SeriesViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['name', 'description', 'genre']
     ordering_fields = ['name', 'year', 'created_at']
     ordering = ['name']
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['post'])
+    def bulk_delete(self, request):
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'detail': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        Series.objects.filter(uuid__in=ids).update(is_active=False)
+        return Response({'status': 'deleted'})
+
+    @action(detail=False, methods=['post'])
+    def bulk_restore(self, request):
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'detail': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        Series.objects.filter(uuid__in=ids).update(is_active=True)
+        return Response({'status': 'restored'})
 
     def get_permissions(self):
         try:

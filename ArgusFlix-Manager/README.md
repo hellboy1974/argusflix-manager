@@ -94,6 +94,17 @@ wget -qO- https://raw.githubusercontent.com/hellboy1974/argusflix-manager/main/i
 
 ---
 
+### 🔄 Ubuntu / Debian Auto-Updater
+
+To securely update a running ArgusFlix Manager installation with upstream changes without losing your custom apps or settings:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/hellboy1974/argusflix-manager/main/update_ubuntu.sh | sudo bash
+```
+> This script safely merges upstream changes using Git, builds/updates the Docker containers (or applies native virtualenv migrations) and restarts the services.
+
+---
+
 ### 📦 Unraid Community Application (New!)
 
 You can now easily install ArgusFlix Manager natively in Unraid:

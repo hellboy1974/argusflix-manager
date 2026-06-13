@@ -38,36 +38,60 @@ export const NAV_ITEMS = {
     path: '/admin-center',
     adminOnly: true,
   },
-
-  channels: {
-    id: 'channels',
-    label: 'Channels',
-    icon: ListOrdered,
-    path: '/channels',
-    adminOnly: false,
-    hasBadge: true,
-  },
-  movies: {
-    id: 'movies',
-    label: 'Movies',
-    icon: Film,
-    path: '/movies',
-    adminOnly: true,
-  },
-  series: {
-    id: 'series',
-    label: 'Series',
+  live_tv: {
+    id: 'live_tv',
+    label: 'Live TV',
     icon: Tv,
-    path: '/series',
-    adminOnly: true,
+    adminOnly: false,
+    paths: [
+      { id: 'channels', label: 'Channels', icon: ListOrdered, path: '/channels', hasBadge: true },
+      { id: 'guide', label: 'TV Guide', icon: LayoutGrid, path: '/guide' },
+      { id: 'custom_playlists', label: 'Custom Playlists', icon: ListPlus, path: '/custom-playlists' },
+      { id: 'dvr', label: 'DVR', icon: Database, path: '/dvr' },
+    ],
   },
-  custom_playlists: {
-    id: 'custom_playlists',
-    label: 'Custom Playlists',
-    icon: ListPlus,
-    path: '/custom-playlists',
-    adminOnly: true,
+  vod: {
+    id: 'vod',
+    label: 'Video on Demand',
+    icon: Film,
+    adminOnly: false,
+    paths: [
+      { id: 'movies', label: 'Movies', icon: Film, path: '/movies' },
+      { id: 'series', label: 'Series', icon: Tv, path: '/series' },
+    ],
   },
+  settings_admin: {
+    id: 'settings_admin',
+    label: 'Einstellungen',
+    icon: LucideSettings,
+    adminOnly: true,
+    paths: [
+      { id: 'dashboard_stats', label: 'Dashboard Stats', icon: ChartLine, path: '/stats' },
+      { id: 'sources', label: 'Verbindungen', icon: ListOrdered, path: '/sources' },
+      { id: 'content_import', label: 'Content Import', icon: Import, path: '/content-import' },
+      { id: 'epg_mapping', label: 'EPG Mapping', icon: Map, path: '/epg-mapping' },
+      { id: 'automations', label: 'Automations', icon: Settings2, path: '/automations' },
+      { id: 'argus_devices', label: 'Argus TV Devices', icon: Smartphone, path: '/devices' },
+      { id: 'media_servers', label: 'Media Servers', icon: Server, path: '/media-servers' },
+      { id: 'app_builder', label: 'App Builder', icon: LayoutTemplate, path: '/app-builder' },
+      { id: 'metadata_providers', label: 'Metadata Providers', icon: Database, path: '/metadata-providers' },
+      { id: 'my_plugins', label: 'My Plugins', icon: Package, path: '/plugins' },
+      { id: 'find_plugins', label: 'Find Plugins', icon: Download, path: '/plugins/browse' },
+      { id: 'connections', label: 'Connections', icon: Webhook, path: '/connect' },
+      { id: 'logs', label: 'Logs', icon: Logs, path: '/connect/logs' },
+      { id: 'profiles', label: 'Profiles', icon: User, path: '/profiles' },
+      { id: 'users', label: 'Users', icon: User, path: '/users' },
+      { id: 'logo_manager', label: 'Logo Manager', icon: FileImage, path: '/logos' },
+      { id: 'settings', label: 'System Settings', icon: LucideSettings, path: '/settings' },
+    ]
+  },
+
+
+
+
+
+
+
   updates: {
     id: 'updates',
     label: 'Updates',
@@ -76,78 +100,8 @@ export const NAV_ITEMS = {
     adminOnly: true,
     hasBadge: true,
   },
-  sources: {
-    id: 'sources',
-    label: 'Sources & EPG',
-    icon: Play,
-    adminOnly: true,
-    paths: [
-      { id: 'sources', label: 'Verbindungen', icon: ListOrdered, path: '/sources' },
-      { id: 'content_import', label: 'Content Import', icon: Import, path: '/content-import' },
-      { id: 'epg_mapping', label: 'EPG Mapping', icon: Map, path: '/epg-mapping' }
-    ],
-  },
-  guide: {
-    id: 'guide',
-    label: 'TV Guide',
-    icon: LayoutGrid,
-    path: '/guide',
-    adminOnly: false,
-  },
-  dvr: {
-    id: 'dvr',
-    label: 'DVR',
-    icon: Database,
-    path: '/dvr',
-    adminOnly: true,
-  },
-  admin: {
-    id: 'admin',
-    label: 'Admin Center',
-    icon: Activity,
-    adminOnly: true,
-    paths: [
-      { id: 'dashboard_stats', label: 'Dashboard Stats', icon: ChartLine, path: '/stats' },
-      { id: 'automations', label: 'Automations', icon: Settings2, path: '/automations' },
-      { id: 'argus_devices', label: 'Argus TV Devices', icon: Smartphone, path: '/devices' },
-      { id: 'media_servers', label: 'Media Servers', icon: Server, path: '/media-servers' },
-      { id: 'app_builder', label: 'App Builder', icon: LayoutTemplate, path: '/app-builder' },
-      { id: 'metadata_providers', label: 'Metadata Providers', icon: Database, path: '/metadata-providers' }
-    ]
-  },
-  plugins: {
-    id: 'plugins',
-    label: 'Plugins',
-    icon: PlugZap,
-    adminOnly: true,
-    paths: [
-      { id: 'my_plugins', label: 'My Plugins', icon: Package, path: '/plugins' },
-      { id: 'find_plugins', label: 'Find Plugins', icon: Download, path: '/plugins/browse' },
-    ],
-  },
-  integrations: {
-    id: 'integrations',
-    label: 'Integrations',
-    icon: Blocks,
-    adminOnly: true,
-    paths: [
-      { id: 'connections', label: 'Connections', icon: Webhook, path: '/connect' },
-      { id: 'logs', label: 'Logs', icon: Logs, path: '/connect/logs' },
-    ],
-  },
-  system: {
-    id: 'system',
-    label: 'System',
-    icon: MonitorCog,
-    adminOnly: true,
-    canHide: false,
-    paths: [
-      { id: 'profiles', label: 'Profiles', icon: User, path: '/profiles' },
-      { id: 'users', label: 'Users', icon: User, path: '/users' },
-      { id: 'logo_manager', label: 'Logo Manager', icon: FileImage, path: '/logos' },
-      { id: 'settings', label: 'Settings', icon: LucideSettings, path: '/settings' },
-    ],
-  },
+
+
   settings: {
     id: 'settings',
     label: 'Settings',
@@ -159,24 +113,16 @@ export const NAV_ITEMS = {
 };
 
 export const DEFAULT_ADMIN_ORDER = [
-  'channels',
+  'live_tv',
+  'vod',
   'admin_center',
   'updates',
-  'guide',
-  'movies',
-  'series',
-  'custom_playlists',
-  'sources',
-  'dvr',
-  'admin',
-  'plugins',
-  'integrations',
-  'system',
+  'settings_admin',
 ];
 
 export const DEFAULT_USER_ORDER = [
-  'channels',
-  'guide',
+  'live_tv',
+  'vod',
   'settings',
 ];
 
@@ -217,10 +163,16 @@ export const getOrderedNavItems = (userOrder, isAdmin, channelIds = [], customPr
         id: item.id,
         label: label,
         icon: icon,
-        paths: item.paths.map(p => ({
-          ...p,
-          label: i18n.t(`nav.${p.id}`, { defaultValue: p.label })
-        })),
+        paths: item.paths.map(p => {
+          const mapped = {
+            ...p,
+            label: i18n.t(`nav.${p.id}`, { defaultValue: p.label })
+          };
+          if (p.id === 'channels') {
+            mapped.badge = `(${Array.isArray(channelIds) ? channelIds.length : 0})`;
+          }
+          return mapped;
+        }),
         canHide: item.canHide,
       };
     }

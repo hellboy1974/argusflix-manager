@@ -25,7 +25,7 @@ import {
   TabsPanel,
   TabsTab,
 } from '@mantine/core';
-import { Play, Copy } from 'lucide-react';
+import { Play, Copy, Edit, Trash, RotateCcw } from 'lucide-react';
 import { copyToClipboard } from '../utils';
 import useVODStore from '../store/useVODStore';
 import useVideoStore from '../store/useVideoStore';
@@ -44,6 +44,7 @@ import {
   tmdbUrl,
 } from '../utils/components/SeriesModalUtils.js';
 import { YouTubeTrailerModal } from './modals/YouTubeTrailerModal.jsx';
+import { VODEditModal } from './modals/VODEditModal.jsx';
 
 const Series = ({ displaySeries, onClickYouTubeTrailer }) => {
   return (
@@ -168,6 +169,28 @@ const Series = ({ displaySeries, onClickYouTubeTrailer }) => {
             <Text size="sm">{displaySeries.description}</Text>
           </Box>
         )}
+
+        
+        <Group spacing="xs" mt="sm">
+          <Button
+            leftSection={<Edit size={16} />}
+            variant="outline"
+            color="indigo"
+            size="sm"
+            onClick={() => setEditModalOpened(true)}
+          >
+            Edit
+          </Button>
+          <Button
+            leftSection={displaySeries.is_active === false ? <RotateCcw size={16} /> : <Trash size={16} />}
+            variant="outline"
+            color={displaySeries.is_active === false ? "green" : "red"}
+            size="sm"
+            onClick={handleToggleActive}
+          >
+            {displaySeries.is_active === false ? "Restore" : "Delete"}
+          </Button>
+        </Group>
 
         {/* Watch Trailer button if available */}
         {displaySeries.youtube_trailer && (
@@ -345,6 +368,7 @@ const SeriesModal = ({ series, opened, onClose }) => {
   const [activeTab, setActiveTab] = useState(null);
   const [expandedEpisode, setExpandedEpisode] = useState(null);
   const [trailerModalOpened, setTrailerModalOpened] = useState(false);
+  const [editModalOpened, setEditModalOpened] = useState(false);
   const [trailerUrl, setTrailerUrl] = useState('');
   const [providers, setProviders] = useState([]);
   const [selectedProvider, setSelectedProvider] = useState(null);
@@ -723,7 +747,13 @@ const SeriesModal = ({ series, opened, onClose }) => {
       </Modal>
 
       {/* YouTube Trailer Modal */}
-      <YouTubeTrailerModal
+      <VODEditModal
+          opened={editModalOpened}
+          onClose={() => setEditModalOpened(false)}
+          vod={displaySeries}
+          type="series"
+        />
+        <YouTubeTrailerModal
         opened={trailerModalOpened}
         onClose={() => setTrailerModalOpened(false)}
         trailerUrl={trailerUrl}

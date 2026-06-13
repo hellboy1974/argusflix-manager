@@ -89,6 +89,7 @@ class Series(models.Model):
 
     # Additional metadata and properties
     custom_properties = models.JSONField(blank=True, null=True, help_text='Additional metadata and properties for the series')
+    is_active = models.BooleanField(default=True, help_text="Set to False to hide this content (soft delete)")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -128,6 +129,7 @@ class Movie(models.Model):
 
     # Additional metadata and properties
     custom_properties = models.JSONField(blank=True, null=True, help_text='Additional metadata and properties for the movie')
+    is_active = models.BooleanField(default=True, help_text="Set to False to hide this content (soft delete)")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -170,6 +172,7 @@ class Episode(models.Model):
 
     # Custom properties for episode
     custom_properties = models.JSONField(blank=True, null=True, help_text="Custom properties for this episode")
+    is_active = models.BooleanField(default=True, help_text="Set to False to hide this content (soft delete)")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

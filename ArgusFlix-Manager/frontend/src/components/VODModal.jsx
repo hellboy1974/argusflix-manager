@@ -13,7 +13,7 @@ import {
   Stack,
   Modal,
 } from '@mantine/core';
-import { Play, Copy } from 'lucide-react';
+import { Play, Copy, Edit, Trash, RotateCcw } from 'lucide-react';
 import { copyToClipboard } from '../utils';
 import useVODStore from '../store/useVODStore';
 import useVideoStore from '../store/useVideoStore';
@@ -26,6 +26,7 @@ import {
   tmdbUrl,
 } from '../utils/components/SeriesModalUtils.js';
 import { YouTubeTrailerModal } from './modals/YouTubeTrailerModal.jsx';
+import { VODEditModal } from './modals/VODEditModal.jsx';
 import {
   formatAudioDetails,
   formatVideoDetails,
@@ -44,6 +45,16 @@ const Movie = ({
   const env_mode = useSettingsStore((s) => s.environment.env_mode);
 
   const displayVOD = detailedVOD || vod;
+
+  
+  const handleToggleActive = async () => {
+    if (displayVOD.is_active) {
+      await useVODStore.getState().softDeleteVOD('movie', displayVOD.id);
+    } else {
+      await useVODStore.getState().bulkRestoreVODs('movie', [displayVOD.id]);
+    }
+    onClose();
+  };
 
   const getStreamUrl = () => {
     if (!displayVOD) return null;
@@ -155,6 +166,26 @@ const Movie = ({
 
       {/* Play and Watch Trailer buttons */}
       <Group spacing="xs" mt="sm">
+
+        <Button
+          leftSection={<Edit size={16} />}
+          variant="outline"
+          color="indigo"
+          size="sm"
+          onClick={() => setEditModalOpened(true)}
+        >
+          Edit
+        </Button>
+        <Button
+          leftSection={displayVOD.is_active === false ? <RotateCcw size={16} /> : <Trash size={16} />}
+          variant="outline"
+          color={displayVOD.is_active === false ? "green" : "red"}
+          size="sm"
+          onClick={handleToggleActive}
+        >
+          {displayVOD.is_active === false ? "Restore" : "Delete"}
+        </Button>
+
         <Button
           leftSection={<Play size={16} />}
           variant="filled"
@@ -243,6 +274,7 @@ const VODModal = ({ vod, opened, onClose }) => {
   const [detailedVOD, setDetailedVOD] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [trailerModalOpened, setTrailerModalOpened] = useState(false);
+  const [editModalOpened, setEditModalOpened] = useState(false);
   const [trailerUrl, setTrailerUrl] = useState('');
   const [providers, setProviders] = useState([]);
   const [selectedProvider, setSelectedProvider] = useState(null);
@@ -492,7 +524,13 @@ const VODModal = ({ vod, opened, onClose }) => {
       </Modal>
 
       {/* YouTube Trailer Modal */}
-      <YouTubeTrailerModal
+      <VODEditModal
+          opened={editModalOpened}
+          onClose={() => setEditModalOpened(false)}
+          vod={displayVOD}
+          type="movie"
+        />
+        <YouTubeTrailerModal
         opened={trailerModalOpened}
         onClose={() => setTrailerModalOpened(false)}
         trailerUrl={trailerUrl}

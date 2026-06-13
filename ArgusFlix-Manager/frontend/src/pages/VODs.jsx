@@ -1,6 +1,8 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import {
   Box,
+  Button,
+  Checkbox,
   Flex,
   Grid,
   GridCol,
@@ -11,10 +13,13 @@ import {
   SegmentedControl,
   Select,
   Stack,
+  Switch,
   TextInput,
   Title,
+  Paper,
+  Text,
 } from '@mantine/core';
-import { Search } from 'lucide-react';
+import { Search, Trash, RotateCcw, CheckSquare } from 'lucide-react';
 import { useDisclosure } from '@mantine/hooks';
 import useVODStore from '../store/useVODStore';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
@@ -51,7 +56,7 @@ const useCardColumns = () => {
 };
 
 const VODsPage = () => {
-  const currentPageContent = useVODStore((s) => s.currentPageContent); // Direct subscription
+  const currentPageContent = useVODStore((s) => s.currentPageContent);
   const allCategories = useVODStore((s) => s.categories);
   const filters = useVODStore((s) => s.filters);
   const currentPage = useVODStore((s) => s.currentPage);
@@ -60,6 +65,11 @@ const VODsPage = () => {
   const setFilters = useVODStore((s) => s.setFilters);
   const setPage = useVODStore((s) => s.setPage);
   const setPageSize = useVODStore((s) => s.setPageSize);
+  const bulkSoftDeleteVODs = useVODStore((s) => s.bulkSoftDeleteVODs);
+  const bulkRestoreVODs = useVODStore((s) => s.bulkRestoreVODs);
+
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   // Persist page size in localStorage
   useEffect(() => {
@@ -77,7 +87,6 @@ const VODsPage = () => {
   const fetchContent = useVODStore((s) => s.fetchContent);
   const fetchCategories = useVODStore((s) => s.fetchCategories);
 
-  // const showVideo = useVideoStore((s) => s.showVideo); - removed as unused
   const [selectedSeries, setSelectedSeries] = useState(null);
   const [selectedVOD, setSelectedVOD] = useState(null);
   const [
@@ -90,7 +99,6 @@ const VODsPage = () => {
   const columns = useCardColumns();
   const [categories, setCategories] = useState({});
 
-  // Helper function to get display data based on current filters
   const getDisplayData = () => {
     return (currentPageContent || []).map((item) => ({
       ...item,
@@ -111,76 +119,135 @@ const VODsPage = () => {
   }, [filters, currentPage, pageSize, fetchContent]);
 
   const handleVODCardClick = (vod) => {
+    if (selectMode) {
+      toggleSelection(vod.id);
+      return;
+    }
     setSelectedVOD(vod);
     openVODModal();
   };
 
   const handleSeriesClick = (series) => {
+    if (selectMode) {
+      toggleSelection(series.id);
+      return;
+    }
     setSelectedSeries(series);
     openSeriesModal();
+  };
+
+  const toggleSelection = (id) => {
+    const newSelection = new Set(selectedIds);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedIds(newSelection);
   };
 
   const onCategoryChange = (value) => {
     setFilters({ category: value });
     setPage(1);
+    setSelectedIds(new Set());
   };
 
-  // When type changes, reset category to all
   const handleTypeChange = (value) => {
     setFilters({ type: value, category: '' });
     setPage(1);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    const type = filters.type === 'all' ? 'movie' : (filters.type === 'movies' ? 'movie' : 'series');
+    bulkSoftDeleteVODs(type, Array.from(selectedIds)).then(() => {
+      setSelectedIds(new Set());
+      setSelectMode(false);
+    });
+  };
+
+  const handleBulkRestore = () => {
+    if (selectedIds.size === 0) return;
+    const type = filters.type === 'all' ? 'movie' : (filters.type === 'movies' ? 'movie' : 'series');
+    bulkRestoreVODs(type, Array.from(selectedIds)).then(() => {
+      setSelectedIds(new Set());
+      setSelectMode(false);
+    });
   };
 
   const categoryOptions = getCategoryOptions(categories, filters);
-
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
-    <Box p="md" id="vods-container">
+    <Box p="md" id="vods-container" pos="relative">
       <Stack spacing="md">
         <Group position="apart">
           <Title order={2}>Video on Demand</Title>
+          <Button 
+            variant={selectMode ? "filled" : "light"} 
+            color="indigo" 
+            leftIcon={<CheckSquare size={16} />}
+            onClick={() => {
+              setSelectMode(!selectMode);
+              if (selectMode) setSelectedIds(new Set());
+            }}
+          >
+            {selectMode ? 'Cancel Selection' : 'Select Mode'}
+          </Button>
         </Group>
 
         {/* Filters */}
-        <Group spacing="md" align="end">
-          <SegmentedControl
-            value={filters.type}
-            onChange={handleTypeChange}
-            data={[
-              { label: 'All', value: 'all' },
-              { label: 'Movies', value: 'movies' },
-              { label: 'Series', value: 'series' },
-            ]}
-          />
+        <Group spacing="md" align="end" position="apart">
+          <Group spacing="md" align="end">
+            <SegmentedControl
+              value={filters.type}
+              onChange={handleTypeChange}
+              data={[
+                { label: 'All', value: 'all' },
+                { label: 'Movies', value: 'movies' },
+                { label: 'Series', value: 'series' },
+              ]}
+            />
 
-          <TextInput
-            placeholder="Search VODs..."
-            icon={<Search size={16} />}
-            value={filters.search}
-            onChange={(e) => setFilters({ search: e.target.value })}
-            miw={200}
-          />
+            <TextInput
+              placeholder="Search VODs..."
+              icon={<Search size={16} />}
+              value={filters.search}
+              onChange={(e) => setFilters({ search: e.target.value })}
+              miw={200}
+            />
 
-          <Select
-            placeholder="Category"
-            data={categoryOptions}
-            value={filters.category}
-            onChange={onCategoryChange}
-            clearable
-            miw={150}
-          />
+            <Select
+              placeholder="Category"
+              data={categoryOptions}
+              value={filters.category}
+              onChange={onCategoryChange}
+              clearable
+              miw={150}
+            />
 
-          <Select
-            label="Page Size"
-            value={String(pageSize)}
-            onChange={handlePageSizeChange}
-            data={['12', '24', '48', '96'].map((v) => ({
-              value: v,
-              label: v,
-            }))}
-            w={110}
-          />
+            <Select
+              label="Page Size"
+              value={String(pageSize)}
+              onChange={handlePageSizeChange}
+              data={['12', '24', '48', '96'].map((v) => ({
+                value: v,
+                label: v,
+              }))}
+              w={110}
+            />
+          </Group>
+          <Group>
+            <Switch 
+              label="Show Hidden (Deleted)" 
+              checked={filters.is_active === false}
+              onChange={(e) => {
+                setFilters({ is_active: !e.currentTarget.checked });
+                setSelectedIds(new Set());
+              }}
+            />
+          </Group>
         </Group>
 
         {/* Content */}
@@ -201,11 +268,22 @@ const VODsPage = () => {
                       maw={MAX_CARD_WIDTH}
                       m={'0 auto'}
                     >
-                      {item.contentType === 'series' ? (
-                        <SeriesCard series={item} onClick={handleSeriesClick} />
-                      ) : (
-                        <VODCard vod={item} onClick={handleVODCardClick} />
-                      )}
+                      <Box pos="relative">
+                        {item.contentType === 'series' ? (
+                          <SeriesCard series={item} onClick={handleSeriesClick} />
+                        ) : (
+                          <VODCard vod={item} onClick={handleVODCardClick} />
+                        )}
+                        {selectMode && (
+                          <Box pos="absolute" top={10} right={10} style={{ zIndex: 10 }}>
+                            <Checkbox 
+                              size="md" 
+                              checked={selectedIds.has(item.id)} 
+                              onChange={() => toggleSelection(item.id)}
+                            />
+                          </Box>
+                        )}
+                      </Box>
                     </GridCol>
                   ))}
                 </Suspense>
@@ -214,7 +292,7 @@ const VODsPage = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <Flex justify="center" mt="md">
+              <Flex justify="center" mt="md" mb={selectMode ? 80 : 0}>
                 <Pagination
                   page={currentPage}
                   onChange={setPage}
@@ -225,6 +303,33 @@ const VODsPage = () => {
           </>
         )}
       </Stack>
+
+      {/* Floating Action Bar for Selection Mode */}
+      {selectMode && selectedIds.size > 0 && (
+        <Paper
+          shadow="xl"
+          radius="md"
+          p="md"
+          withBorder
+          pos="fixed"
+          bottom={20}
+          left="50%"
+          style={{ transform: 'translateX(-50%)', zIndex: 1000, backgroundColor: 'var(--mantine-color-dark-7)' }}
+        >
+          <Group spacing="lg">
+            <Text weight={500}>{selectedIds.size} selected</Text>
+            {filters.is_active === false ? (
+              <Button color="green" leftIcon={<RotateCcw size={16} />} onClick={handleBulkRestore}>
+                Restore Selected
+              </Button>
+            ) : (
+              <Button color="red" leftIcon={<Trash size={16} />} onClick={handleBulkDelete}>
+                Delete Selected
+              </Button>
+            )}
+          </Group>
+        </Paper>
+      )}
 
       {/* Series Episodes Modal */}
       <ErrorBoundary>

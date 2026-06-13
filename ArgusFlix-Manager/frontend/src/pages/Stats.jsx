@@ -21,6 +21,7 @@ import useLogosStore from '../store/logos';
 import useStreamProfilesStore from '../store/streamProfiles';
 import useLocalStorage from '../hooks/useLocalStorage';
 import SystemEvents from '../components/SystemEvents';
+import DashboardVisuals from '../components/DashboardVisuals.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import {
   fetchActiveChannelStats,
@@ -385,6 +386,10 @@ const StatsPage = () => {
               </Group>
             </Group>
           </Box>
+          {/* Dashboard Visualizations */}
+          <DashboardVisuals />
+          
+          <Title order={3} mb="md" px="xs">Active Connections</Title>
           <Box
             style={{
               gap: '1rem',

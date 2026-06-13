@@ -13,6 +13,9 @@ const getFetchContentParams = (state) => {
   if (state.filters.category) {
     params.append('category', state.filters.category);
   }
+  if (state.filters.is_active !== undefined) {
+    params.append('is_active', state.filters.is_active);
+  }
   return params;
 };
 
@@ -130,6 +133,7 @@ const useVODStore = create((set, get) => ({
     type: 'all', // 'all', 'movies', 'series'
     search: '',
     category: '',
+    is_active: true, // Only show active by default
   },
   currentPage: 1,
   totalCount: 0,
@@ -399,7 +403,73 @@ const useVODStore = create((set, get) => ({
     }
   },
 
+
+  updateVOD: async (type, id, data) => {
+    try {
+      set({ loading: true, error: null });
+      if (type === 'movie') {
+        await api.updateMovie(id, data);
+      } else if (type === 'series') {
+        await api.updateSeries(id, data);
+      }
+      // Re-fetch to get updated data
+      await get().fetchContent();
+    } catch (error) {
+      set({ error: 'Failed to update VOD.', loading: false });
+      throw error;
+    }
+  },
+
+  softDeleteVOD: async (type, id) => {
+    try {
+      set({ loading: true, error: null });
+      if (type === 'movie') {
+        await api.bulkDeleteMovies([id]);
+      } else if (type === 'series') {
+        await api.bulkDeleteSeries([id]);
+      }
+      await get().fetchContent();
+    } catch (error) {
+      set({ error: 'Failed to delete VOD.', loading: false });
+      throw error;
+    }
+  },
+
+  bulkSoftDeleteVODs: async (type, ids) => {
+    try {
+      set({ loading: true, error: null });
+      if (type === 'movie') {
+        await api.bulkDeleteMovies(ids);
+      } else if (type === 'series') {
+        await api.bulkDeleteSeries(ids);
+      } else {
+        // mixed? For now assume movies if not specified or mixed
+        // But backend has separate endpoints
+      }
+      await get().fetchContent();
+    } catch (error) {
+      set({ error: 'Failed to bulk delete VODs.', loading: false });
+      throw error;
+    }
+  },
+
+  bulkRestoreVODs: async (type, ids) => {
+    try {
+      set({ loading: true, error: null });
+      if (type === 'movie') {
+        await api.bulkRestoreMovies(ids);
+      } else if (type === 'series') {
+        await api.bulkRestoreSeries(ids);
+      }
+      await get().fetchContent();
+    } catch (error) {
+      set({ error: 'Failed to restore VODs.', loading: false });
+      throw error;
+    }
+  },
+
   // Helper methods for getting filtered content
+
   getFilteredContent: () => {
     const state = get();
     // Return the current page content directly - backend handles all filtering/pagination

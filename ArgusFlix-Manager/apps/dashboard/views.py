@@ -2,7 +2,13 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from psutil import cpu_percent, virtual_memory, net_io_counters
 from apps.channels.models import Stream
-from django.http import JsonResponse  # ADD THIS LINE
+from django.http import JsonResponse
+from django.db.models import Count
+from apps.vod.models import Movie, Series
+from apps.channels.models import Channel
+from apps.accounts.models import WatchHistory
+from core.models import SystemEvent
+  # ADD THIS LINE
 
 
 @login_required
@@ -77,3 +83,54 @@ def live_dashboard_data(request):
             "error": str(e)
         }
     return JsonResponse(data)
+
+
+@login_required
+def visual_stats_data(request):
+    try:
+        # Content counts
+        live_tv_count = Channel.objects.filter(is_active=True).count()
+        movie_count = Movie.objects.filter(is_active=True).count()
+        series_count = Series.objects.filter(is_active=True).count()
+
+        content_counts = {
+            "live_tv": live_tv_count,
+            "movies": movie_count,
+            "series": series_count,
+        }
+
+        # Recently played streams (WatchHistory)
+        recent_history = WatchHistory.objects.select_related('profile').order_by('-last_watched')[:10]
+        recent_streams = []
+        for rh in recent_history:
+            recent_streams.append({
+                "profile": rh.profile.name if rh.profile else "Unknown",
+                "type": rh.content_type,
+                "content_id": rh.content_id,
+                "progress_seconds": rh.progress_seconds,
+                "last_watched": rh.last_watched.isoformat() if rh.last_watched else None
+            })
+
+        # Most common errors (from SystemEvent)
+        # Assuming event_type contains 'error'
+        error_events = SystemEvent.objects.filter(event_type__endswith='error')
+        # We group by details or just event_type if details is too varied
+        common_errors_qs = error_events.values('event_type').annotate(count=Count('id')).order_by('-count')[:5]
+        
+        common_errors = []
+        for err in common_errors_qs:
+            common_errors.append({
+                "name": err['event_type'],
+                "count": err['count']
+            })
+
+        # If there are no errors, maybe return some mock data for UI demo purposes, but let's stick to real data
+        return JsonResponse({
+            "content_counts": content_counts,
+            "recent_streams": recent_streams,
+            "common_errors": common_errors
+        })
+    except Exception as e:
+        import traceback
+        print("Error fetching visual stats:", traceback.format_exc())
+        return JsonResponse({"error": str(e)}, status=500)

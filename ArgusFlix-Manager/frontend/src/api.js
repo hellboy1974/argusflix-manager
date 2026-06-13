@@ -3607,6 +3607,91 @@ export default class API {
   }
 
   // VOD Methods
+  
+  static async updateMovie(id, data) {
+    try {
+      const response = await request(`${host}/api/vod/movies/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to update movie', e);
+      throw e;
+    }
+  }
+
+  static async bulkDeleteMovies(ids) {
+    try {
+      const response = await request(`${host}/api/vod/movies/bulk_delete/`, {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to delete movies', e);
+      throw e;
+    }
+  }
+
+  static async bulkRestoreMovies(ids) {
+    try {
+      const response = await request(`${host}/api/vod/movies/bulk_restore/`, {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to restore movies', e);
+      throw e;
+    }
+  }
+
+  static async updateSeries(id, data) {
+    try {
+      const response = await request(`${host}/api/vod/series/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to update series', e);
+      throw e;
+    }
+  }
+
+  static async bulkDeleteSeries(ids) {
+    try {
+      const response = await request(`${host}/api/vod/series/bulk_delete/`, {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to delete series', e);
+      throw e;
+    }
+  }
+
+  static async bulkRestoreSeries(ids) {
+    try {
+      const response = await request(`${host}/api/vod/series/bulk_restore/`, {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to restore series', e);
+      throw e;
+    }
+  }
+
   static async getMovies(params = new URLSearchParams()) {
     try {
       const response = await request(
@@ -3736,6 +3821,17 @@ export default class API {
       return response;
     } catch (e) {
       errorNotification('Failed to retrieve series info', e);
+    }
+  }
+
+  
+  static async getDashboardVisuals() {
+    try {
+      const response = await request(`${host}/api/dashboard/visual-stats/`);
+      return response;
+    } catch (e) {
+      errorNotification('Failed to retrieve dashboard visual stats', e);
+      throw e;
     }
   }
 
