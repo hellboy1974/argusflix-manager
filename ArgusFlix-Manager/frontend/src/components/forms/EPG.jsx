@@ -667,6 +667,7 @@ const EPG = ({ epg = null, isOpen, onClose }) => {
     mode: 'uncontrolled',
     initialValues: {
       name: '',
+      group_name: '',
       source_type: 'xmltv',
       url: '',
       username: '',
@@ -675,6 +676,7 @@ const EPG = ({ epg = null, isOpen, onClose }) => {
       refresh_interval: 24,
       cron_expression: '',
       priority: 0,
+      time_offset_minutes: 0,
     },
 
     validate: {
@@ -727,6 +729,7 @@ const EPG = ({ epg = null, isOpen, onClose }) => {
       const storedEpg = useEPGsStore.getState().epgs[epg.id] || epg;
       const values = {
         name: storedEpg.name,
+        group_name: storedEpg.group_name || '',
         source_type: storedEpg.source_type,
         url: storedEpg.url,
         username: storedEpg.username || '',
@@ -735,6 +738,7 @@ const EPG = ({ epg = null, isOpen, onClose }) => {
         refresh_interval: storedEpg.refresh_interval,
         cron_expression: storedEpg.cron_expression || '',
         priority: storedEpg.priority ?? 0,
+        time_offset_minutes: storedEpg.time_offset_minutes ?? 0,
       };
       form.setValues(values);
       setSourceType(storedEpg.source_type);
@@ -795,6 +799,15 @@ const EPG = ({ epg = null, isOpen, onClose }) => {
                 description="Unique identifier for this EPG source"
                 {...form.getInputProps('name')}
                 key={form.key('name')}
+              />
+
+              <TextInput
+                id="group_name"
+                name="group_name"
+                label="Group Name"
+                description="Optional: Group EPG sources together (e.g. 'Germany')"
+                {...form.getInputProps('group_name')}
+                key={form.key('group_name')}
               />
 
               <NativeSelect
@@ -930,9 +943,18 @@ const EPG = ({ epg = null, isOpen, onClose }) => {
                 min={0}
                 max={999}
                 label="Priority"
-                description="Priority for EPG matching (higher numbers = higher priority). Used when multiple EPG sources have matching entries for a channel."
+                description="Lower numbers evaluate first (e.g., 0 overrides 1) when channels use multiple EPG sources"
+                step={1}
                 {...form.getInputProps('priority')}
                 key={form.key('priority')}
+              />
+
+              <NumberInput
+                label="Timezone Offset (Minutes)"
+                description="Shift all program times for this source by a specified number of minutes (e.g. 60 or -120)"
+                step={30}
+                {...form.getInputProps('time_offset_minutes')}
+                key={form.key('time_offset_minutes')}
               />
 
               {sourceType === 'xmltv' && savedEpgId && (

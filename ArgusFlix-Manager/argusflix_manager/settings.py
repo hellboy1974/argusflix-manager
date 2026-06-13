@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     "apps.proxy.live_proxy",
     "apps.vod.apps.VODConfig",
     "apps.connect.apps.ConnectConfig",
+    "apps.devices.apps.DevicesConfig",
     "core",
     "daphne",
     "drf_spectacular",
@@ -99,6 +100,7 @@ INSTALLED_APPS = [
     "django_filters",
     "django_celery_beat",
     "apps.plugins",
+    "apps.appbuilder",
 ]
 
 # EPG Processing optimization settings

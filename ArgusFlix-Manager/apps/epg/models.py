@@ -28,6 +28,7 @@ class EPGSource(models.Model):
     ]
 
     name = models.CharField(max_length=255, unique=True)
+    group_name = models.CharField(max_length=255, null=True, blank=True, help_text="Optional group name to cluster multiple EPG sources (e.g. 'Germany')")
     source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES)
     url = models.URLField(max_length=1000, blank=True, null=True)  # For XMLTV
     username = models.CharField(max_length=255, blank=True, null=True,
@@ -41,6 +42,10 @@ class EPGSource(models.Model):
     refresh_interval = models.IntegerField(default=0)
     refresh_task = models.ForeignKey(
         PeriodicTask, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    time_offset_minutes = models.IntegerField(
+        default=0,
+        help_text="Global time offset applied to all programs from this source during parsing"
     )
     custom_properties = models.JSONField(
         default=dict,

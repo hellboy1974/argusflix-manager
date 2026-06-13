@@ -361,6 +361,11 @@ class Channel(models.Model):
         help_text="Whether this channel contains adult content"
     )
 
+    epg_time_offset_minutes = models.IntegerField(
+        default=0,
+        help_text="Time offset applied to EPG programs during playback and API responses for this specific channel"
+    )
+
     auto_created = models.BooleanField(
         default=False,
         help_text="Whether this channel was automatically created via M3U auto channel sync"
@@ -949,6 +954,7 @@ class ChannelOverride(models.Model):
         blank=True,
         related_name="+",
     )
+    epg_time_offset_minutes = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1026,8 +1032,15 @@ class ChannelGroupM3UAccount(models.Model):
     )
     last_seen = models.DateTimeField(
         default=timezone.now,
-        db_index=True,
-        help_text='Last time this group was seen in the M3U source during a refresh'
+        help_text="Time this group was last found during a sync"
+    )
+    first_seen_at = models.DateTimeField(
+        default=timezone.now,
+        help_text="Time this group was first discovered"
+    )
+    is_acknowledged = models.BooleanField(
+        default=False,
+        help_text="Whether the user has acknowledged this new group"
     )
     is_stale = models.BooleanField(
         default=False,

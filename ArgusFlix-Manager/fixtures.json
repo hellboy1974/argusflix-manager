@@ -89,11 +89,491 @@
     }
   },
   {
-  "model": "core.coresettings",
-  "fields": {
-    "key": "cache-images",
-    "name": "Cache Images",
-    "value": "true"
+    "model": "core.coresettings",
+    "fields": {
+      "key": "cache-images",
+      "name": "Cache Images",
+      "value": "true"
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "\u00d6sterreich 1",
+      "group_name": "\u00d6sterreich",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/austria.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "\u00d6sterreich 2",
+      "group_name": "\u00d6sterreich",
+      "source_type": "xmltv",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_AT1.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Kanada 1",
+      "group_name": "Kanada",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/canada.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Kanada 2",
+      "group_name": "Kanada",
+      "source_type": "xmltv",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_CA2.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Finnland 1",
+      "group_name": "Finnland",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/finland1.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Finnland 2",
+      "group_name": "Finnland",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/finland2.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Finnland 3",
+      "group_name": "Finnland",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/finland3.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Finnland 4",
+      "group_name": "Finnland",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/finland4.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Deutschland 1",
+      "group_name": "Deutschland",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/germany.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Deutschland 2",
+      "group_name": "Deutschland",
+      "source_type": "xmltv",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_DE1.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Italien 1",
+      "group_name": "Italien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/italy1.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Italien 2",
+      "group_name": "Italien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/italy2.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Italien 3",
+      "group_name": "Italien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/italy3.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Italien 4",
+      "group_name": "Italien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/italy4.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Italien 5",
+      "group_name": "Italien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/italy5.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Italien 6",
+      "group_name": "Italien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/italy6.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Italien 7",
+      "group_name": "Italien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/italy7.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Italien 8",
+      "group_name": "Italien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/italy8.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Italien 9",
+      "group_name": "Italien",
+      "source_type": "xmltv",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_IT1.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Portugal 1",
+      "group_name": "Portugal",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/portugal1.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Portugal 2",
+      "group_name": "Portugal",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/portugal2.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Portugal 3",
+      "group_name": "Portugal",
+      "source_type": "xmltv",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_PT1.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Spanien 1",
+      "group_name": "Spanien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/spain1.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Spanien 2",
+      "group_name": "Spanien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/spain2.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Spanien 3",
+      "group_name": "Spanien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/spain3.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Spanien 4",
+      "group_name": "Spanien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/spain4.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Spanien 5",
+      "group_name": "Spanien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/spain5.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Spanien 6",
+      "group_name": "Spanien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/spain6.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Spanien 7",
+      "group_name": "Spanien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/spain7.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Spanien 8",
+      "group_name": "Spanien",
+      "source_type": "xmltv",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_ES1.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Schweiz 1",
+      "group_name": "Schweiz",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/switzerland2.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Schweiz 2",
+      "group_name": "Schweiz",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/switzerland3.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Schweiz 3",
+      "group_name": "Schweiz",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/switzerland4.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Schweiz 4",
+      "group_name": "Schweiz",
+      "source_type": "xmltv",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_CH1.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Grossbritannien 1",
+      "group_name": "Grossbritannien",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/unitedkingdom.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Grossbritannien 2",
+      "group_name": "Grossbritannien",
+      "source_type": "xmltv",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "USA 1",
+      "group_name": "USA",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/unitedstates10.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "USA 2",
+      "group_name": "USA",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/unitedstates11.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "USA 3",
+      "group_name": "USA",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/unitedstates3.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "USA 4",
+      "group_name": "USA",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/unitedstates4.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "USA 5",
+      "group_name": "USA",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/unitedstates6.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "USA 6",
+      "group_name": "USA",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/unitedstates7.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "USA 7",
+      "group_name": "USA",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/unitedstates8.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "USA 8",
+      "group_name": "USA",
+      "source_type": "xmltv",
+      "url": "https://www.open-epg.com/files/unitedstates9.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "USA 9",
+      "group_name": "USA",
+      "source_type": "xmltv",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_US_LOCALS1.txt",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "USA 10",
+      "group_name": "USA",
+      "source_type": "xmltv",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_US_SPORTS1.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "USA 11",
+      "group_name": "USA",
+      "source_type": "xmltv",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_US2.xml.gz",
+      "is_active": true
+    }
+  },
+  {
+    "model": "epg.epgsource",
+    "fields": {
+      "name": "Plex 1",
+      "group_name": "Plex",
+      "source_type": "xmltv",
+      "url": "https://epgshare01.online/epgshare01/epg_ripper_PLEX1.xml.gz",
+      "is_active": true
+    }
   }
-}
 ]

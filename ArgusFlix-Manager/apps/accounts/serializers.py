@@ -147,3 +147,26 @@ class UserSerializer(serializers.ModelSerializer):
             instance.channel_profiles.set(channel_profiles)
 
         return instance
+
+
+from .models import Profile, WatchHistory, Favorite
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['id', 'user', 'name', 'avatar_url', 'pin', 'is_kids_profile', 'created_at', 'updated_at']
+        read_only_fields = ['user', 'created_at', 'updated_at']
+
+
+class WatchHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WatchHistory
+        fields = ['id', 'profile', 'content_type', 'content_id', 'progress_seconds', 'duration_seconds', 'last_watched', 'completed']
+        read_only_fields = ['profile', 'last_watched']
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Favorite
+        fields = ['id', 'profile', 'content_type', 'content_id', 'created_at']
+        read_only_fields = ['profile', 'created_at']

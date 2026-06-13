@@ -3,7 +3,7 @@ import json
 import ipaddress
 
 from rest_framework import serializers
-from .models import CoreSettings, UserAgent, StreamProfile, OutputProfile, DVR_SETTINGS_KEY, NETWORK_ACCESS_KEY
+from .models import CoreSettings, UserAgent, StreamProfile, OutputProfile, DVR_SETTINGS_KEY, NETWORK_ACCESS_KEY, MetadataProvider
 
 
 class UserAgentSerializer(serializers.ModelSerializer):
@@ -38,6 +38,12 @@ class OutputProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = OutputProfile
         fields = ["id", "name", "command", "parameters", "is_active", "locked"]
+
+
+class MetadataProviderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MetadataProvider
+        fields = "__all__"
 
 
 class CoreSettingsSerializer(serializers.ModelSerializer):

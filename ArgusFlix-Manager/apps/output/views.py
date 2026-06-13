@@ -128,6 +128,9 @@ def generate_m3u(request, profile_name=None, user=None):
         if request.body.decode() != '{}':
             return HttpResponseForbidden("POST requests with body are not allowed.")
 
+    is_custom_playlist = False
+    custom_playlist = None
+
     if user is not None:
         if user.user_level < 10:
             user_profile_count = user.channel_profiles.count()
@@ -156,15 +159,24 @@ def generate_m3u(request, profile_name=None, user=None):
 
     else:
         if profile_name is not None:
+            from apps.output.models import CustomPlaylist
             try:
                 channel_profile = ChannelProfile.objects.get(name=profile_name)
+                base_qs = Channel.objects.filter(
+                    channelprofilemembership__channel_profile=channel_profile,
+                    channelprofilemembership__enabled=True
+                ).select_related('channel_group', 'logo')
             except ChannelProfile.DoesNotExist:
-                logger.warning("Requested channel profile (%s) during m3u generation does not exist", profile_name)
-                raise Http404(f"Channel profile '{profile_name}' not found")
-            base_qs = Channel.objects.filter(
-                channelprofilemembership__channel_profile=channel_profile,
-                channelprofilemembership__enabled=True
-            ).select_related('channel_group', 'logo')
+                # Check for Custom Playlist
+                from django.db.models import Q
+                custom_playlist = CustomPlaylist.objects.filter(Q(token=profile_name) | Q(slug=profile_name), is_active=True).first()
+                if custom_playlist:
+                    is_custom_playlist = True
+                    mapped_group_ids = custom_playlist.live_mappings.values_list('channel_group_id', flat=True)
+                    base_qs = Channel.objects.filter(channel_group_id__in=mapped_group_ids).select_related('channel_group', 'logo')
+                else:
+                    logger.warning("Requested channel profile (%s) during m3u generation does not exist", profile_name)
+                    raise Http404(f"Channel profile '{profile_name}' not found")
         else:
             base_qs = Channel.objects.select_related('channel_group', 'logo')
 
@@ -315,6 +327,29 @@ def generate_m3u(request, profile_name=None, user=None):
             stream_url = f"{_stream_url_prefix}{channel.uuid}{proxy_qs_suffix}"
 
         m3u_content += extinf_line + stream_url + "\n"
+
+    if is_custom_playlist and custom_playlist:
+        from apps.vod.models import Movie, Series
+        mapped_cat_ids = custom_playlist.vod_mappings.values_list('vod_category_id', flat=True)
+        if mapped_cat_ids.exists():
+            # Add Movies
+            movies = Movie.objects.filter(category_id__in=mapped_cat_ids).select_related('category')
+            for movie in movies:
+                group_title = movie.category.name if movie.category else "VOD"
+                extinf = f'#EXTINF:-1 tvg-id="" tvg-name="{movie.name}" tvg-logo="{movie.poster_url}" group-title="{group_title}",{movie.name}\n'
+                stream_url = request.build_absolute_uri(reverse('vod:stream_movie', args=[movie.id]))
+                m3u_content += extinf + stream_url + "\n"
+            
+            # Add Series/Episodes
+            series_qs = Series.objects.filter(category_id__in=mapped_cat_ids).prefetch_related('seasons__episodes').select_related('category')
+            for series in series_qs:
+                group_title = series.category.name if series.category else "Series"
+                for season in series.seasons.all():
+                    for ep in season.episodes.all():
+                        name = f"{series.name} S{season.season_number:02d}E{ep.episode_number:02d} {ep.name}"
+                        extinf = f'#EXTINF:-1 tvg-id="" tvg-name="{name}" tvg-logo="{series.poster_url}" group-title="{group_title}",{name}\n'
+                        stream_url = request.build_absolute_uri(reverse('vod:stream_episode', args=[ep.id]))
+                        m3u_content += extinf + stream_url + "\n"
 
     # Cache the generated content for 2 seconds to handle double-GET requests
     cache.set(content_cache_key, m3u_content, 2)
@@ -1378,15 +1413,22 @@ def generate_epg(request, profile_name=None, user=None):
                 base_qs = Channel.objects.filter(user_level__lte=user.user_level).select_related('logo', 'epg_data__epg_source')
         else:
             if profile_name is not None:
+                from apps.output.models import CustomPlaylist
                 try:
                     channel_profile = ChannelProfile.objects.get(name=profile_name)
+                    base_qs = Channel.objects.filter(
+                        channelprofilemembership__channel_profile=channel_profile,
+                        channelprofilemembership__enabled=True,
+                    ).select_related('logo', 'epg_data__epg_source')
                 except ChannelProfile.DoesNotExist:
-                    logger.warning("Requested channel profile (%s) during epg generation does not exist", profile_name)
-                    raise Http404(f"Channel profile '{profile_name}' not found")
-                base_qs = Channel.objects.filter(
-                    channelprofilemembership__channel_profile=channel_profile,
-                    channelprofilemembership__enabled=True,
-                ).select_related('logo', 'epg_data__epg_source')
+                    from django.db.models import Q
+                    custom_playlist = CustomPlaylist.objects.filter(Q(token=profile_name) | Q(slug=profile_name), is_active=True).first()
+                    if custom_playlist:
+                        mapped_group_ids = custom_playlist.live_mappings.values_list('channel_group_id', flat=True)
+                        base_qs = Channel.objects.filter(channel_group_id__in=mapped_group_ids).select_related('logo', 'epg_data__epg_source')
+                    else:
+                        logger.warning("Requested channel profile (%s) during epg generation does not exist", profile_name)
+                        raise Http404(f"Channel profile '{profile_name}' not found")
             else:
                 base_qs = Channel.objects.all().select_related('logo', 'epg_data__epg_source')
 
@@ -1539,8 +1581,8 @@ def generate_epg(request, profile_name=None, user=None):
         xml_lines = []  # Clear to save memory
 
         # Pre-pass: categorize channels into dummy and real EPG groups
-        dummy_program_list = []  # (channel_id, pattern_match_name, epg_source_or_None)
-        real_epg_map = {}  # epg_data_id -> [channel_id, ...]
+        dummy_program_list = []  # (channel_id, pattern_match_name, epg_source_or_None, total_offset)
+        real_epg_map = {}  # epg_data_id -> { offset: [channel_id, ...] }
         dummy_epg_checked = {}  # epg_data_id -> bool (has stored programs)
 
         for channel in channels:
@@ -1582,22 +1624,33 @@ def generate_epg(request, profile_name=None, user=None):
                         else:
                             logger.warning(f"Stream index {stream_index} not found for channel {effective_name}, falling back to channel name")
 
+            # Calculate total offset
+            eff_offset = getattr(channel, "effective_epg_time_offset_minutes", None)
+            if eff_offset is None:
+                eff_offset = channel.epg_time_offset_minutes or 0
+
+            source_offset = 0
+            if effective_epg_data and effective_epg_data.epg_source:
+                source_offset = effective_epg_data.epg_source.time_offset_minutes or 0
+
+            total_offset = eff_offset + source_offset
+
             if not effective_epg_data:
-                dummy_program_list.append((channel_id, pattern_match_name, None))
+                dummy_program_list.append((channel_id, pattern_match_name, None, total_offset))
             else:
                 if effective_epg_data.epg_source and effective_epg_data.epg_source.source_type == 'dummy':
                     if effective_epg_data_id not in dummy_epg_checked:
                         dummy_epg_checked[effective_epg_data_id] = effective_epg_data.programs.exists()
                     if dummy_epg_checked[effective_epg_data_id]:
-                        real_epg_map.setdefault(effective_epg_data_id, []).append(channel_id)
+                        real_epg_map.setdefault(effective_epg_data_id, {}).setdefault(total_offset, []).append(channel_id)
                     else:
-                        dummy_program_list.append((channel_id, pattern_match_name, effective_epg_data.epg_source))
+                        dummy_program_list.append((channel_id, pattern_match_name, effective_epg_data.epg_source, total_offset))
                     continue
 
-                real_epg_map.setdefault(effective_epg_data_id, []).append(channel_id)
+                real_epg_map.setdefault(effective_epg_data_id, {}).setdefault(total_offset, []).append(channel_id)
 
         # Emit dummy programmes
-        for channel_id, pattern_match_name, epg_source in dummy_program_list:
+        for channel_id, pattern_match_name, epg_source, total_offset in dummy_program_list:
             program_length_hours = 4
             dummy_programs = generate_dummy_programs(
                 channel_id, pattern_match_name,
@@ -1606,8 +1659,15 @@ def generate_epg(request, profile_name=None, user=None):
                 epg_source=epg_source
             )
             for program in dummy_programs:
-                start_str = program['start_time'].strftime("%Y%m%d%H%M%S %z")
-                stop_str = program['end_time'].strftime("%Y%m%d%H%M%S %z")
+                if total_offset:
+                    shifted_start = program['start_time'] + timedelta(minutes=total_offset)
+                    shifted_end = program['end_time'] + timedelta(minutes=total_offset)
+                else:
+                    shifted_start = program['start_time']
+                    shifted_end = program['end_time']
+
+                start_str = shifted_start.strftime("%Y%m%d%H%M%S %z")
+                stop_str = shifted_end.strftime("%Y%m%d%H%M%S %z")
                 yield f'  <programme start="{start_str}" stop="{stop_str}" channel="{html.escape(channel_id)}">\n'
                 yield f"    <title>{html.escape(program['title'])}</title>\n"
                 if program.get('sub_title'):
@@ -1648,9 +1708,8 @@ def generate_epg(request, profile_name=None, user=None):
             )
 
             current_epg_id = None
-            channel_ids_for_epg = None
-            is_multi = False
-            multi_buffer = []
+            offset_groups = {}
+            multi_buffers = {}
             program_batch = []
             batch_size = 1000
             chunk_size = 5000
@@ -1679,31 +1738,43 @@ def generate_epg(request, profile_name=None, user=None):
 
                     # When epg_id changes, flush multi-channel buffer for previous group
                     if epg_id != current_epg_id:
-                        if is_multi and multi_buffer:
-                            escaped_primary = html.escape(channel_ids_for_epg[0])
-                            for extra_cid in channel_ids_for_epg[1:]:
-                                escaped_extra = html.escape(extra_cid)
-                                for xml_text in multi_buffer:
-                                    program_batch.append(xml_text.replace(
-                                        f'channel="{escaped_primary}"',
-                                        f'channel="{escaped_extra}"',
-                                        1,
-                                    ))
-                                    if len(program_batch) >= batch_size:
-                                        yield '\n'.join(program_batch) + '\n'
-                                        program_batch = []
-                            multi_buffer = []
+                        if current_epg_id is not None and multi_buffers:
+                            for offset_val, xml_texts in multi_buffers.items():
+                                channel_ids = real_epg_map[current_epg_id][offset_val]
+                                escaped_primary = html.escape(channel_ids[0])
+                                for extra_cid in channel_ids[1:]:
+                                    escaped_extra = html.escape(extra_cid)
+                                    for xml_text in xml_texts:
+                                        program_batch.append(xml_text.replace(
+                                            f'channel="{escaped_primary}"',
+                                            f'channel="{escaped_extra}"',
+                                            1,
+                                        ))
+                                        if len(program_batch) >= batch_size:
+                                            yield '\n'.join(program_batch) + '\n'
+                                            program_batch = []
+                            multi_buffers = {}
 
                         current_epg_id = epg_id
-                        channel_ids_for_epg = real_epg_map[epg_id]
-                        is_multi = len(channel_ids_for_epg) > 1
+                        offset_groups = real_epg_map[epg_id]
+                        multi_buffers = {offset_val: [] for offset_val in offset_groups}
 
-                    # Build programme XML for primary channel_id
-                    primary_cid = channel_ids_for_epg[0]
-                    start_str = prog['start_time'].strftime("%Y%m%d%H%M%S %z")
-                    stop_str = prog['end_time'].strftime("%Y%m%d%H%M%S %z")
+                    # Build programme XML for each offset group
+                    for offset_val, channel_ids_for_offset in offset_groups.items():
+                        primary_cid = channel_ids_for_offset[0]
+                        is_multi_for_offset = len(channel_ids_for_offset) > 1
 
-                    program_xml = [f'  <programme start="{start_str}" stop="{stop_str}" channel="{html.escape(primary_cid)}">']
+                        if offset_val:
+                            shifted_start = prog['start_time'] + timedelta(minutes=offset_val)
+                            shifted_stop = prog['end_time'] + timedelta(minutes=offset_val)
+                        else:
+                            shifted_start = prog['start_time']
+                            shifted_stop = prog['end_time']
+
+                        start_str = shifted_start.strftime("%Y%m%d%H%M%S %z")
+                        stop_str = shifted_stop.strftime("%Y%m%d%H%M%S %z")
+
+                        program_xml = [f'  <programme start="{start_str}" stop="{stop_str}" channel="{html.escape(primary_cid)}">']
                     program_xml.append(f'    <title>{html.escape(prog["title"])}</title>')
 
                     if prog['sub_title']:
@@ -1898,27 +1969,31 @@ def generate_epg(request, profile_name=None, user=None):
 
                     program_xml.append("  </programme>")
 
-                    xml_text = '\n'.join(program_xml)
+                    xml_text = '\n'.join(program_xml) + '\n'
+                    if is_multi_for_offset:
+                        multi_buffers[offset_val].append(xml_text)
                     program_batch.append(xml_text)
-
-                    if is_multi:
-                        multi_buffer.append(xml_text)
 
                     if len(program_batch) >= batch_size:
                         yield '\n'.join(program_batch) + '\n'
                         program_batch = []
 
-            # Final flush of multi-channel buffer
-            if is_multi and multi_buffer:
-                escaped_primary = html.escape(channel_ids_for_epg[0])
-                for extra_cid in channel_ids_for_epg[1:]:
-                    escaped_extra = html.escape(extra_cid)
-                    for xml_text in multi_buffer:
-                        program_batch.append(xml_text.replace(
-                            f'channel="{escaped_primary}"',
-                            f'channel="{escaped_extra}"',
-                            1,
-                        ))
+            # Flush any remaining multi-channel buffers for the last epg_id
+            if current_epg_id is not None and multi_buffers:
+                for offset_val, xml_texts in multi_buffers.items():
+                    channel_ids = real_epg_map[current_epg_id][offset_val]
+                    escaped_primary = html.escape(channel_ids[0])
+                    for extra_cid in channel_ids[1:]:
+                        escaped_extra = html.escape(extra_cid)
+                        for xml_text in xml_texts:
+                            program_batch.append(xml_text.replace(
+                                f'channel="{escaped_primary}"',
+                                f'channel="{escaped_extra}"',
+                                1,
+                            ))
+                            if len(program_batch) >= batch_size:
+                                yield '\n'.join(program_batch) + '\n'
+                                program_batch = []
 
             if program_batch:
                 yield '\n'.join(program_batch) + '\n'
@@ -1962,6 +2037,8 @@ def generate_epg(request, profile_name=None, user=None):
     return response
 
 
+from apps.output.models import CustomPlaylist
+
 def xc_get_user(request):
     username = request.GET.get("username")
     password = request.GET.get("password")
@@ -1969,7 +2046,18 @@ def xc_get_user(request):
     if not username or not password:
         return None
 
-    user = get_object_or_404(User, username=username)
+    # Check for CustomPlaylist first
+    try:
+        playlist = CustomPlaylist.objects.get(token=username, is_active=True)
+        if password == "custom":
+            return playlist
+    except CustomPlaylist.DoesNotExist:
+        pass
+
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return None
 
     custom_properties = user.custom_properties or {}
 
@@ -1979,8 +2067,13 @@ def xc_get_user(request):
     if custom_properties["xc_password"] != password:
         return None
 
-    if not network_access_allowed(request, 'XC_API', user):
-        return None
+    if isinstance(user, User):
+        if not network_access_allowed(request, 'XC_API', user):
+            return None
+    else:
+        # CustomPlaylist has no user-specific restrictions for now, but we check global IP bans
+        if not network_access_allowed(request, 'XC_API'):
+            return None
 
     return user
 
@@ -2214,8 +2307,22 @@ def xc_get_live_categories(user):
 
 def _xc_live_streams_setup(request, user, category_id):
     from apps.channels.managers import with_effective_values
+    from apps.output.models import CustomPlaylist
 
-    if user.user_level < 10:
+    if isinstance(user, CustomPlaylist):
+        # Filter channels by CustomPlaylistLiveMapping
+        mapped_group_ids = user.live_mappings.values_list('channel_group_id', flat=True)
+        filters = {"channel_group__id__in": mapped_group_ids}
+        if category_id is not None:
+            filters["channel_group__id"] = category_id
+        
+        # Hide adult content based on custom properties (assuming CustomPlaylist could have this)
+        if (user.custom_properties or {}).get('hide_adult_content', False):
+            filters["is_adult"] = False
+            
+        base_qs = Channel.objects.filter(**filters).select_related('channel_group', 'logo')
+
+    elif user.user_level < 10:
         user_profile_count = user.channel_profiles.count()
 
         # If user has ALL profiles or NO profiles, give unrestricted access

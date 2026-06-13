@@ -364,3 +364,84 @@ def list_permissions(request):
     permissions = Permission.objects.all()
     serializer = PermissionSerializer(permissions, many=True)
     return Response(serializer.data)
+
+
+from .models import Profile, WatchHistory, Favorite
+from .serializers import ProfileSerializer, WatchHistorySerializer, FavoriteSerializer
+from django.utils import timezone
+
+class ProfileViewSet(viewsets.ModelViewSet):
+    serializer_class = ProfileSerializer
+    permission_classes = [Authenticated]
+
+    def get_queryset(self):
+        return Profile.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def sync_progress(self, request, pk=None):
+        profile = self.get_object()
+        content_type = request.data.get('content_type')
+        content_id = str(request.data.get('content_id', ''))
+        progress = int(request.data.get('progress', 0))
+        duration = int(request.data.get('duration', 0))
+        
+        if not content_type or not content_id:
+            return Response({'error': 'content_type and content_id are required'}, status=400)
+            
+        completed = False
+        if duration > 0 and progress >= (duration * 0.9):
+            completed = True
+            
+        history, created = WatchHistory.objects.update_or_create(
+            profile=profile,
+            content_type=content_type,
+            content_id=content_id,
+            defaults={
+                'progress_seconds': progress,
+                'duration_seconds': duration,
+                'completed': completed,
+                'last_watched': timezone.now()
+            }
+        )
+        
+        return Response(WatchHistorySerializer(history).data)
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        profile = self.get_object()
+        history = WatchHistory.objects.filter(profile=profile).order_by('-last_watched')
+        return Response(WatchHistorySerializer(history, many=True).data)
+
+    @action(detail=True, methods=['post', 'delete'])
+    def favorites(self, request, pk=None):
+        profile = self.get_object()
+        content_type = request.data.get('content_type')
+        content_id = str(request.data.get('content_id', ''))
+        
+        if not content_type or not content_id:
+            return Response({'error': 'content_type and content_id are required'}, status=400)
+            
+        if request.method == 'POST':
+            fav, created = Favorite.objects.get_or_create(
+                profile=profile,
+                content_type=content_type,
+                content_id=content_id
+            )
+            return Response(FavoriteSerializer(fav).data, status=201 if created else 200)
+            
+        elif request.method == 'DELETE':
+            Favorite.objects.filter(
+                profile=profile, 
+                content_type=content_type, 
+                content_id=content_id
+            ).delete()
+            return Response(status=204)
+
+    @action(detail=True, methods=['get'])
+    def get_favorites(self, request, pk=None):
+        profile = self.get_object()
+        favs = Favorite.objects.filter(profile=profile).order_by('-created_at')
+        return Response(FavoriteSerializer(favs, many=True).data)

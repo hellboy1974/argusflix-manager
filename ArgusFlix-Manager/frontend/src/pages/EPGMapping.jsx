@@ -16,9 +16,10 @@ import {
   Divider,
   Checkbox,
   Slider,
+  NumberInput,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { Search, Zap, Link, Tv, AlertCircle } from 'lucide-react';
+import { Search, Zap, Link, Tv, AlertCircle, Eye } from 'lucide-react';
 import { Allotment } from 'allotment';
 import 'allotment/dist/style.css';
 import { FixedSizeList as List } from 'react-window';
@@ -27,6 +28,7 @@ import useChannelsStore from '../store/channels';
 import useEPGsStore from '../store/epgs';
 import api from '../api';
 import ErrorBoundary from '../components/ErrorBoundary';
+import EPGTimelineModal from '../components/EPGTimelineModal';
 
 const EPGMappingContent = () => {
   // Zustand Stores
@@ -49,8 +51,11 @@ const EPGMappingContent = () => {
   const [epgSourceFilter, setEpgSourceFilter] = useState('all');
   
   const [isUpdating, setIsUpdating] = useState(false);
+  const [timelineModalOpened, setTimelineModalOpened] = useState(false);
+  const [timelineEpg, setTimelineEpg] = useState(null);
   const [selectedChannelIds, setSelectedChannelIds] = useState(new Set());
   const [matchThreshold, setMatchThreshold] = useState(85);
+  const [channelOffset, setChannelOffset] = useState(0);
 
   // Initial Load
   useEffect(() => {
@@ -126,6 +131,7 @@ const EPGMappingContent = () => {
   // Actions
   const handleSelectChannel = (channel) => {
     setSelectedChannel(channel);
+    setChannelOffset(channel.epg_time_offset_minutes || 0);
     // Auto-fill EPG search with channel name for quick matching
     setEpgSearch(channel.name);
   };
@@ -192,6 +198,23 @@ const EPGMappingContent = () => {
       fetchChannels();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleUpdateOffset = async () => {
+    if (!selectedChannel) return;
+    setIsUpdating(true);
+    try {
+      await api.updateChannel({
+        id: selectedChannel.id,
+        epg_time_offset_minutes: channelOffset,
+      });
+      notifications.show({ title: 'Offset Updated', message: `Offset for ${selectedChannel.name} set to ${channelOffset}m`, color: 'green' });
+      fetchChannels();
+    } catch (e) {
+      notifications.show({ title: 'Error', message: 'Failed to update offset', color: 'red' });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -264,6 +287,7 @@ const EPGMappingContent = () => {
                 <Text size="sm" fw={500} truncate>{channel.name}</Text>
                 <Text size="xs" c="dimmed" truncate>
                   Group: {channelGroups[channel.channel_group_id]?.name || 'None'}
+                  {channel.epg_time_offset_minutes ? ` | Offset: ${channel.epg_time_offset_minutes}m` : ''}
                 </Text>
               </Box>
             </Group>
@@ -296,16 +320,30 @@ const EPGMappingContent = () => {
               <Text size="sm" fw={500} truncate>{tvg.name}</Text>
               <Text size="xs" c="dimmed" truncate>{tvg.tvg_id}</Text>
             </Box>
-            <Button 
-              size="xs" 
-              variant="light" 
-              color="blue"
-              onClick={() => handleAssignEPG(tvg)}
-              disabled={!selectedChannel || isUpdating}
-              leftSection={<Link size={14} />}
-            >
-              Assign
-            </Button>
+            <Group gap="xs" wrap="nowrap">
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTimelineEpg(tvg);
+                  setTimelineModalOpened(true);
+                }}
+                title="Inspect EPG Timeline"
+              >
+                <Eye size={16} />
+              </ActionIcon>
+              <Button 
+                size="xs" 
+                variant="light" 
+                color="blue"
+                onClick={() => handleAssignEPG(tvg)}
+                disabled={!selectedChannel || isUpdating}
+                leftSection={<Link size={14} />}
+              >
+                Assign
+              </Button>
+            </Group>
           </Group>
         </Box>
       </div>
@@ -414,9 +452,29 @@ const EPGMappingContent = () => {
                 <Group justify="space-between">
                   <Text size="sm" fw={500}>EPG Database</Text>
                   {selectedChannel && (
-                    <Badge color="blue" variant="filled">
-                      Mapping: {selectedChannel.name}
-                    </Badge>
+                    <Group gap="xs">
+                      <Group gap={4}>
+                        <NumberInput
+                          size="xs"
+                          w={90}
+                          placeholder="Offset (min)"
+                          value={channelOffset}
+                          onChange={(val) => setChannelOffset(val || 0)}
+                          suffix=" min"
+                        />
+                        <Button 
+                          size="xs" 
+                          variant="light" 
+                          onClick={handleUpdateOffset}
+                          loading={isUpdating}
+                        >
+                          Save Offset
+                        </Button>
+                      </Group>
+                      <Badge color="blue" variant="filled">
+                        Mapping: {selectedChannel.name}
+                      </Badge>
+                    </Group>
                   )}
                 </Group>
                 
@@ -459,6 +517,13 @@ const EPGMappingContent = () => {
           </Box>
         </Allotment>
       </Box>
+
+      <EPGTimelineModal
+        opened={timelineModalOpened}
+        onClose={() => setTimelineModalOpened(false)}
+        tvg={timelineEpg}
+        channel={selectedChannel}
+      />
     </Box>
   );
 };

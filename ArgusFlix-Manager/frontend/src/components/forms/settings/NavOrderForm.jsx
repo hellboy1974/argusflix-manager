@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Button, Text, Group, ActionIcon, Stack } from '@mantine/core';
+import { Box, Button, Text, Group, ActionIcon, Stack, TextInput, Select, Collapse } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { GripVertical, Eye, EyeOff } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, Edit2, Check, X } from 'lucide-react';
 import {
   closestCenter,
   DndContext,
@@ -27,8 +27,20 @@ import {
   getOrderedNavItems,
 } from '../../../config/navigation';
 import { USER_LEVELS } from '../../../constants';
+import { IconRegistry } from '../../../config/icons';
 
-const DraggableNavItem = ({ item, isHidden, canHide, onToggleVisibility }) => {
+const ICON_OPTIONS = Object.keys(IconRegistry).map(key => ({
+  value: key,
+  label: key,
+}));
+
+const DraggableNavItem = ({ 
+  item, 
+  isHidden, 
+  canHide, 
+  onToggleVisibility, 
+  onUpdateItem 
+}) => {
   const {
     transform,
     transition,
@@ -40,6 +52,22 @@ const DraggableNavItem = ({ item, isHidden, canHide, onToggleVisibility }) => {
     id: item.id,
   });
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editLabel, setEditLabel] = useState(item.label);
+  const [editIcon, setEditIcon] = useState('');
+
+  // Find the string name of the current icon component
+  useEffect(() => {
+    let currentIconName = '';
+    for (const [name, comp] of Object.entries(IconRegistry)) {
+      if (item.icon === comp) {
+        currentIconName = name;
+        break;
+      }
+    }
+    setEditIcon(currentIconName);
+  }, [item.icon, isEditing]);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: transition,
@@ -49,6 +77,16 @@ const DraggableNavItem = ({ item, isHidden, canHide, onToggleVisibility }) => {
   };
 
   const IconComponent = item.icon;
+
+  const handleSave = () => {
+    onUpdateItem(item.id, editLabel, editIcon);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditLabel(item.label);
+  };
 
   return (
     <Box
@@ -62,8 +100,8 @@ const DraggableNavItem = ({ item, isHidden, canHide, onToggleVisibility }) => {
         marginBottom: 6,
       }}
     >
-      <Group justify="space-between">
-        <Group gap="sm">
+      <Group justify="space-between" wrap="nowrap">
+        <Group gap="sm" style={{ flexGrow: 1 }}>
           <ActionIcon
             {...attributes}
             {...listeners}
@@ -73,34 +111,75 @@ const DraggableNavItem = ({ item, isHidden, canHide, onToggleVisibility }) => {
           >
             <GripVertical size={16} color="#888" />
           </ActionIcon>
+          
           {IconComponent && (
             <IconComponent size={18} color={isHidden ? '#666' : '#ccc'} />
           )}
-          <Text size="sm" c={isHidden ? 'dimmed' : 'gray.3'}>
+          
+          <Text size="sm" c={isHidden ? 'dimmed' : 'gray.3'} style={{ flexGrow: 1 }}>
             {item.label}
           </Text>
         </Group>
-        {canHide && (
+
+        <Group gap="xs" wrap="nowrap">
           <ActionIcon
             variant="transparent"
             size="sm"
-            onClick={() => onToggleVisibility(item.id)}
-            title={isHidden ? 'Show in navigation' : 'Hide from navigation'}
+            onClick={() => setIsEditing(!isEditing)}
+            title="Edit Item"
           >
-            {isHidden ? (
-              <EyeOff size={16} color="#666" />
-            ) : (
-              <Eye size={16} color="#888" />
-            )}
+            <Edit2 size={16} color={isEditing ? '#4dabf7' : '#888'} />
           </ActionIcon>
-        )}
+          {canHide && (
+            <ActionIcon
+              variant="transparent"
+              size="sm"
+              onClick={() => onToggleVisibility(item.id)}
+              title={isHidden ? 'Show in navigation' : 'Hide from navigation'}
+            >
+              {isHidden ? (
+                <EyeOff size={16} color="#666" />
+              ) : (
+                <Eye size={16} color="#888" />
+              )}
+            </ActionIcon>
+          )}
+        </Group>
       </Group>
+
+      <Collapse in={isEditing}>
+        <Box pt="sm" pb="xs">
+          <Group align="flex-end" wrap="nowrap">
+            <TextInput
+              label="Label"
+              size="xs"
+              value={editLabel}
+              onChange={(e) => setEditLabel(e.currentTarget.value)}
+              style={{ flexGrow: 1 }}
+            />
+            <Select
+              label="Icon"
+              size="xs"
+              data={ICON_OPTIONS}
+              value={editIcon}
+              onChange={setEditIcon}
+              searchable
+              style={{ width: '150px' }}
+            />
+            <ActionIcon color="green" variant="light" onClick={handleSave} title="Save" size="md">
+              <Check size={16} />
+            </ActionIcon>
+            <ActionIcon color="red" variant="light" onClick={handleCancel} title="Cancel" size="md">
+              <X size={16} />
+            </ActionIcon>
+          </Group>
+        </Box>
+      </Collapse>
     </Box>
   );
 };
 
 const NavOrderForm = ({ active }) => {
-  // All store selectors grouped together
   const user = useAuthStore((s) => s.user);
   const getNavOrder = useAuthStore((s) => s.getNavOrder);
   const setNavOrder = useAuthStore((s) => s.setNavOrder);
@@ -109,6 +188,7 @@ const NavOrderForm = ({ active }) => {
   const updateUserPreferences = useAuthStore((s) => s.updateUserPreferences);
 
   const isAdmin = user?.user_level >= USER_LEVELS.ADMIN;
+  const canEdit = isAdmin || user?.custom_properties?.can_edit_navigation === true;
   const defaultOrder = isAdmin ? DEFAULT_ADMIN_ORDER : DEFAULT_USER_ORDER;
 
   const [items, setItems] = useState([]);
@@ -125,14 +205,14 @@ const NavOrderForm = ({ active }) => {
   );
 
   useEffect(() => {
-    if (active) {
+    if (active && canEdit) {
       const savedOrder = getNavOrder();
-      const orderedItems = getOrderedNavItems(savedOrder, isAdmin);
+      const customProps = user?.custom_properties || {};
+      const orderedItems = getOrderedNavItems(savedOrder, isAdmin, [], customProps);
       setItems(orderedItems);
     }
-  }, [active, isAdmin, getNavOrder]);
+  }, [active, canEdit, isAdmin, getNavOrder, user?.custom_properties]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
@@ -141,18 +221,14 @@ const NavOrderForm = ({ active }) => {
     };
   }, []);
 
-  // Debounced save function
   const debouncedSave = useCallback(
     async (newOrder) => {
-      // Clear any pending save
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
 
-      // Store the pending order
       pendingOrderRef.current = newOrder;
 
-      // Schedule save after 800ms of inactivity
       saveTimeoutRef.current = setTimeout(async () => {
         const orderToSave = pendingOrderRef.current;
         if (!orderToSave) return;
@@ -167,9 +243,9 @@ const NavOrderForm = ({ active }) => {
             autoClose: 2000,
           });
         } catch {
-          // Revert on failure
           const savedOrder = getNavOrder();
-          const orderedItems = getOrderedNavItems(savedOrder, isAdmin);
+          const customProps = user?.custom_properties || {};
+          const orderedItems = getOrderedNavItems(savedOrder, isAdmin, [], customProps);
           setItems(orderedItems);
           notifications.show({
             title: 'Error',
@@ -182,7 +258,7 @@ const NavOrderForm = ({ active }) => {
         }
       }, 800);
     },
-    [setNavOrder, getNavOrder, isAdmin]
+    [setNavOrder, getNavOrder, isAdmin, user]
   );
 
   const handleDragEnd = ({ active, over }) => {
@@ -192,15 +268,12 @@ const NavOrderForm = ({ active }) => {
     const newIndex = items.findIndex((item) => item.id === over.id);
     const newItems = arrayMove(items, oldIndex, newIndex);
 
-    // Optimistic update
     setItems(newItems);
 
-    // Debounced save to backend
     const newOrder = newItems.map((item) => item.id);
     debouncedSave(newOrder);
   };
 
-  // Wrapped visibility toggle with error handling
   const handleToggleVisibility = useCallback(
     async (itemId) => {
       try {
@@ -222,8 +295,49 @@ const NavOrderForm = ({ active }) => {
     [toggleNavVisibility]
   );
 
+  const handleUpdateItem = async (itemId, newLabel, newIcon) => {
+    setIsSaving(true);
+    try {
+      const currentLabels = user?.custom_properties?.navLabels || {};
+      const currentIcons = user?.custom_properties?.navIcons || {};
+
+      const newLabels = { ...currentLabels };
+      if (newLabel && newLabel !== NAV_ITEMS[itemId]?.label) {
+        newLabels[itemId] = newLabel;
+      } else {
+        delete newLabels[itemId];
+      }
+
+      const newIconsObj = { ...currentIcons };
+      if (newIcon) {
+        newIconsObj[itemId] = newIcon;
+      } else {
+        delete newIconsObj[itemId];
+      }
+
+      await updateUserPreferences({
+        navLabels: newLabels,
+        navIcons: newIconsObj,
+      });
+
+      notifications.show({
+        title: 'Navigation',
+        message: 'Item updated successfully',
+        color: 'green',
+        autoClose: 2000,
+      });
+    } catch {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to update navigation item',
+        color: 'red',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleReset = async () => {
-    // Cancel any pending debounced save
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       pendingOrderRef.current = null;
@@ -231,12 +345,17 @@ const NavOrderForm = ({ active }) => {
 
     setIsSaving(true);
     try {
-      await updateUserPreferences({ navOrder: defaultOrder, hiddenNav: [] });
-      const orderedItems = getOrderedNavItems(defaultOrder, isAdmin);
+      await updateUserPreferences({ 
+        navOrder: defaultOrder, 
+        hiddenNav: [],
+        navLabels: {},
+        navIcons: {},
+      });
+      const orderedItems = getOrderedNavItems(defaultOrder, isAdmin, [], {});
       setItems(orderedItems);
       notifications.show({
         title: 'Navigation',
-        message: 'Reset to default order',
+        message: 'Reset to default order and labels',
         color: 'blue',
         autoClose: 2000,
       });
@@ -255,13 +374,20 @@ const NavOrderForm = ({ active }) => {
     return null;
   }
 
-  // Cache hiddenNav before render loop to avoid calling getter N times
+  if (!canEdit) {
+    return (
+      <Box p="md">
+        <Text c="dimmed">You do not have permission to edit the navigation sidebar.</Text>
+      </Box>
+    );
+  }
+
   const hiddenNav = getHiddenNav();
 
   return (
     <Stack gap="md">
       <Text size="sm" c="dimmed">
-        Drag and drop to reorder the sidebar navigation items.
+        Drag and drop to reorder the sidebar navigation items. Click the edit icon to customize labels and icons.
       </Text>
 
       <DndContext
@@ -281,6 +407,7 @@ const NavOrderForm = ({ active }) => {
               isHidden={hiddenNav.includes(item.id)}
               canHide={item.canHide !== false}
               onToggleVisibility={handleToggleVisibility}
+              onUpdateItem={handleUpdateItem}
             />
           ))}
         </SortableContext>

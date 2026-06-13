@@ -1,3 +1,4 @@
+import { getIconComponent } from './icons';
 import {
   ListOrdered,
   Play,
@@ -15,9 +16,28 @@ import {
   Logs,
   Blocks,
   MonitorCog,
+  Smartphone,
+  Film,
+  Tv,
+  ListPlus,
+  Activity,
+  Map,
+  Import,
+  Server,
+  Settings2,
+  LayoutTemplate,
+  RefreshCw,
 } from 'lucide-react';
 
 export const NAV_ITEMS = {
+  admin_center: {
+    id: 'admin_center',
+    label: 'Admin Center',
+    icon: Activity,
+    path: '/admin-center',
+    adminOnly: true,
+  },
+
   channels: {
     id: 'channels',
     label: 'Channels',
@@ -26,19 +46,45 @@ export const NAV_ITEMS = {
     adminOnly: false,
     hasBadge: true,
   },
-  vods: {
-    id: 'vods',
-    label: 'VODs',
-    icon: Video,
-    path: '/vods',
+  movies: {
+    id: 'movies',
+    label: 'Movies',
+    icon: Film,
+    path: '/movies',
     adminOnly: true,
+  },
+  series: {
+    id: 'series',
+    label: 'Series',
+    icon: Tv,
+    path: '/series',
+    adminOnly: true,
+  },
+  custom_playlists: {
+    id: 'custom_playlists',
+    label: 'Custom Playlists',
+    icon: ListPlus,
+    path: '/custom-playlists',
+    adminOnly: true,
+  },
+  updates: {
+    id: 'updates',
+    label: 'Updates',
+    icon: RefreshCw,
+    path: '/updates',
+    adminOnly: true,
+    hasBadge: true,
   },
   sources: {
     id: 'sources',
-    label: 'M3U & EPG Manager',
+    label: 'Sources & EPG',
     icon: Play,
-    path: '/sources',
     adminOnly: true,
+    paths: [
+      { label: 'Verbindungen', icon: ListOrdered, path: '/sources' },
+      { label: 'Content Import', icon: Import, path: '/content-import' },
+      { label: 'EPG Mapping', icon: Map, path: '/epg-mapping' }
+    ],
   },
   guide: {
     id: 'guide',
@@ -54,12 +100,19 @@ export const NAV_ITEMS = {
     path: '/dvr',
     adminOnly: true,
   },
-  stats: {
-    id: 'stats',
-    label: 'Stats',
-    icon: ChartLine,
-    path: '/stats',
+  admin: {
+    id: 'admin',
+    label: 'Admin Center',
+    icon: Activity,
     adminOnly: true,
+    paths: [
+      { label: 'Dashboard Stats', icon: ChartLine, path: '/stats' },
+      { label: 'Automations', icon: Settings2, path: '/automations' },
+      { label: 'Argus TV Devices', icon: Smartphone, path: '/devices' },
+      { label: 'Media Servers', icon: Server, path: '/media-servers' },
+      { label: 'App Builder', icon: LayoutTemplate, path: '/app-builder' },
+      { label: 'Metadata Providers', icon: Database, path: '/metadata-providers' }
+    ]
   },
   plugins: {
     id: 'plugins',
@@ -88,6 +141,7 @@ export const NAV_ITEMS = {
     adminOnly: true,
     canHide: false,
     paths: [
+      { label: 'Profiles', icon: User, path: '/profiles' },
       { label: 'Users', icon: User, path: '/users' },
       { label: 'Logo Manager', icon: FileImage, path: '/logos' },
       { label: 'Settings', icon: LucideSettings, path: '/settings' },
@@ -105,11 +159,15 @@ export const NAV_ITEMS = {
 
 export const DEFAULT_ADMIN_ORDER = [
   'channels',
-  'vods',
-  'sources',
+  'admin_center',
+  'updates',
   'guide',
+  'movies',
+  'series',
+  'custom_playlists',
+  'sources',
   'dvr',
-  'stats',
+  'admin',
   'plugins',
   'integrations',
   'system',
@@ -121,7 +179,8 @@ export const DEFAULT_USER_ORDER = [
   'settings',
 ];
 
-export const getOrderedNavItems = (userOrder, isAdmin, channelIds = []) => {
+
+export const getOrderedNavItems = (userOrder, isAdmin, channelIds = [], customProperties = {}) => {
   const defaultOrder = isAdmin ? DEFAULT_ADMIN_ORDER : DEFAULT_USER_ORDER;
 
   let order;
@@ -139,16 +198,23 @@ export const getOrderedNavItems = (userOrder, isAdmin, channelIds = []) => {
     order = defaultOrder;
   }
 
+  const customLabels = customProperties.navLabels || {};
+  const customIcons = customProperties.navIcons || {};
+
   return order.map((id) => {
     const item = NAV_ITEMS[id];
     if (!item) return null;
+
+    const label = customLabels[id] || item.label;
+    const CustomIconComp = customIcons[id] ? getIconComponent(customIcons[id]) : null;
+    const icon = CustomIconComp || item.icon;
 
     // Group item (has paths array)
     if (item.paths) {
       return {
         id: item.id,
-        label: item.label,
-        icon: item.icon,
+        label: label,
+        icon: icon,
         paths: item.paths,
         canHide: item.canHide,
       };
@@ -156,8 +222,8 @@ export const getOrderedNavItems = (userOrder, isAdmin, channelIds = []) => {
 
     const navItem = {
       id: item.id,
-      label: item.label,
-      icon: item.icon,
+      label: label,
+      icon: icon,
       path: item.path,
       canHide: item.canHide,
     };

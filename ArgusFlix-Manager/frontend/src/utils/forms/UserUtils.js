@@ -50,6 +50,7 @@ export const userToFormValues = (user) => {
       ? `${customProps.output_profile}`
       : '',
     hide_adult_content: customProps.hide_adult_content || false,
+    can_edit_navigation: customProps.can_edit_navigation || false,
     epg_days: customProps.epg_days || 0,
     epg_prev_days: customProps.epg_prev_days || 0,
     allowed_ips: [
@@ -80,6 +81,9 @@ export const formValuesToPayload = (values, existingUser) => {
   customProps.hide_adult_content = payload.hide_adult_content || false;
   delete payload.hide_adult_content;
 
+  customProps.can_edit_navigation = payload.can_edit_navigation || false;
+  delete payload.can_edit_navigation;
+
   customProps.epg_days = payload.epg_days || 0;
   delete payload.epg_days;
 
@@ -108,17 +112,18 @@ export const formValuesToPayload = (values, existingUser) => {
 export const getFormInitialValues = () => {
   return {
     username: '',
+    password: '',
     first_name: '',
     last_name: '',
     email: '',
-    user_level: '0',
+    user_level: '1',
     stream_limit: 0,
-    password: '',
+    channel_profiles: ['0'],
     xc_password: '',
     output_format: '',
     output_profile: '',
-    channel_profiles: [],
     hide_adult_content: false,
+    can_edit_navigation: false,
     epg_days: 0,
     epg_prev_days: 0,
     allowed_ips: [],

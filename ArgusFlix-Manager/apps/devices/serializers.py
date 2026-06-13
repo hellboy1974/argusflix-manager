@@ -1,7 +1,14 @@
 from rest_framework import serializers
-from .models import ArgusDevice, DeviceBackup
+from .models import ArgusDevice, DeviceBackup, KeymapProfile
+
+class KeymapProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KeymapProfile
+        fields = '__all__'
 
 class ArgusDeviceSerializer(serializers.ModelSerializer):
+    keymap_data = KeymapProfileSerializer(source='keymap', read_only=True)
+
     class Meta:
         model = ArgusDevice
         fields = '__all__'

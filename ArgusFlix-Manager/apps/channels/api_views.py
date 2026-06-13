@@ -2089,6 +2089,10 @@ class ChannelViewSet(viewsets.ModelViewSet):
                     child=serializers.IntegerField(),
                     help_text='List of channel IDs to process. If empty or not provided, all channels without EPG will be processed.',
                     required=False,
+                ),
+                'threshold': serializers.IntegerField(
+                    help_text='Fuzzy matching threshold (default: 85)',
+                    required=False,
                 )
             }
         ),
@@ -2097,15 +2101,22 @@ class ChannelViewSet(viewsets.ModelViewSet):
     def match_epg(self, request):
         # Get channel IDs from request body if provided
         channel_ids = request.data.get('channel_ids', [])
+        threshold = request.data.get('threshold')
+        if threshold is not None:
+            try:
+                threshold = int(threshold)
+            except ValueError:
+                threshold = None
 
         if channel_ids:
             # Process only selected channels
             from .tasks import match_selected_channels_epg
-            match_selected_channels_epg.delay(channel_ids)
+            match_selected_channels_epg.delay(channel_ids, fuzzy_threshold=threshold)
             message = f"EPG matching task initiated for {len(channel_ids)} selected channel(s)."
         else:
             # Process all channels without EPG (original behavior)
-            match_epg_channels.delay()
+            from .tasks import match_epg_channels
+            match_epg_channels.delay(fuzzy_threshold=threshold)
             message = "EPG matching task initiated for all channels without EPG."
 
         return Response(
@@ -2880,6 +2891,47 @@ class LogoViewSet(viewsets.ModelViewSet):
                         _logo_fetch_failures.pop(k, None)
                 logger.warning(f"Error fetching logo from {logo_url}: {e}")
                 raise Http404("Error fetching remote image")
+    @action(detail=False, methods=['post'])
+    def sync_github(self, request):
+        import requests
+        try:
+            tree_url = "https://api.github.com/repos/tv-logo/tv-logos/git/trees/main?recursive=1"
+            response = requests.get(tree_url)
+            response.raise_for_status()
+            tree_data = response.json().get("tree", [])
+
+            logos_to_create_or_update = {}
+            for item in tree_data:
+                path = item.get("path", "")
+                if path.startswith("countries/") and path.endswith(".png"):
+                    filename = path.split("/")[-1]
+                    name = filename[:-4]
+                    raw_url = f"https://raw.githubusercontent.com/tv-logo/tv-logos/main/{path}"
+                    logos_to_create_or_update[raw_url] = name
+
+            if not logos_to_create_or_update:
+                return Response({"message": "No logos found in repository"}, status=status.HTTP_404_NOT_FOUND)
+
+            existing_urls = set(Logo.objects.filter(url__in=logos_to_create_or_update.keys()).values_list('url', flat=True))
+            
+            new_logos = []
+            for url, name in logos_to_create_or_update.items():
+                if url not in existing_urls:
+                    new_logos.append(Logo(name=name, url=url))
+
+            if new_logos:
+                Logo.objects.bulk_create(new_logos, batch_size=500)
+
+            return Response({
+                "message": f"Successfully synced {len(new_logos)} new logos.",
+                "added_count": len(new_logos),
+                "total_count": len(logos_to_create_or_update)
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            import traceback
+            logger.error(f"Error syncing GitHub logos: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ChannelProfileViewSet(viewsets.ModelViewSet):

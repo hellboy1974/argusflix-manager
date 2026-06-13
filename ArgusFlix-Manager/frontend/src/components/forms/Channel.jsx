@@ -486,7 +486,14 @@ const ChannelForm = ({ channel: channelProp = null, isOpen, onClose }) => {
   }
 
   const filteredTvgs = tvgs
-    .filter((tvg) => tvg.epg_source == selectedEPG)
+    .filter((tvg) => {
+      if (selectedEPG && selectedEPG.startsWith('group:')) {
+        const groupName = selectedEPG.substring(6);
+        const source = epgs[tvg.epg_source];
+        return source && source.group_name === groupName;
+      }
+      return tvg.epg_source == selectedEPG;
+    })
     .filter(
       (tvg) =>
         tvg.name.toLowerCase().includes(tvgFilter.toLowerCase()) ||
@@ -1058,13 +1065,13 @@ const ChannelForm = ({ channel: channelProp = null, isOpen, onClose }) => {
                       label="Source"
                       value={selectedEPG}
                       onChange={setSelectedEPG}
-                      data={Object.values(epgs)
-                        .filter((epg) => epg.is_active)
-                        .sort((a, b) => a.name.localeCompare(b.name))
-                        .map((epg) => ({
-                          value: `${epg.id}`,
-                          label: epg.name,
-                        }))}
+                      data={(() => {
+                        const activeEpgs = Object.values(epgs).filter((epg) => epg.is_active);
+                        const groups = [...new Set(activeEpgs.map(e => e.group_name).filter(Boolean))].sort();
+                        const groupOpts = groups.map(g => ({ value: `group:${g}`, label: `Group: ${g}` }));
+                        const sourceOpts = activeEpgs.sort((a, b) => a.name.localeCompare(b.name)).map(e => ({ value: `${e.id}`, label: e.name }));
+                        return [...groupOpts, ...sourceOpts];
+                      })()}
                       size="xs"
                       mb="xs"
                     />
@@ -1137,6 +1144,30 @@ const ChannelForm = ({ channel: channelProp = null, isOpen, onClose }) => {
                   />
                 </Box>
               )}
+
+              <NumberInput
+                id="epg_time_offset_minutes"
+                name="epg_time_offset_minutes"
+                label="Timezone Offset (Minutes)"
+                description={
+                  <ProviderHintRow
+                    channel={channel}
+                    field="epg_time_offset_minutes"
+                    formValue={watch('epg_time_offset_minutes')}
+                    hintText={getProviderHint(channel, 'epg_time_offset_minutes')}
+                    onReset={() =>
+                      setValue(
+                        'epg_time_offset_minutes',
+                        getProviderFormValue(channel, 'epg_time_offset_minutes')
+                      )
+                    }
+                  />
+                }
+                step={30}
+                {...register('epg_time_offset_minutes')}
+                onChange={(val) => setValue('epg_time_offset_minutes', val)}
+                error={errors.epg_time_offset_minutes?.message}
+              />
             </Stack>
 
             <Divider size="sm" orientation="vertical" />

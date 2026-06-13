@@ -1,5 +1,7 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import { Box, Tabs, Flex, Text, TabsList, TabsTab } from '@mantine/core';
+import { Box, Tabs, Flex, Text, TabsList, TabsTab, Button, Group } from '@mantine/core';
+import { Github } from 'lucide-react';
+import api from '../api';
 import useLogosStore from '../store/logos';
 import useVODLogosStore from '../store/vodLogos';
 import LogosTable from '../components/tables/LogosTable';
@@ -10,6 +12,7 @@ const LogosPage = () => {
   const logos = useLogosStore((s) => s.logos);
   const totalCount = useVODLogosStore((s) => s.totalCount);
   const [activeTab, setActiveTab] = useState('channel');
+  const [isSyncing, setIsSyncing] = useState(false);
   const logoCount =
     activeTab === 'channel' ? Object.keys(logos).length : totalCount;
 
@@ -33,6 +36,30 @@ const LogosPage = () => {
     // Always load channel logos on mount
     loadChannelLogos();
   }, [loadChannelLogos]);
+
+  const handleSyncGitHub = async () => {
+    setIsSyncing(true);
+    try {
+      const response = await api.post('/api/logos/sync_github/');
+      const data = response.data;
+      showNotification({
+        title: 'Sync Complete',
+        message: data.message,
+        color: 'green',
+      });
+      // Force reload of logos
+      await useLogosStore.getState().fetchAllLogos();
+    } catch (err) {
+      showNotification({
+        title: 'Sync Failed',
+        message: err.response?.data?.error || 'Failed to sync GitHub logos',
+        color: 'red',
+      });
+      console.error('GitHub sync error:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   return (
     <Box>
@@ -64,12 +91,27 @@ const LogosPage = () => {
             </Text>
           </Flex>
 
-          <Tabs value={activeTab} onChange={setActiveTab} variant="pills">
-            <TabsList>
-              <TabsTab value="channel">Channel Logos</TabsTab>
-              <TabsTab value="vod">VOD Logos</TabsTab>
-            </TabsList>
-          </Tabs>
+          <Group>
+            {activeTab === 'channel' && (
+              <Button
+                size="xs"
+                variant="light"
+                color="blue"
+                leftSection={<Github size={16} />}
+                onClick={handleSyncGitHub}
+                loading={isSyncing}
+              >
+                Sync GitHub TV-Logos
+              </Button>
+            )}
+
+            <Tabs value={activeTab} onChange={setActiveTab} variant="pills">
+              <TabsList>
+                <TabsTab value="channel">Channel Logos</TabsTab>
+                <TabsTab value="vod">VOD Logos</TabsTab>
+              </TabsList>
+            </Tabs>
+          </Group>
         </Flex>
       </Box>
 

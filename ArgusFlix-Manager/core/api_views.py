@@ -19,6 +19,8 @@ from .models import (
     DVR_SETTINGS_KEY,
     NETWORK_ACCESS_KEY,
     PROXY_SETTINGS_KEY,
+    APP_SETTINGS_KEY,
+    MetadataProvider,
 )
 from .serializers import (
     UserAgentSerializer,
@@ -26,6 +28,8 @@ from .serializers import (
     OutputProfileSerializer,
     CoreSettingsSerializer,
     ProxySettingsSerializer,
+    AppSettingsSerializer,
+    MetadataProviderSerializer,
 )
 
 import socket
@@ -89,6 +93,30 @@ class OutputProfileViewSet(viewsets.ModelViewSet):
             return [perm() for perm in permission_classes_by_action[self.action]]
         except KeyError:
             return [Authenticated()]
+
+
+class MetadataProviderViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows metadata providers to be viewed, created, edited, or deleted.
+    """
+
+    queryset = MetadataProvider.objects.all()
+    serializer_class = MetadataProviderSerializer
+
+    def get_permissions(self):
+        try:
+            return [perm() for perm in permission_classes_by_action[self.action]]
+        except KeyError:
+            return [Authenticated()]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if not qs.exists():
+            default_providers = ["TMDB", "OMDB", "TVMaze", "TheTVDB", "Trakt.tv", "Fanart.tv"]
+            for i, p in enumerate(default_providers):
+                MetadataProvider.objects.get_or_create(name=p, defaults={'priority': i})
+            qs = super().get_queryset()
+        return qs
 
 
 class CoreSettingsViewSet(viewsets.ModelViewSet):
@@ -722,3 +750,252 @@ class SystemNotificationViewSet(viewsets.ModelViewSet):
             'unread_count': unread_count
         })
 
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def get_active_connections(request):
+    try:
+        from core.utils import RedisClient
+        import json
+        rc = RedisClient()
+        connections = []
+        keys = rc.keys("stream:connection:*")
+        for key in keys:
+            data = rc.get(key)
+            if data:
+                try:
+                    conn = json.loads(data)
+                    connections.append(conn)
+                except Exception:
+                    pass
+        return Response(connections)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def kill_active_connection(request, client_id):
+    try:
+        from core.utils import RedisClient
+        rc = RedisClient()
+        
+        # Kill logic: We can signal the client to stop
+        rc.set(f"stream:stop:{client_id}", "true", 300)
+        
+        # Also clean up connection key
+        keys = rc.keys(f"stream:connection:*:{client_id}")
+        for key in keys:
+            rc.delete(key)
+            
+        return Response({"success": True})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def get_vpn_status(request):
+    try:
+        from core.utils import RedisClient
+        rc = RedisClient()
+        status = rc.get("vpn_guard:status")
+        if isinstance(status, bytes):
+            status = status.decode('utf-8')
+        return Response({"status": status or "unknown"})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAdminUser])
+def provider_audit_endpoint(request):
+    from core.utils import RedisClient
+    import json
+    rc = RedisClient()
+    
+    if request.method == 'POST':
+        # Trigger the audit task
+        from core.tasks import run_provider_audit
+        run_provider_audit.delay()
+        return Response({"message": "Provider audit started in background."})
+        
+    elif request.method == 'GET':
+        # Fetch latest results
+        data = rc.get("provider_audit_results")
+        if data:
+            if isinstance(data, bytes):
+                data = data.decode('utf-8')
+            try:
+                results = json.loads(data)
+                return Response(results)
+            except Exception:
+                pass
+        return Response([])
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def clear_system_cache(request):
+    try:
+        from django.core.cache import cache
+        from core.utils import RedisClient
+        
+        # Clear Django default cache
+        cache.clear()
+        
+        # Clear Redis cache keys
+        rc = RedisClient()
+        cache_keys = rc.keys("*cache*")
+        for key in cache_keys:
+            rc.delete(key)
+            
+        return Response({"success": True, "message": "System cache cleared successfully."})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def proxy_doctor_scan(request):
+    try:
+        from core.utils import RedisClient
+        import json
+        import time
+        rc = RedisClient()
+        keys = rc.keys("stream:connection:*")
+        zombies = []
+        now = time.time()
+        
+        for key in keys:
+            data = rc.get(key)
+            if data:
+                try:
+                    conn = json.loads(data)
+                    start_time = conn.get("start_time", now)
+                    last_read = conn.get("last_read", start_time)
+                    
+                    # If last read was more than 60 seconds ago and it's been running for more than 2 minutes, it's a zombie
+                    if (now - start_time) > 120 and (now - last_read) > 60:
+                        zombies.append(conn)
+                except Exception:
+                    pass
+        return Response({"zombies": zombies, "count": len(zombies)})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def proxy_doctor_clean(request):
+    try:
+        from core.utils import RedisClient
+        import json
+        import time
+        rc = RedisClient()
+        keys = rc.keys("stream:connection:*")
+        cleaned = 0
+        now = time.time()
+        
+        for key in keys:
+            data = rc.get(key)
+            if data:
+                try:
+                    conn = json.loads(data)
+                    start_time = conn.get("start_time", now)
+                    last_read = conn.get("last_read", start_time)
+                    
+                    if (now - start_time) > 120 and (now - last_read) > 60:
+                        client_id = conn.get('client_id')
+                        if client_id:
+                            rc.set(f"stream:stop:{client_id}", "true", 300)
+                        rc.delete(key)
+                        cleaned += 1
+                except Exception:
+                    pass
+        return Response({"success": True, "cleaned_count": cleaned})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+from rest_framework import viewsets
+from .models import AppMenuSection
+from .serializers import AppMenuSectionSerializer
+
+class AppMenuSectionViewSet(viewsets.ModelViewSet):
+    queryset = AppMenuSection.objects.all()
+    serializer_class = AppMenuSectionSerializer
+from .models import DeviceCommand, DeviceBackup
+from .serializers import DeviceCommandSerializer, DeviceBackupSerializer
+
+class DeviceCommandViewSet(viewsets.ModelViewSet):
+    queryset = DeviceCommand.objects.all()
+    serializer_class = DeviceCommandSerializer
+    filterset_fields = ['device_id', 'status', 'command_type']
+
+class DeviceBackupViewSet(viewsets.ModelViewSet):
+    queryset = DeviceBackup.objects.all()
+    serializer_class = DeviceBackupSerializer
+    filterset_fields = ['device_id']
+from .models import AppPageLayout
+from .serializers import AppPageLayoutSerializer
+
+class AppPageLayoutViewSet(viewsets.ModelViewSet):
+    queryset = AppPageLayout.objects.all()
+    serializer_class = AppPageLayoutSerializer
+    filterset_fields = ['page', 'is_active']
+
+class AppSettingsViewSet(viewsets.ViewSet):
+    "`"`"
+    API endpoint for app settings stored as JSON in CoreSettings.
+    "`"`"
+    serializer_class = AppSettingsSerializer
+
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve'):
+            return [IsStandardUser()]
+        return [IsAdmin()]
+
+    def _get_or_create_settings(self):
+        try:
+            settings_obj = CoreSettings.objects.get(key=APP_SETTINGS_KEY)
+            settings_data = settings_obj.value
+        except CoreSettings.DoesNotExist:
+            settings_data = {
+                "appLanguage": "en",
+                "parentalControlLevel": 0,
+                "hasParentalPin": False,
+                "playerDecoderMode": "HARDWARE",
+                "playerSurfaceMode": "SURFACE_VIEW",
+                "vodViewMode": "GRID",
+                "liveTvChannelMode": "LIST",
+                "liveChannelGroupingMode": "FLAT",
+            }
+            settings_obj, created = CoreSettings.objects.get_or_create(
+                key=APP_SETTINGS_KEY,
+                defaults={
+                    "name": "App Settings",
+                    "value": settings_data
+                }
+            )
+        return settings_obj, settings_data
+
+    def list(self, request):
+        settings_obj, settings_data = self._get_or_create_settings()
+        serializer = AppSettingsSerializer(settings_data)
+        return Response(serializer.data)
+
+    def create(self, request):
+        return self._update_settings(request)
+
+    def partial_update(self, request, pk=None):
+        return self._update_settings(request, partial=True)
+
+    def _update_settings(self, request, partial=False):
+        settings_obj, settings_data = self._get_or_create_settings()
+        serializer = AppSettingsSerializer(data=request.data, partial=partial)
+        
+        if serializer.is_valid():
+            settings_data.update(serializer.validated_data)
+            settings_obj.value = settings_data
+            settings_obj.save()
+            return Response(serializer.data)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

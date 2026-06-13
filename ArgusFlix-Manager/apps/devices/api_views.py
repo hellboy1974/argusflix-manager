@@ -1,4 +1,7 @@
 import random
+import subprocess
+import os
+import urllib.request
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -10,6 +13,38 @@ from .serializers import ArgusDeviceSerializer, DeviceBackupSerializer
 class ArgusDeviceViewSet(viewsets.ModelViewSet):
     queryset = ArgusDevice.objects.all().order_by('-created_at')
     serializer_class = ArgusDeviceSerializer
+
+    @action(detail=False, methods=['post'])
+    def remote_install(self, request):
+        ip = request.data.get('ip')
+        if not ip:
+            return Response({'error': 'IP address is required'}, status=400)
+            
+        try:
+            # 1. Connect via ADB
+            connect_res = subprocess.run(['adb', 'connect', ip], capture_output=True, text=True, timeout=10)
+            if 'connected' not in connect_res.stdout.lower() and 'already connected' not in connect_res.stdout.lower():
+                return Response({'error': f'Failed to connect to {ip}: {connect_res.stdout}'}, status=400)
+                
+            # 2. Download APK temporarily
+            apk_path = '/tmp/ArgusFlix.apk'
+            if not os.path.exists(apk_path):
+                apk_url = 'https://github.com/Davidona/ArgusFlix-IPTV/releases/latest/download/ArgusFlix.apk'
+                urllib.request.urlretrieve(apk_url, apk_path)
+                
+            # 3. Install APK
+            install_res = subprocess.run(['adb', '-s', ip, 'install', '-r', apk_path], capture_output=True, text=True, timeout=60)
+            if 'Success' not in install_res.stdout:
+                return Response({'error': f'Failed to install APK: {install_res.stdout}\n{install_res.stderr}'}, status=400)
+                
+            # 4. Launch App
+            subprocess.run(['adb', '-s', ip, 'shell', 'monkey', '-p', 'com.argusflix.app', '-c', 'android.intent.category.LAUNCHER', '1'], capture_output=True)
+            
+            return Response({'status': 'success', 'message': 'App installed and launched successfully'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+        finally:
+            subprocess.run(['adb', 'disconnect', ip], capture_output=True)
 
     @action(detail=False, methods=['post'])
     def generate_pairing_code(self, request):
@@ -73,3 +108,20 @@ class ArgusDeviceViewSet(viewsets.ModelViewSet):
 class DeviceBackupViewSet(viewsets.ModelViewSet):
     queryset = DeviceBackup.objects.all().order_by('-created_at')
     serializer_class = DeviceBackupSerializer
+
+    def create(self, request, *args, **kwargs):
+        device_id_str = request.data.get('device_id')
+        if device_id_str:
+            try:
+                device = ArgusDevice.objects.get(device_id=device_id_str)
+                # Mutate the POST data to include the actual PK
+                request.data['device'] = device.pk
+            except ArgusDevice.DoesNotExist:
+                return Response({'error': 'Device not found'}, status=404)
+        return super().create(request, *args, **kwargs)
+
+class KeymapProfileViewSet(viewsets.ModelViewSet):
+    from .models import KeymapProfile
+    from .serializers import KeymapProfileSerializer
+    queryset = KeymapProfile.objects.all().order_by('-created_at')
+    serializer_class = KeymapProfileSerializer

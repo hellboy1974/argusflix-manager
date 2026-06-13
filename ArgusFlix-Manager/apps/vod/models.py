@@ -321,6 +321,14 @@ class M3UVODCategoryRelation(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    first_seen_at = models.DateTimeField(
+        default=timezone.now,
+        help_text="Time this category was first discovered"
+    )
+    is_acknowledged = models.BooleanField(
+        default=False,
+        help_text="Whether the user has acknowledged this new category"
+    )
 
     class Meta:
         verbose_name = 'M3U VOD Category Relation'

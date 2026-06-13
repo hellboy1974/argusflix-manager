@@ -160,6 +160,8 @@ class M3UAccountSerializer(serializers.ModelSerializer):
             "server_group",
             "max_streams",
             "is_active",
+            "sync_policy",
+            "sync_with_devices",
             "created_at",
             "updated_at",
             "filters",

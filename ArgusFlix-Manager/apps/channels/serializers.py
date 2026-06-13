@@ -190,6 +190,8 @@ class ChannelGroupM3UAccountSerializer(serializers.ModelSerializer):
             "custom_properties",
             "is_stale",
             "last_seen",
+            "first_seen_at",
+            "is_acknowledged",
             "stream_count",
         ]
 
@@ -368,6 +370,7 @@ class ChannelOverrideSerializer(serializers.ModelSerializer):
             "tvc_guide_stationid",
             "epg_data_id",
             "stream_profile_id",
+            "epg_time_offset_minutes",
         ]
         extra_kwargs = {
             "name": {"allow_null": True, "required": False},
@@ -442,6 +445,7 @@ class ChannelSerializer(serializers.ModelSerializer):
     effective_tvc_guide_stationid = serializers.SerializerMethodField()
     effective_epg_data_id = serializers.SerializerMethodField()
     effective_stream_profile_id = serializers.SerializerMethodField()
+    effective_epg_time_offset_minutes = serializers.SerializerMethodField()
 
     class Meta:
         model = Channel
@@ -464,6 +468,7 @@ class ChannelSerializer(serializers.ModelSerializer):
             "auto_created_by",
             "auto_created_by_name",
             "override",
+            "epg_time_offset_minutes",
             "source_stream",
             "effective_name",
             "effective_channel_number",
@@ -473,6 +478,7 @@ class ChannelSerializer(serializers.ModelSerializer):
             "effective_tvc_guide_stationid",
             "effective_epg_data_id",
             "effective_stream_profile_id",
+            "effective_epg_time_offset_minutes",
         ]
 
     def _effective_value(self, obj, field_name):
@@ -512,6 +518,9 @@ class ChannelSerializer(serializers.ModelSerializer):
 
     def get_effective_stream_profile_id(self, obj):
         return self._effective_value(obj, "stream_profile_id")
+
+    def get_effective_epg_time_offset_minutes(self, obj):
+        return self._effective_value(obj, "epg_time_offset_minutes")
 
     def get_source_stream(self, obj):
         """

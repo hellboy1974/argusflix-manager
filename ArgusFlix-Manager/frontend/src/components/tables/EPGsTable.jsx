@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import API from '../../api';
 import useEPGsStore from '../../store/epgs';
+import useLogosStore from '../../store/logos';
 import EPGForm from '../forms/EPG';
 import DummyEPGForm from '../forms/DummyEPG';
 import {
@@ -17,6 +18,9 @@ import {
   Stack,
   Group,
   Menu,
+  Center,
+  Modal,
+  TextInput,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import {
@@ -28,6 +32,7 @@ import {
   SquarePen,
   SquarePlus,
   ChevronDown,
+  Github,
 } from 'lucide-react';
 import { format } from '../../utils/dateTimeUtils.js';
 import useLocalStorage from '../../hooks/useLocalStorage';
@@ -226,6 +231,7 @@ const EPGsTable = () => {
   const [epgModalOpen, setEPGModalOpen] = useState(false);
   const [dummyEpgModalOpen, setDummyEpgModalOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState([]);
+  const [isSyncingLogos, setIsSyncingLogos] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [epgToDelete, setEpgToDelete] = useState(null);
@@ -241,6 +247,87 @@ const EPGsTable = () => {
   const [tableSize] = useLocalStorage('table-size', 'default');
   const isWarningSuppressed = useWarningsStore((s) => s.isWarningSuppressed);
   const suppressWarning = useWarningsStore((s) => s.suppressWarning);
+
+  const [bulkSetGroupOpen, setBulkSetGroupOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [bulkGroupValue, setBulkGroupValue] = useState('');
+
+  const handleBulkToggleActive = async (isActive) => {
+    setBulkActionLoading(true);
+    const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id]);
+    try {
+      await Promise.all(
+        selectedIds.map(id => API.updateEPG({ id, is_active: isActive }, true))
+      );
+      notifications.show({ title: 'Success', message: `EPG sources ${isActive ? 'enabled' : 'disabled'}`, color: 'green' });
+      setRowSelection({});
+    } catch (e) {
+      console.error(e);
+      notifications.show({ title: 'Error', message: 'Failed to update EPG sources', color: 'red' });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkSetGroup = async () => {
+    setBulkActionLoading(true);
+    const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id]);
+    try {
+      await Promise.all(
+        selectedIds.map(id => API.updateEPG({ id, group_name: bulkGroupValue }))
+      );
+      notifications.show({ title: 'Success', message: 'Group updated for selected EPG sources', color: 'green' });
+      setBulkSetGroupOpen(false);
+      setRowSelection({});
+    } catch (e) {
+      console.error(e);
+      notifications.show({ title: 'Error', message: 'Failed to update groups', color: 'red' });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkActionLoading(true);
+    const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id]);
+    try {
+      await Promise.all(
+        selectedIds.map(id => API.deleteEPG(id))
+      );
+      notifications.show({ title: 'Success', message: 'Selected EPG sources deleted', color: 'green' });
+      setBulkDeleteOpen(false);
+      setRowSelection({});
+    } catch (e) {
+      console.error(e);
+      notifications.show({ title: 'Error', message: 'Failed to delete EPG sources', color: 'red' });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const renderTopToolbarCustom = () => {
+    const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id]);
+    if (selectedIds.length === 0) return null;
+
+    return (
+      <Group p="xs" gap="sm">
+        <Text size="sm" fw={500}>{selectedIds.length} selected</Text>
+        <Button size="xs" variant="light" color="green" onClick={() => handleBulkToggleActive(true)} loading={bulkActionLoading}>
+          Enable
+        </Button>
+        <Button size="xs" variant="light" color="gray" onClick={() => handleBulkToggleActive(false)} loading={bulkActionLoading}>
+          Disable
+        </Button>
+        <Button size="xs" variant="light" color="blue" onClick={() => { setBulkGroupValue(''); setBulkSetGroupOpen(true); }}>
+          Set Group
+        </Button>
+        <Button size="xs" variant="light" color="red" onClick={() => setBulkDeleteOpen(true)}>
+          Delete
+        </Button>
+      </Group>
+    );
+  };
 
   const toggleActive = async (epg) => {
     try {
@@ -261,6 +348,29 @@ const EPGsTable = () => {
     } catch (error) {
       console.error('Error toggling active state:', error);
     }
+  }, []);
+
+  const handleSyncGitHubLogos = async () => {
+    setIsSyncingLogos(true);
+    try {
+      const response = await API.post('/api/logos/sync_github/');
+      const data = response.data;
+      notifications.show({
+        title: 'Sync Complete',
+        message: data.message,
+        color: 'green',
+      });
+      await useLogosStore.getState().fetchAllLogos();
+    } catch (err) {
+      notifications.show({
+        title: 'Sync Failed',
+        message: err.response?.data?.error || 'Failed to sync GitHub logos',
+        color: 'red',
+      });
+      console.error('GitHub sync error:', err);
+    } finally {
+      setIsSyncingLogos(false);
+    }
   };
 
   const columns = useMemo(
@@ -270,6 +380,12 @@ const EPGsTable = () => {
         header: 'Name',
         accessorKey: 'name',
         size: 200,
+      },
+      {
+        header: 'Group',
+        accessorKey: 'group_name',
+        size: 150,
+        cell: ({ cell }) => <Text size="sm">{cell.getValue() || '-'}</Text>
       },
       {
         header: 'Type',
@@ -576,9 +692,10 @@ const EPGsTable = () => {
     data,
     allRowIds: data.map((epg) => epg.id),
     enablePagination: false,
-    enableRowSelection: false,
-    renderTopToolbar: false,
+    enableRowSelection: true,
+    renderTopToolbar: renderTopToolbarCustom,
     onRowSelectionChange: setRowSelection,
+    state: { rowSelection },
     manualSorting: true,
     bodyCellRenderFns: {
       actions: renderBodyCell,
@@ -631,7 +748,18 @@ const EPGsTable = () => {
         >
           EPGs
         </Text>
-        <Menu shadow="md" width={200}>
+        <Group>
+          <Button
+            size="xs"
+            variant="light"
+            color="blue"
+            leftSection={<Github size={16} />}
+            onClick={handleSyncGitHubLogos}
+            loading={isSyncingLogos}
+          >
+            Sync GitHub TV-Logos
+          </Button>
+          <Menu shadow="md" width={200}>
           <Menu.Target>
             <Button
               leftSection={<SquarePlus size={18} />}
@@ -763,6 +891,32 @@ This action cannot be undone.`}
         actionKey="delete-epg"
         onSuppressChange={suppressWarning}
         size="lg"
+      />
+
+      <Modal opened={bulkSetGroupOpen} onClose={() => setBulkSetGroupOpen(false)} title="Set Group Name">
+        <Stack>
+          <Text size="sm">Enter the group name to assign to the selected EPG sources:</Text>
+          <TextInput
+            placeholder="e.g. Germany"
+            value={bulkGroupValue}
+            onChange={(e) => setBulkGroupValue(e.target.value)}
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setBulkSetGroupOpen(false)}>Cancel</Button>
+            <Button color="blue" onClick={handleBulkSetGroup} loading={bulkActionLoading}>Save</Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <ConfirmationDialog
+        opened={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        loading={bulkActionLoading}
+        title="Confirm Bulk Deletion"
+        message={`Are you sure you want to delete the ${Object.keys(rowSelection).filter(id => rowSelection[id]).length} selected EPG sources? This action cannot be undone.`}
+        confirmLabel="Delete All"
+        cancelLabel="Cancel"
       />
     </Box>
   );

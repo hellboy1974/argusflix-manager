@@ -8,7 +8,8 @@ import {
 import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
 import Channels from './pages/Channels';
-import ContentSources from './pages/ContentSources';
+import Connections from './pages/Connections';
+import Updates from './pages/Updates';
 import Guide from './pages/Guide';
 import Stats from './pages/Stats';
 import DVR from './pages/DVR';
@@ -19,7 +20,20 @@ import ConnectPage from './pages/Connect';
 import ConnectLogsPage from './pages/ConnectLogs';
 import Users from './pages/Users';
 import LogosPage from './pages/Logos';
-import VODsPage from './pages/VODs';
+import ArgusDevicesPage from './pages/ArgusDevices';
+import AppPageLayouts from './pages/AppPageLayouts';
+import MoviesPage from './pages/Movies';
+import SeriesPage from './pages/Series';
+import CustomPlaylistsPage from './pages/CustomPlaylists';
+import MediaServersPage from './pages/MediaServers';
+import Automations from './pages/Automations';
+import EPGMapping from './pages/EPGMapping';
+import ContentImportPage from './pages/ContentImport';
+import Toolbox from './pages/Toolbox';
+import AppBuilder from './pages/AppBuilder';
+import AdminCenter from './pages/AdminCenter';
+import MetadataProviders from './pages/MetadataProviders';
+import Profiles from './pages/Profiles';
 import useAuthStore from './store/auth';
 import FloatingVideo from './components/FloatingVideo';
 import { WebsocketProvider } from './WebSocket';
@@ -150,7 +164,8 @@ const App = () => {
                     {isAuthenticated && isInitialized ? (
                       <>
                         <Route path="/channels" element={<Channels />} />
-                        <Route path="/sources" element={<ContentSources />} />
+                        <Route path="/updates" element={<Updates />} />
+                        <Route path="/sources" element={<Connections />} />
                         <Route path="/guide" element={<Guide />} />
                         <Route path="/dvr" element={<DVR />} />
                         <Route path="/stats" element={<Stats />} />
@@ -167,7 +182,19 @@ const App = () => {
                         <Route path="/users" element={<Users />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/logos" element={<LogosPage />} />
-                        <Route path="/vods" element={<VODsPage />} />
+                        <Route path="/devices" element={<ArgusDevicesPage />} />
+                        <Route path="/movies" element={<MoviesPage />} />
+                        <Route path="/series" element={<SeriesPage />} />
+                        <Route path="/metadata-providers" element={<MetadataProviders />} />
+                        <Route path="/custom-playlists" element={<CustomPlaylistsPage />} />
+                        <Route path="/media-servers" element={<MediaServersPage />} />
+                        <Route path="/automations" element={<Automations />} />
+                        <Route path="/epg-mapping" element={<EPGMapping />} />
+                        <Route path="/content-import" element={<ContentImportPage />} />
+                        <Route path="/toolbox/:pluginKey" element={<Toolbox />} />
+                        <Route path="/app-builder" element={<AppBuilder />} />
+                        <Route path="/admin-center" element={<AdminCenter />} />
+                        <Route path="/profiles" element={<Profiles />} />
                       </>
                     ) : (
                       <Route path="/login" element={<Login needsSuperuser />} />

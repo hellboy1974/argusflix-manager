@@ -1016,3 +1016,114 @@ def create_setting_recommendation(setting_key, recommended_value, reason, curren
 
     return notification
 
+
+@shared_task(bind=True)
+def check_vpn_guard(self):
+    from core.models import CoreSettings
+    from core.utils import RedisClient
+    import requests
+    
+    rc = RedisClient()
+    settings = CoreSettings.get_settings()
+    vpn_settings = settings.get('vpn_guard', {})
+    
+    if not vpn_settings.get('enabled', False):
+        rc.delete('vpn_guard:status')
+        return "VPN Guard disabled"
+        
+    gluetun_url = vpn_settings.get('gluetun_url', 'http://gluetun:8000')
+    if not gluetun_url:
+        return "No Gluetun URL configured"
+        
+    try:
+        # Check Gluetun status API
+        resp = requests.get(f"{gluetun_url}/v1/openvpn/status", timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        
+        status = data.get('status')
+        if status in ['running', 'connected']:
+            rc.set('vpn_guard:status', 'up', 60)
+            return "VPN UP"
+        else:
+            rc.set('vpn_guard:status', 'down', 60)
+            _kill_all_streams()
+            return f"VPN DOWN ({status})"
+            
+    except Exception as e:
+        logger.error(f"VPN Guard check failed: {e}")
+        rc.set('vpn_guard:status', 'down', 60)
+        _kill_all_streams()
+        return "VPN DOWN (Error)"
+
+def _kill_all_streams():
+    from core.utils import RedisClient
+    rc = RedisClient()
+    keys = rc.keys("stream:connection:*")
+    for key in keys:
+        try:
+            import json
+            data = rc.get(key)
+            if data:
+                conn = json.loads(data)
+                client_id = conn.get('client_id')
+                if client_id:
+                    rc.set(f"stream:stop:{client_id}", "true", 300)
+                    rc.delete(key)
+        except Exception:
+            pass
+
+@shared_task(bind=True)
+def run_provider_audit(self):
+    import requests
+    import time
+    import json
+    from core.utils import RedisClient
+    from apps.m3u.models import M3UAccount
+    
+    rc = RedisClient()
+    results = []
+    
+    # Audit M3U Accounts
+    accounts = M3UAccount.objects.filter(enabled=True)
+    for acc in accounts:
+        result = {
+            "id": f"m3u_{acc.id}",
+            "name": acc.name,
+            "type": "M3U / XC",
+            "latency_ms": -1,
+            "status": "Error",
+            "last_checked": time.time()
+        }
+        
+        # Determine the base URL to check
+        url_to_check = acc.url
+        if acc.username and acc.password:
+            # It's XC
+            if not url_to_check.endswith('/'):
+                url_to_check += '/'
+            url_to_check += f"player_api.php?username={acc.username}&password={acc.password}"
+            
+        try:
+            start_time = time.time()
+            resp = requests.head(url_to_check, timeout=10, allow_redirects=True)
+            if resp.status_code == 405:
+                # Fallback to GET if HEAD is not allowed
+                resp = requests.get(url_to_check, timeout=10, stream=True)
+                resp.close()
+            
+            end_time = time.time()
+            latency = int((end_time - start_time) * 1000)
+            
+            result["latency_ms"] = latency
+            if resp.status_code < 400:
+                result["status"] = "OK"
+            else:
+                result["status"] = f"HTTP {resp.status_code}"
+        except Exception as e:
+            result["status"] = str(e)[:30]
+            
+        results.append(result)
+        
+    rc.set("provider_audit_results", json.dumps(results))
+    return f"Audited {len(results)} providers."

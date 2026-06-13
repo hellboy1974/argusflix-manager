@@ -26,6 +26,9 @@ ENV VIRTUAL_ENV=/argusflix_managerpy
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 WORKDIR /app
 
+# Install ADB for Remote APK Installation
+RUN apt-get update && apt-get install -y adb && rm -rf /var/lib/apt/lists/*
+
 # Copy application code
 COPY . /app
 # Copy nginx configuration

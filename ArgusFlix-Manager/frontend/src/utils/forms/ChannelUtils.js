@@ -11,6 +11,7 @@ export const OVERRIDABLE_FIELDS = [
   'tvc_guide_stationid',
   'epg_data_id',
   'stream_profile_id',
+  'epg_time_offset_minutes',
 ];
 
 // Display labels for the override fields above.
@@ -23,6 +24,7 @@ export const OVERRIDE_FIELD_LABELS = {
   tvc_guide_stationid: 'Gracenote Station ID',
   epg_data_id: 'EPG',
   stream_profile_id: 'Stream Profile',
+  epg_time_offset_minutes: 'Timezone Offset (Minutes)',
 };
 
 export const matchChannelEpg = (channel) => {
@@ -189,6 +191,7 @@ export const getChannelFormDefaultValues = (channel, channelGroups) => {
   const gracenoteId = effective(channel, 'tvc_guide_stationid');
   const epgDataId = effective(channel, 'epg_data_id');
   const logoId = effective(channel, 'logo_id');
+  const offset = effective(channel, 'epg_time_offset_minutes');
   return {
     name: name || '',
     channel_number:
@@ -208,6 +211,7 @@ export const getChannelFormDefaultValues = (channel, channelGroups) => {
     user_level: `${channel?.user_level ?? '0'}`,
     is_adult: channel?.is_adult ?? false,
     hidden_from_output: channel?.hidden_from_output ?? false,
+    epg_time_offset_minutes: offset ?? 0,
   };
 };
 

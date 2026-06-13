@@ -393,7 +393,7 @@ def normalize_name(name: str) -> str:
     norm = " ".join(tokens).strip()
     return norm
 
-def match_channels_to_epg(channels_data, epg_data, region_code=None, use_ml=True, send_progress=True):
+def match_channels_to_epg(channels_data, epg_data, region_code=None, use_ml=True, send_progress=True, fuzzy_threshold=None):
     """
     EPG matching logic that finds the best EPG matches for channels using
     multiple matching strategies including fuzzy matching and ML models.
@@ -419,7 +419,14 @@ def match_channels_to_epg(channels_data, epg_data, region_code=None, use_ml=True
     is_bulk_matching = len(channels_data) > 1
 
     # Adjust matching thresholds based on operation type
-    if is_bulk_matching:
+    if fuzzy_threshold is not None:
+        FUZZY_HIGH_CONFIDENCE = fuzzy_threshold
+        FUZZY_MEDIUM_CONFIDENCE = max(40, fuzzy_threshold - 20)
+        ML_HIGH_CONFIDENCE = 0.65
+        ML_LAST_RESORT = 0.50
+        FUZZY_LAST_RESORT_MIN = 20
+        logger.info(f"Using custom threshold {fuzzy_threshold} for matching ({total_channels} channels)")
+    elif is_bulk_matching:
         # Conservative thresholds for bulk matching to avoid creating cleanup work
         FUZZY_HIGH_CONFIDENCE = 90      # Only very high fuzzy scores
         FUZZY_MEDIUM_CONFIDENCE = 70    # Higher threshold for ML enhancement
@@ -434,7 +441,9 @@ def match_channels_to_epg(channels_data, epg_data, region_code=None, use_ml=True
         ML_HIGH_CONFIDENCE = 0.65       # Original threshold
         ML_LAST_RESORT = 0.50          # Original desperate threshold
         FUZZY_LAST_RESORT_MIN = 20     # Original minimum
-        logger.info("Using aggressive thresholds for single channel matching")    # Process each channel
+        logger.info("Using aggressive thresholds for single channel matching")
+
+    # Process each channel
     for index, chan in enumerate(channels_data):
         normalized_tvg_id = chan.get("tvg_id", "")
         fallback_name = chan["tvg_id"].strip() if chan["tvg_id"] else chan["name"]
@@ -664,7 +673,7 @@ def match_channels_to_epg(channels_data, epg_data, region_code=None, use_ml=True
     }
 
 @shared_task
-def match_epg_channels():
+def match_epg_channels(fuzzy_threshold=None):
     """
     Uses integrated EPG matching instead of external script.
     Provides the same functionality with better performance and maintainability.
@@ -718,7 +727,7 @@ def match_epg_channels():
         logger.info(f"Processing {len(channels_data)} channels against {len(epg_data)} EPG entries (from active sources only)")
 
         # Run EPG matching with progress updates - automatically uses conservative thresholds for bulk operations
-        result = match_channels_to_epg(channels_data, epg_data, region_code, use_ml=True, send_progress=True)
+        result = match_channels_to_epg(channels_data, epg_data, region_code, use_ml=True, send_progress=True, fuzzy_threshold=fuzzy_threshold)
         channels_to_update_dicts = result["channels_to_update"]
         matched_channels = result["matched_channels"]
 
@@ -791,7 +800,7 @@ def match_epg_channels():
 
 
 @shared_task
-def match_selected_channels_epg(channel_ids):
+def match_selected_channels_epg(channel_ids, fuzzy_threshold=None):
     """
     Match EPG data for only the specified selected channels.
     Uses the same integrated EPG matching logic but processes only selected channels.
@@ -869,7 +878,7 @@ def match_selected_channels_epg(channel_ids):
         logger.info(f"Processing {len(channels_data)} selected channels against {len(epg_data)} EPG entries (from active sources only)")
 
         # Run EPG matching with progress updates - automatically uses appropriate thresholds
-        result = match_channels_to_epg(channels_data, epg_data, region_code, use_ml=True, send_progress=True)
+        result = match_channels_to_epg(channels_data, epg_data, region_code, use_ml=True, send_progress=True, fuzzy_threshold=fuzzy_threshold)
         channels_to_update_dicts = result["channels_to_update"]
         matched_channels = result["matched_channels"]
 

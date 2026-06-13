@@ -260,6 +260,16 @@ const User = ({ user = null, isOpen, onClose }) => {
                   })}
                   key={form.key('hide_adult_content')}
                 />
+                {authUser?.user_level >= USER_LEVELS.ADMIN && (
+                  <Switch
+                    label="Can Edit Navigation"
+                    description="Allow this user to customize their sidebar navigation layout"
+                    {...form.getInputProps('can_edit_navigation', {
+                      type: 'checkbox',
+                    })}
+                    key={form.key('can_edit_navigation')}
+                  />
+                )}
               </Stack>
             </TabsPanel>
           )}

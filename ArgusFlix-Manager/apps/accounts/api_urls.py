@@ -9,6 +9,7 @@ from .api_views import (
     TokenRefreshView,
     list_permissions,
     initialize_superuser,
+    ProfileViewSet,
 )
 from rest_framework_simplejwt import views as jwt_views
 
@@ -19,6 +20,7 @@ router = DefaultRouter()
 router.register(r"users", UserViewSet, basename="user")
 router.register(r"groups", GroupViewSet, basename="group")
 router.register(r"api-keys", APIKeyViewSet, basename="api-key")
+router.register(r"profiles", ProfileViewSet, basename="profile")
 
 # 🔹 Custom Authentication Endpoints
 auth_view = AuthViewSet.as_view({"post": "login"})

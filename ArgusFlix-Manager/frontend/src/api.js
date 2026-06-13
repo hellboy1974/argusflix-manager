@@ -493,6 +493,83 @@ export default class API {
     }
   }
 
+  static async syncM3UAccounts(ids) {
+    try {
+      const response = await request(`${host}/api/m3u/accounts/sync-all/`, {
+        method: 'POST',
+        body: { account_ids: ids },
+      });
+
+      return response;
+    } catch (e) {
+      errorNotification('Failed to start sync for accounts', e);
+      throw e;
+    }
+  }
+
+  // App Builder Methods
+  static async getAppProfiles() {
+    try {
+      return await request(`${host}/api/appbuilder/profiles/`);
+    } catch (e) {
+      errorNotification('Failed to fetch app profiles', e);
+      return [];
+    }
+  }
+
+  static async getAppPages(profileId) {
+    try {
+      const url = profileId 
+        ? `${host}/api/appbuilder/pages/?profile=${profileId}`
+        : `${host}/api/appbuilder/pages/`;
+      return await request(url);
+    } catch (e) {
+      errorNotification('Failed to fetch app pages', e);
+      return [];
+    }
+  }
+
+  static async saveAppWidgets(pageId, widgets) {
+    try {
+      // First, get all current widgets for this page
+      const currentWidgets = await request(`${host}/api/appbuilder/widgets/?page=${pageId}`);
+      
+      // Delete removed widgets
+      const widgetIdsToSave = widgets.map(w => w.id).filter(id => !String(id).startsWith('temp_'));
+      for (const cw of currentWidgets) {
+        if (!widgetIdsToSave.includes(cw.id)) {
+          await request(`${host}/api/appbuilder/widgets/${cw.id}/`, { method: 'DELETE' });
+        }
+      }
+
+      // Create or update widgets
+      for (const widget of widgets) {
+        const payload = {
+          page: pageId,
+          widget_type: widget.widget_type,
+          order: widget.order,
+          settings: widget.settings || {}
+        };
+        
+        if (String(widget.id).startsWith('temp_')) {
+          await request(`${host}/api/appbuilder/widgets/`, {
+            method: 'POST',
+            body: payload
+          });
+        } else {
+          await request(`${host}/api/appbuilder/widgets/${widget.id}/`, {
+            method: 'PUT',
+            body: payload
+          });
+        }
+      }
+      return true;
+    } catch (e) {
+      errorNotification('Failed to save layout', e);
+      return false;
+    }
+  }
+
   static async addChannelGroup(values) {
     try {
       const response = await request(`${host}/api/channels/groups/`, {
@@ -2521,6 +2598,64 @@ export default class API {
     }
   }
 
+  static async getDeviceBackups(deviceId) {
+    try {
+      const response = await request(`${host}/api/v1/core/device-backups/?device=${deviceId}`);
+      return response;
+    } catch (e) {
+      errorNotification('Failed to fetch device backups', e);
+      throw e;
+    }
+  }
+
+  static async getAppPageLayouts() {
+    try {
+      const response = await request(`${host}/api/v1/core/app-page-layouts/`);
+      return response;
+    } catch (e) {
+      errorNotification('Failed to fetch app page layouts', e);
+      throw e;
+    }
+  }
+
+  static async createAppPageLayout(data) {
+    try {
+      const response = await request(`${host}/api/v1/core/app-page-layouts/`, {
+        method: 'POST',
+        body: data,
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to create app page layout', e);
+      throw e;
+    }
+  }
+
+  static async updateAppPageLayout(id, data) {
+    try {
+      const response = await request(`${host}/api/v1/core/app-page-layouts/${id}/`, {
+        method: 'PATCH',
+        body: data,
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to update app page layout', e);
+      throw e;
+    }
+  }
+
+  static async deleteAppPageLayout(id) {
+    try {
+      const response = await request(`${host}/api/v1/core/app-page-layouts/${id}/`, {
+        method: 'DELETE',
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to delete app page layout', e);
+      throw e;
+    }
+  }
+
   static async getLogos(params = {}) {
     try {
       const queryParams = new URLSearchParams(params);
@@ -3913,4 +4048,245 @@ export default class API {
       errorNotification('Failed to search Schedules Direct lineups', e);
     }
   }
+  static async remoteInstallDevice(ip) {
+    try {
+      const response = await request(`${host}/api/devices/remote_install/`, {
+        method: 'POST',
+        body: { ip },
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to remote install app via ADB', e);
+      throw e;
+    }
+  }
+
+  static async smartMatchEPG(channelIds, threshold = 85) {
+    try {
+      const response = await request(`${host}/api/channels/channels/match-epg/`, {
+        method: 'POST',
+        body: { channel_ids: channelIds, threshold: threshold },
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to smart match EPG', e);
+      throw e;
+    }
+  }
+
+  // --- Custom Playlists API ---
+
+  static async getCustomPlaylists() {
+    try {
+      const response = await request(`${host}/api/output/playlists/`);
+      return response;
+    } catch (e) {
+      errorNotification('Failed to load custom playlists', e);
+    }
+  }
+
+  static async createCustomPlaylist(data) {
+    try {
+      const response = await request(`${host}/api/output/playlists/`, {
+        method: 'POST',
+        body: data,
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to create custom playlist', e);
+      throw e;
+    }
+  }
+
+  static async updateCustomPlaylist(id, data) {
+    try {
+      const response = await request(`${host}/api/output/playlists/${id}/`, {
+        method: 'PATCH',
+        body: data,
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to update custom playlist', e);
+      throw e;
+    }
+  }
+
+  static async deleteCustomPlaylist(id) {
+    try {
+      const response = await request(`${host}/api/output/playlists/${id}/`, {
+        method: 'DELETE',
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to delete custom playlist', e);
+      throw e;
+    }
+  }
+
+  // --- Admin Center API ---
+  
+  static async getActiveConnections() {
+    try {
+      const response = await request(`${host}/api/core/admin/connections/`);
+      return response;
+    } catch (e) {
+      errorNotification('Failed to get active connections', e);
+      throw e;
+    }
+  }
+
+  static async killActiveConnection(clientId) {
+    try {
+      const response = await request(`${host}/api/core/admin/connections/${clientId}/kill/`, {
+        method: 'POST',
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to kill connection', e);
+      throw e;
+    }
+  }
+
+
+  static async getProviderAudit() {
+    try {
+      const response = await request(`${host}/api/core/admin/audit/`);
+      return response;
+    } catch (e) {
+      errorNotification('Failed to fetch provider audit results', e);
+      return [];
+    }
+  }
+
+
+
+  static async scanProxyZombies() {
+    try {
+      const response = await request(`${host}/api/core/admin/doctor/scan/`);
+      return response;
+    } catch (e) {
+      errorNotification('Failed to scan for proxy zombies', e);
+      return { zombies: [], count: 0 };
+    }
+  }
+
+  static async cleanProxyZombies() {
+    try {
+      const response = await request(`${host}/api/core/admin/doctor/clean/`, {
+        method: 'POST',
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to clean proxy zombies', e);
+      throw e;
+    }
+  }
+
+  static async clearSystemCache() {
+    try {
+      const response = await request(`${host}/api/core/admin/cache/clear/`, {
+        method: 'POST',
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to clear system cache', e);
+      throw e;
+    }
+  }
+
+  static async triggerProviderAudit() {
+    try {
+      const response = await request(`${host}/api/core/admin/audit/`, {
+        method: 'POST',
+      });
+      return response;
+    } catch (e) {
+      errorNotification('Failed to trigger provider audit', e);
+      throw e;
+    }
+  }
+
+  static async getVpnStatus() {
+    try {
+      const response = await request(`${host}/api/core/admin/vpn-status/`);
+      return response;
+    } catch (e) {
+      console.error('Failed to get VPN status:', e);
+      return { status: 'unknown' };
+    }
+  }
+
+  static async getMetadataProviders() {
+    try {
+      return await request(`${host}/api/core/metadata-providers/`);
+    } catch (e) {
+      errorNotification('Failed to get metadata providers', e);
+      throw e;
+    }
+  }
+
+  static async patchMetadataProvider(id, data) {
+    try {
+      return await request(`${host}/api/core/metadata-providers/${id}/`, {
+        method: 'PATCH',
+        body: data,
+      });
+    } catch (e) {
+      errorNotification('Failed to update metadata provider', e);
+      throw e;
+    }
+  }
+
+  // --- Generic Methods (Used by Profiles and Keymaps) ---
+  static async get(path) {
+    try {
+      return await request(`${host}${path}`);
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  static async post(path, data) {
+    try {
+      return await request(`${host}${path}`, {
+        method: 'POST',
+        body: data,
+      });
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  static async put(path, data) {
+    try {
+      return await request(`${host}${path}`, {
+        method: 'PUT',
+        body: data,
+      });
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  static async patch(path, data) {
+    try {
+      return await request(`${host}${path}`, {
+        method: 'PATCH',
+        body: data,
+      });
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  static async delete(path) {
+    try {
+      return await request(`${host}${path}`, {
+        method: 'DELETE',
+      });
+    } catch (e) {
+      throw e;
+    }
+  }
 }
+

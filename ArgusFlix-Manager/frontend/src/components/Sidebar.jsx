@@ -173,9 +173,10 @@ const Sidebar = ({ collapsed, toggleDrawer, drawerWidth, miniDrawerWidth }) => {
   const navOrder = getNavOrder();
   const hiddenNav = getHiddenNav();
   const navItems = useMemo(() => {
-    const orderedItems = getOrderedNavItems(navOrder, isAdmin, channelIds);
+    const customProps = authUser?.custom_properties || {};
+    const orderedItems = getOrderedNavItems(navOrder, isAdmin, channelIds, customProps);
     return orderedItems.filter((item) => !hiddenNav.includes(item.id));
-  }, [navOrder, hiddenNav, isAdmin, channelIds]);
+  }, [navOrder, hiddenNav, isAdmin, channelIds, authUser?.custom_properties]);
 
   // Environment settings and version are loaded by the settings store during initData()
   // No need to fetch them again here - just use the store values

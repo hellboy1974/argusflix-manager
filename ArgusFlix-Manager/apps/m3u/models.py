@@ -16,6 +16,10 @@ class M3UAccount(models.Model):
         STADNARD = "STD", "Standard"
         XC = "XC", "Xtream Codes"
 
+    class SyncPolicy(models.TextChoices):
+        AUTO_ON_STARTUP = "auto_on_startup", "Beim Starten"
+        MANUAL = "manual", "Nur Manuell"
+
     class Status(models.TextChoices):
         IDLE = "idle", "Idle"
         FETCHING = "fetching", "Fetching"
@@ -49,6 +53,13 @@ class M3UAccount(models.Model):
     )
     is_active = models.BooleanField(
         default=True, help_text="Set to false to deactivate this M3U account"
+    )
+    sync_policy = models.CharField(
+        max_length=20, choices=SyncPolicy.choices, default=SyncPolicy.MANUAL,
+        help_text="Synchronisations-Richtlinie"
+    )
+    sync_with_devices = models.BooleanField(
+        default=True, help_text="Synchronisation mit angebundenen Apps/Geräten zulassen"
     )
     created_at = models.DateTimeField(
         auto_now_add=True, help_text="Time when this account was created"

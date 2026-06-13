@@ -195,6 +195,7 @@ NETWORK_ACCESS_KEY = "network_access"
 SYSTEM_SETTINGS_KEY = "system_settings"
 EPG_SETTINGS_KEY = "epg_settings"
 USER_LIMITS_SETTINGS_KEY = "user_limit_settings"
+APP_SETTINGS_KEY = "app_settings"
 
 
 class CoreSettings(models.Model):
@@ -398,6 +399,20 @@ class CoreSettings(models.Model):
             "new_client_behind_seconds": 5,
         })
 
+    # App Settings
+    @classmethod
+    def get_app_settings(cls):
+        return cls._get_group(APP_SETTINGS_KEY, {
+            "appLanguage": "en",
+            "parentalControlLevel": 0,
+            "hasParentalPin": False,
+            "playerDecoderMode": "HARDWARE",
+            "playerSurfaceMode": "SURFACE_VIEW",
+            "vodViewMode": "GRID",
+            "liveTvChannelMode": "LIST",
+            "liveChannelGroupingMode": "FLAT",
+        })
+
     # System Settings
     @classmethod
     def get_system_settings(cls):
@@ -408,6 +423,7 @@ class CoreSettings(models.Model):
             "preferred_region": None,
             "auto_import_mapped_files": True,
             "enable_ip_lookup": True,
+            "tmdb_api_key": "",
         })
 
     @classmethod
@@ -418,6 +434,16 @@ class CoreSettings(models.Model):
     def set_system_time_zone(cls, tz_name: str | None):
         value = (tz_name or "").strip() or getattr(settings, "TIME_ZONE", "UTC") or "UTC"
         cls._update_group(SYSTEM_SETTINGS_KEY, "System Settings", {"time_zone": value})
+        return value
+
+    @classmethod
+    def get_tmdb_api_key(cls):
+        return cls.get_system_settings().get("tmdb_api_key") or ""
+
+    @classmethod
+    def set_tmdb_api_key(cls, key: str | None):
+        value = (key or "").strip()
+        cls._update_group(SYSTEM_SETTINGS_KEY, "System Settings", {"tmdb_api_key": value})
         return value
 
     @classmethod
@@ -633,3 +659,152 @@ class NotificationDismissal(models.Model):
 
     def __str__(self):
         return f"{self.user.username} dismissed {self.notification.notification_key}"
+
+class AppMenuSection(models.Model):
+    """
+    Defines the dynamic menu structure for the ArgusFlix App 'Settings' screen.
+    Allows reordering, renaming, and hiding specific menu sections.
+    """
+    internal_id = models.CharField(
+        max_length=100, 
+        unique=True, 
+        help_text="Internal ID for the app to map to the correct UI component (e.g. 'providers', 'playback')"
+    )
+    label = models.CharField(
+        max_length=255, 
+        help_text="Display label in the app"
+    )
+    sort_order = models.IntegerField(
+        default=0, 
+        help_text="Order in the menu (lower numbers appear first)"
+    )
+    is_visible = models.BooleanField(
+        default=True, 
+        help_text="Whether this section is visible in the app"
+    )
+    icon_character = models.CharField(
+        max_length=10, 
+        blank=True, 
+        help_text="Single character or icon key used in the rail"
+    )
+    accent_color = models.CharField(
+        max_length=20, 
+        blank=True, 
+        help_text="Hex color code (e.g. #FF5252) for the accent"
+    )
+
+    class Meta:
+        ordering = ['sort_order', 'label']
+
+    def __str__(self):
+        return f"{self.label} ({self.internal_id})"
+
+
+class DeviceCommand(models.Model):
+    "\""
+    Commands sent from the Manager to the Android TV App.
+    "\""
+    COMMAND_CHOICES = [
+        ('TRIGGER_BACKUP', 'Trigger Backup'),
+        ('EXECUTE_RESTORE_WITH_FILE', 'Execute Restore with File'),
+    ]
+
+    device_id = models.CharField(max_length=255, help_text="Unique identifier for the TV box")
+    command_type = models.CharField(max_length=50, choices=COMMAND_CHOICES)
+    payload = models.JSONField(default=dict, blank=True, help_text="Additional parameters, e.g. partial backup options or file URL")
+    status = models.CharField(max_length=20, default='PENDING', choices=[
+        ('PENDING', 'Pending'),
+        ('PROCESSING', 'Processing'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed')
+    ])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.command_type} for {self.device_id} ({self.status})"
+
+
+class DeviceBackup(models.Model):
+    "\""
+    Backups uploaded from the TV App.
+    "\""
+    device_id = models.CharField(max_length=255, help_text="Unique identifier for the TV box")
+    device_name = models.CharField(max_length=255, blank=True, help_text="Friendly name of the TV box")
+    backup_file = models.FileField(upload_to='device_backups/')
+    file_size = models.BigIntegerField(default=0)
+    included_content = models.TextField(blank=True, help_text="Metadata about what is included in this backup (e.g. 'Stalker, Xtream')")
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Backup from {self.device_id} on {self.created_at}"
+
+class AppPageLayout(models.Model):
+    "\""
+    Defines the dynamic UI sections (Hero, Carousels) for the TV App screens.
+    "\""
+    PAGE_CHOICES = [
+        ('HOME', 'Home Screen'),
+        ('LIVE_TV', 'Live TV Screen'),
+        ('MOVIES', 'Movies Screen'),
+        ('SERIES', 'Series Screen'),
+    ]
+    SECTION_TYPE_CHOICES = [
+        ('HERO_BANNER', 'Hero Banner'),
+        ('CAROUSEL_ROW', 'Carousel Row'),
+        ('GRID', 'Grid'),
+    ]
+    CONTENT_SOURCE_CHOICES = [
+        ('RECENTLY_ADDED', 'Recently Added'),
+        ('CONTINUE_WATCHING', 'Continue Watching'),
+        ('FAVORITES', 'Favorites'),
+        ('PROVIDER_SPECIFIC', 'Provider Specific'),
+        ('CATEGORY_SPECIFIC', 'Category Specific'),
+        ('DYNAMIC_FILTER', 'Dynamic Filter'),
+    ]
+
+    title = models.CharField(max_length=255, help_text="Display title of the section (e.g. 'Trending Movies')")
+    page = models.CharField(max_length=50, choices=PAGE_CHOICES)
+    section_type = models.CharField(max_length=50, choices=SECTION_TYPE_CHOICES)
+    content_source = models.CharField(max_length=50, choices=CONTENT_SOURCE_CHOICES)
+    provider_id = models.CharField(max_length=255, blank=True, help_text="Optional: ID of the specific provider")
+    category_id = models.CharField(max_length=255, blank=True, help_text="Optional: ID of the specific category")
+    filter_criteria = models.JSONField(default=dict, blank=True, help_text="Dynamic filter criteria for querying content (e.g., year, genre, order)")
+    sort_order = models.IntegerField(default=0, help_text="Order in which this section appears from top to bottom")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['page', 'sort_order']
+
+    def __str__(self):
+        return f"{self.title} ({self.page} - {self.section_type})"
+
+
+PROVIDER_CHOICES = [
+    ("TMDB", "TMDB"),
+    ("OMDB", "OMDB"),
+    ("TVMaze", "TVMaze"),
+    ("TheTVDB", "TheTVDB"),
+    ("Trakt.tv", "Trakt.tv"),
+    ("Fanart.tv", "Fanart.tv"),
+]
+
+class MetadataProvider(models.Model):
+    name = models.CharField(max_length=50, choices=PROVIDER_CHOICES, unique=True)
+    api_key = models.CharField(max_length=255, blank=True)
+    priority = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['priority']
+
+    def __str__(self):
+        return self.name
+

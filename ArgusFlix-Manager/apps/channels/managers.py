@@ -22,6 +22,7 @@ OVERRIDABLE_FIELDS = (
     "tvc_guide_stationid",
     "epg_data_id",
     "stream_profile_id",
+    "epg_time_offset_minutes",
 )
 
 

@@ -88,6 +88,11 @@ def _resolve_output_profile(request, user):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def stream_ts(request, channel_id, user=None, force_output_format=None):
+    from core.utils import RedisClient
+    rc = RedisClient()
+    if rc.get("vpn_guard:status") == b"down" or rc.get("vpn_guard:status") == "down":
+        return JsonResponse({"error": "Service Unavailable (VPN Guard)"}, status=503)
+
     if not network_access_allowed(request, "STREAMS"):
         return JsonResponse({"error": "Forbidden"}, status=403)
 
