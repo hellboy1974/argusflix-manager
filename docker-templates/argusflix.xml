@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>ArgusFlix-Manager</Name>
+  <Repository>hellboy1974/argusflix-manager:latest</Repository>
+  <Registry>https://hub.docker.com/r/hellboy1974/argusflix-manager</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/hellboy1974/argusflix-manager/issues</Support>
+  <Project>https://github.com/hellboy1974/argusflix-manager</Project>
+  <Overview>ArgusFlix Manager is a central control panel for the ArgusFlix Android TV ecosystem. It handles stream validation, EPG management, live layout syncing, user profiles, and PIN protections for your IPTV ecosystem.</Overview>
+  <Category>MediaApp:Video MediaServer:Video</Category>
+  <WebUI>http://[IP]:[PORT:8000]</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/hellboy1974/argusflix-manager/main/docker-templates/argusflix.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/hellboy1974/argusflix-manager/main/docs/logo.png</Icon>
+  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled></DateInstalled>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="Web UI Port" Target="8000" Default="8000" Mode="tcp" Description="The main port used to access the ArgusFlix Manager Dashboard and API." Type="Port" Display="always" Required="true" Mask="false">8000</Config>
+  <Config Name="App Data" Target="/app/data" Default="/mnt/user/appdata/argusflix-manager" Mode="rw" Description="Persistent storage location for SQLite database, static files, and media." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/argusflix-manager</Config>
+  <Config Name="Secret Key" Target="SECRET_KEY" Default="" Mode="" Description="Django Secret Key. Must be a secure random string (e.g. 50 characters). If left blank, it will be automatically generated, but setting it explicitly is recommended so it doesn't change on rebuilds." Type="Variable" Display="always" Required="true" Mask="true">replace-this-with-a-secure-random-string</Config>
+  <Config Name="Allowed Hosts" Target="ALLOWED_HOSTS" Default="*" Mode="" Description="Comma separated list of allowed hosts (e.g., 192.168.1.100,argusflix.local). Use * for any host." Type="Variable" Display="always" Required="true" Mask="false">*</Config>
+  <Config Name="Debug Mode" Target="DEBUG" Default="False" Mode="" Description="Enable debug mode (True/False). Only use for troubleshooting." Type="Variable" Display="advanced" Required="false" Mask="false">False</Config>
+  <Config Name="Database Connection" Target="DATABASE_URL" Default="sqlite:////app/data/db.sqlite3" Mode="" Description="URL for the database. By default uses local SQLite. Can be changed to Postgres (postgres://user:password@host:5432/dbname)" Type="Variable" Display="advanced" Required="false" Mask="false">sqlite:////app/data/db.sqlite3</Config>
+  <Config Name="Redis Connection" Target="REDIS_URL" Default="redis://redis:6379/0" Mode="" Description="URL for the Redis cache/broker. You will need a separate Redis container running." Type="Variable" Display="advanced" Required="false" Mask="false">redis://redis:6379/0</Config>
+</Container>
