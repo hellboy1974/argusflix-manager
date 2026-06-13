@@ -1,4 +1,5 @@
 import { getIconComponent } from './icons';
+import i18n from '../i18n';
 import {
   ListOrdered,
   Play,
@@ -81,9 +82,9 @@ export const NAV_ITEMS = {
     icon: Play,
     adminOnly: true,
     paths: [
-      { label: 'Verbindungen', icon: ListOrdered, path: '/sources' },
-      { label: 'Content Import', icon: Import, path: '/content-import' },
-      { label: 'EPG Mapping', icon: Map, path: '/epg-mapping' }
+      { id: 'sources', label: 'Verbindungen', icon: ListOrdered, path: '/sources' },
+      { id: 'content_import', label: 'Content Import', icon: Import, path: '/content-import' },
+      { id: 'epg_mapping', label: 'EPG Mapping', icon: Map, path: '/epg-mapping' }
     ],
   },
   guide: {
@@ -106,12 +107,12 @@ export const NAV_ITEMS = {
     icon: Activity,
     adminOnly: true,
     paths: [
-      { label: 'Dashboard Stats', icon: ChartLine, path: '/stats' },
-      { label: 'Automations', icon: Settings2, path: '/automations' },
-      { label: 'Argus TV Devices', icon: Smartphone, path: '/devices' },
-      { label: 'Media Servers', icon: Server, path: '/media-servers' },
-      { label: 'App Builder', icon: LayoutTemplate, path: '/app-builder' },
-      { label: 'Metadata Providers', icon: Database, path: '/metadata-providers' }
+      { id: 'dashboard_stats', label: 'Dashboard Stats', icon: ChartLine, path: '/stats' },
+      { id: 'automations', label: 'Automations', icon: Settings2, path: '/automations' },
+      { id: 'argus_devices', label: 'Argus TV Devices', icon: Smartphone, path: '/devices' },
+      { id: 'media_servers', label: 'Media Servers', icon: Server, path: '/media-servers' },
+      { id: 'app_builder', label: 'App Builder', icon: LayoutTemplate, path: '/app-builder' },
+      { id: 'metadata_providers', label: 'Metadata Providers', icon: Database, path: '/metadata-providers' }
     ]
   },
   plugins: {
@@ -120,8 +121,8 @@ export const NAV_ITEMS = {
     icon: PlugZap,
     adminOnly: true,
     paths: [
-      { label: 'My Plugins', icon: Package, path: '/plugins' },
-      { label: 'Find Plugins', icon: Download, path: '/plugins/browse' },
+      { id: 'my_plugins', label: 'My Plugins', icon: Package, path: '/plugins' },
+      { id: 'find_plugins', label: 'Find Plugins', icon: Download, path: '/plugins/browse' },
     ],
   },
   integrations: {
@@ -130,8 +131,8 @@ export const NAV_ITEMS = {
     icon: Blocks,
     adminOnly: true,
     paths: [
-      { label: 'Connections', icon: Webhook, path: '/connect' },
-      { label: 'Logs', icon: Logs, path: '/connect/logs' },
+      { id: 'connections', label: 'Connections', icon: Webhook, path: '/connect' },
+      { id: 'logs', label: 'Logs', icon: Logs, path: '/connect/logs' },
     ],
   },
   system: {
@@ -141,10 +142,10 @@ export const NAV_ITEMS = {
     adminOnly: true,
     canHide: false,
     paths: [
-      { label: 'Profiles', icon: User, path: '/profiles' },
-      { label: 'Users', icon: User, path: '/users' },
-      { label: 'Logo Manager', icon: FileImage, path: '/logos' },
-      { label: 'Settings', icon: LucideSettings, path: '/settings' },
+      { id: 'profiles', label: 'Profiles', icon: User, path: '/profiles' },
+      { id: 'users', label: 'Users', icon: User, path: '/users' },
+      { id: 'logo_manager', label: 'Logo Manager', icon: FileImage, path: '/logos' },
+      { id: 'settings', label: 'Settings', icon: LucideSettings, path: '/settings' },
     ],
   },
   settings: {
@@ -205,7 +206,8 @@ export const getOrderedNavItems = (userOrder, isAdmin, channelIds = [], customPr
     const item = NAV_ITEMS[id];
     if (!item) return null;
 
-    const label = customLabels[id] || item.label;
+    const defaultLabel = i18n.t(`nav.${id}`, { defaultValue: item.label });
+    const label = customLabels[id] || defaultLabel;
     const CustomIconComp = customIcons[id] ? getIconComponent(customIcons[id]) : null;
     const icon = CustomIconComp || item.icon;
 
@@ -215,7 +217,10 @@ export const getOrderedNavItems = (userOrder, isAdmin, channelIds = [], customPr
         id: item.id,
         label: label,
         icon: icon,
-        paths: item.paths,
+        paths: item.paths.map(p => ({
+          ...p,
+          label: i18n.t(`nav.${p.id}`, { defaultValue: p.label })
+        })),
         canHide: item.canHide,
       };
     }

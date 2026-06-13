@@ -126,6 +126,7 @@ REQUESTS_TIMEOUT = 30  # Seconds for external API requests
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -299,6 +300,19 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
+
+LANGUAGES = [
+    ("en", "English"),
+    ("de", "German"),
+    ("fr", "French"),
+    ("it", "Italian"),
+    ("es", "Spanish"),
+    ("pt", "Portuguese"),
+]
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, "locale"),
+]
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"  # Directory where static files will be collected

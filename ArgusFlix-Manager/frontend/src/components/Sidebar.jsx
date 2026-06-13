@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { copyToClipboard } from '../utils';
 import {
@@ -150,6 +151,7 @@ function NavGroup({ label, icon: IconComponent, paths, location, collapsed }) {
 }
 
 const Sidebar = ({ collapsed, toggleDrawer, drawerWidth, miniDrawerWidth }) => {
+  const { t } = useTranslation();
   const location = useLocation();
 
   const channelIds = useChannelsStore((s) => s.channelIds);
@@ -176,7 +178,7 @@ const Sidebar = ({ collapsed, toggleDrawer, drawerWidth, miniDrawerWidth }) => {
     const customProps = authUser?.custom_properties || {};
     const orderedItems = getOrderedNavItems(navOrder, isAdmin, channelIds, customProps);
     return orderedItems.filter((item) => !hiddenNav.includes(item.id));
-  }, [navOrder, hiddenNav, isAdmin, channelIds, authUser?.custom_properties]);
+  }, [navOrder, hiddenNav, isAdmin, channelIds, authUser?.custom_properties, t]);
 
   // Environment settings and version are loaded by the settings store during initData()
   // No need to fetch them again here - just use the store values

@@ -1,0 +1,29 @@
+{
+  "nav": {
+    "channels": "Canales",
+    "movies": "Películas",
+    "series": "Series",
+    "custom_playlists": "Listas Personalizadas",
+    "dvr": "Grabaciones (DVR)",
+    "plugins": "Extensiones",
+    "toolbox": "Herramientas",
+    "media_servers": "Servidores Multimedia",
+    "metadata_providers": "Proveedores de Metadatos",
+    "epg_mapping": "Mapeo EPG",
+    "connections": "Conexiones",
+    "app_builder": "Creador de Apps",
+    "settings": "Ajustes",
+    "admin_center": "Centro de Administración",
+    "users": "Usuarios"
+  },
+  "settings": {
+    "language": "Idioma",
+    "language_en": "English",
+    "language_de": "Deutsch",
+    "language_fr": "Français",
+    "language_it": "Italiano",
+    "language_es": "Español",
+    "language_pt": "Português",
+    "save": "Guardar cambios"
+  }
+}

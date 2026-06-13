@@ -69,6 +69,13 @@ const request = async (url, options = {}) => {
     };
   }
 
+  // Set Accept-Language header dynamically
+  const i18nextLng = window.localStorage.getItem('i18nextLng') || 'en';
+  options.headers = {
+    ...options.headers,
+    'Accept-Language': i18nextLng,
+  };
+
   const response = await fetch(url, options);
 
   if (!response.ok) {

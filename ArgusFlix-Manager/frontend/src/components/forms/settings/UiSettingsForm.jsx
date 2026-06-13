@@ -1,4 +1,5 @@
 import useSettingsStore from '../../../store/settings.jsx';
+import { useTranslation } from 'react-i18next';
 import useLocalStorage from '../../../hooks/useLocalStorage.jsx';
 import useTablePreferences from '../../../hooks/useTablePreferences.jsx';
 import useOutputProfilesStore from '../../../store/outputProfiles.jsx';
@@ -22,6 +23,7 @@ import { Select, Switch, Stack } from '@mantine/core';
 import { saveTimeZoneSetting } from '../../../utils/forms/settings/UiSettingsFormUtils.js';
 
 const UiSettingsForm = React.memo(() => {
+  const { t, i18n } = useTranslation();
   const settings = useSettingsStore((s) => s.settings);
   const outputProfiles = useOutputProfilesStore((s) => s.profiles);
 
@@ -108,6 +110,21 @@ const UiSettingsForm = React.memo(() => {
 
   return (
     <Stack gap="md">
+      <Select
+        label={t('settings.language', { defaultValue: 'Language' })}
+        value={i18n.language?.split('-')[0] || 'en'}
+        onChange={(val) => {
+          if (val) i18n.changeLanguage(val);
+        }}
+        data={[
+          { value: 'en', label: t('settings.language_en', { defaultValue: 'English' }) },
+          { value: 'de', label: t('settings.language_de', { defaultValue: 'Deutsch' }) },
+          { value: 'fr', label: t('settings.language_fr', { defaultValue: 'Français' }) },
+          { value: 'it', label: t('settings.language_it', { defaultValue: 'Italiano' }) },
+          { value: 'es', label: t('settings.language_es', { defaultValue: 'Español' }) },
+          { value: 'pt', label: t('settings.language_pt', { defaultValue: 'Português' }) },
+        ]}
+      />
       <Select
         label="Table Size"
         value={tableSize}

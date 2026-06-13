@@ -1,0 +1,29 @@
+{
+  "nav": {
+    "channels": "Live TV",
+    "movies": "Filme",
+    "series": "Serien",
+    "custom_playlists": "Eigene Listen",
+    "dvr": "Aufnahmen (DVR)",
+    "plugins": "Erweiterungen",
+    "toolbox": "Werkzeuge",
+    "media_servers": "Media Server",
+    "metadata_providers": "Metadaten Anbieter",
+    "epg_mapping": "EPG Zuordnung",
+    "connections": "Verbindungen",
+    "app_builder": "App Baukasten",
+    "settings": "Einstellungen",
+    "admin_center": "Wartungs-Zentrale",
+    "users": "Benutzer"
+  },
+  "settings": {
+    "language": "Sprache",
+    "language_en": "English",
+    "language_de": "Deutsch",
+    "language_fr": "Français",
+    "language_it": "Italiano",
+    "language_es": "Español",
+    "language_pt": "Português",
+    "save": "Änderungen speichern"
+  }
+}
