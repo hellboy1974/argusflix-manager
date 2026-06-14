@@ -419,3 +419,49 @@ Zentrale Verwaltung von Internetradio-Sendern im ArgusFlix Manager und nahtlose 
 * **Frontend (React / Android App):**
   * **Wiedergabe:** Nutzung von `Media3` (ExoPlayer), um MP3, AAC und HLS Audio-Streams nativ abzuspielen.
   * **App-UI:** Umsetzung eines neuen Radio-Bereichs (ähnlich wie Chora) mit Kacheln für Senderlogos und einer TV-freundlichen "Now Playing"-Ansicht für Audio-Content.
+
+---
+
+## 📋 Projekt 16: M3U Editor (Erweitertes Playlist-Management)
+
+Ausbau der bestehenden M3U-Fähigkeiten zu einem visuellen und smarten Editor.
+* **Visueller Drag & Drop Editor (Frontend):** Eine interaktive React-Oberfläche (z.B. mit `dnd-kit`), auf der man Kanäle zwischen Gruppen verschieben, verstecken (`hidden_from_output`) und EPG-IDs (`tvg_id`) anpassen kann.
+* **Automatischer Link-Validator (Dead Link Checker):** Ein Celery-Hintergrund-Task, der die `Stream`-URLs regelmäßig anpingt (HEAD-Request) und bei Timeouts/404 den Kanal automatisch versteckt oder als "offline" markiert.
+* **Auto-EPG & Logo Matcher:** Wenn ein Kanal importiert wird und keine `tvg_id` hat, soll der Manager versuchen, den Namen per Fuzzy-Search mit einer internen/globalen EPG-Datenbank abzugleichen.
+
+---
+
+## 🕵️ Projekt 17: Stalkerhek (Stalker Portal & MAC Management)
+
+Das Scannen von Portalen (`StalkerPortalScan`) existiert bereits, soll aber für Ausfallsicherheit erweitert werden.
+* **Automatischer MAC-Failover (Rotation):** Wenn die `authenticate()` Methode eines Stalker-Accounts fehlschlägt (z.B. "Account blocked"), sucht der Manager in `StalkerPortalScanResult` nach einer neuen "Approved" MAC-Adresse für dasselbe Portal und updatet das Profil.
+* **Automatisierter Portal-Health-Check:** Ein Cronjob, der wöchentlich die aktiven MAC-Adressen prüft und Warnungen (Webhooks/Notifications) ausgibt, falls Accounts bald ablaufen (`expires_at`).
+* **Catchup/Timeshift-Extraktor:** Automatische Analyse der Stalker-Kanäle (im `get_all_channels` Response), ob ein Catchup-Typ vorliegt, und entsprechende Konfiguration der Catchup-URL-Parameter.
+
+---
+
+## 🎬 Projekt 18: Cinephage (VOD & Cinema Library Management)
+
+Erweiterung der bestehenden `Movie`/`Series` Modelle um automatisierte Metadaten-Anreicherung (TMDB/IMDb).
+* **TMDB/IMDb Auto-Enrichment (Metadata Scraper):** Celery-Task, der nach dem Import für neue Filme ohne TMDB-ID die offizielle TMDB-API nach dem Namen (`name` + `year`) abfragt, um `description`, `rating` und hochauflösende `logo_url` zu ergänzen.
+* **"Missing Episode" Tracker:** Abgleich der lokal vorhandenen Episoden einer Serie mit der TMDB-API zur Anzeige fehlender Episoden.
+* **Stream-Qualitäts-Scanner (Bitrate/Resolution):** Asynchroner Task, der `ffprobe` auf die VOD-Links ansetzt, um die echte Auflösung, Video-Codec und Audio-Spuren zu speichern und als Badges in der UI darzustellen.
+
+---
+
+## 🔄 Projekt 19: Bidirektionale History- & Favoriten-Synchronisation
+
+Ausbau der bestehenden Synchronisation (CompanionSyncRepository) zwischen ArgusFlix App und Manager zu einem echten Two-Way-Sync.
+* **App-seitiger Sync-Push:** Die Android TV App sendet (POST/PUT via Companion-API) in Echtzeit oder regelmäßigen Abständen den Fortschritt (`progress_seconds`) eines Films/einer Serie sowie neu markierte Favoriten zurück an den Manager.
+* **Manager-Endpoint Erweiterungen:** Erstellung oder Anpassung der REST-Endpoints (`/api/v1/accounts/profiles/{id}/history/update` etc.) im Backend, um eingehende Watch-History- und Favoriten-Updates zu empfangen und konfliktfrei in die Datenbank zu mergen.
+* **Profil-übergreifendes Fortsetzen:** Ermöglicht es, einen Film auf dem TV im Wohnzimmer zu pausieren (der Fortschritt wird an den Manager gesendet) und nahtlos auf einem zweiten TV im Schlafzimmer fortzusetzen (da dieser den Sync-Status vom Manager lädt).
+
+---
+
+## 🛠️ Projekt 20: Stalker Combo/MAC Generator im Manager
+
+Integration der Funktionalität der Standalone-Skripte (`combo_multi_gen.py`, `angina_mac_generator.py`) direkt in den ArgusFlix Manager, um Millionen von MAC-Combos auf Knopfdruck zu erstellen, zu speichern und für Portal-Scans zu nutzen.
+* **Backend Combo-Engine (Django/Celery):** Ausbau von `core/stalker_mac_gen.py` (oder neues Modul `combo_gen.py`), das MAC-Listen basierend auf Prefix-Auswahl, Mengen (z.B. 2 Millionen) und Generierungs-Logik (Random, Sequentiell, Mixed) extrem schnell und arbeitsspeicherschonend generiert.
+* **Combo-Datenbank & Storage:** Generierte Listen werden entweder direkt in der Datenbank (`StalkerComboList` Model) oder als persistente `.txt`-Dateien im Manager-Dateisystem gespeichert.
+* **React Frontend UI (Generator & Manager):** Eine neue Seite/Tab im Manager (z.B. unter "Stalker Scanner"), auf der man über Checkboxen Prefixe auswählt, die Menge eingibt (z.B. 2.000.000) und den Generierungsprozess startet. Die fertigen Combo-Listen lassen sich dort herunterladen oder mit einem Klick direkt als Input für einen neuen "Stalker Portal Scan" (Projekt 17) verwenden.
+
