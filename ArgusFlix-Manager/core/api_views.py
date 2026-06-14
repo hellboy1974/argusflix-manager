@@ -940,12 +940,12 @@ from .serializers import AppPageLayoutSerializer
 class AppPageLayoutViewSet(viewsets.ModelViewSet):
     queryset = AppPageLayout.objects.all()
     serializer_class = AppPageLayoutSerializer
-    filterset_fields = ['page', 'is_active']
+    filterset_fields = ['page', 'is_active']
 
 class AppSettingsViewSet(viewsets.ViewSet):
-    "`"`"
+    """
     API endpoint for app settings stored as JSON in CoreSettings.
-    "`"`"
+    """
     serializer_class = AppSettingsSerializer
 
     def get_permissions(self):
@@ -967,6 +967,18 @@ class AppSettingsViewSet(viewsets.ViewSet):
                 "vodViewMode": "GRID",
                 "liveTvChannelMode": "LIST",
                 "liveChannelGroupingMode": "FLAT",
+                "epgPresentationMode": "CLASSIC_FULL",
+                "showNowNextOnSwitch": True,
+                "overlayPosition": "BOTTOM",
+                "overlayOpacity": 80,
+                "overlayTimeout": 5,
+                "overlayShowLogo": True,
+                "overlayShowDescription": True,
+                "overlayShowResolution": True,
+                "overlayShowSignalStrength": True,
+                "overlayFontSize": "MEDIUM",
+                "overlayBackgroundColor": "DEFAULT",
+                "overlayTextColor": "DEFAULT",
             }
             settings_obj, created = CoreSettings.objects.get_or_create(
                 key=APP_SETTINGS_KEY,

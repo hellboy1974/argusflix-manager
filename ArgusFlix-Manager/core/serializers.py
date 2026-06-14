@@ -176,3 +176,26 @@ class NotificationDismissalSerializer(serializers.ModelSerializer):
         model = NotificationDismissal
         fields = ['id', 'notification', 'dismissed_at', 'action_taken']
         read_only_fields = ['dismissed_at']
+
+class AppSettingsSerializer(serializers.Serializer):
+    """Serializer for app settings stored as JSON in CoreSettings"""
+    appLanguage = serializers.CharField(max_length=10, required=False, default="en")
+    parentalControlLevel = serializers.IntegerField(min_value=0, max_value=3, required=False, default=0)
+    hasParentalPin = serializers.BooleanField(required=False, default=False)
+    playerDecoderMode = serializers.ChoiceField(choices=["HARDWARE", "SOFTWARE", "COMPATIBILITY", "AUTO"], required=False, default="HARDWARE")
+    playerSurfaceMode = serializers.ChoiceField(choices=["SURFACE_VIEW", "TEXTURE_VIEW", "AUTO"], required=False, default="SURFACE_VIEW")
+    vodViewMode = serializers.ChoiceField(choices=["GRID", "CLASSIC"], required=False, default="GRID")
+    liveTvChannelMode = serializers.ChoiceField(choices=["LIST", "COMFORTABLE", "COMPACT", "PRO"], required=False, default="LIST")
+    liveChannelGroupingMode = serializers.ChoiceField(choices=["FLAT", "GROUPED", "RAW_VARIANTS"], required=False, default="FLAT")
+    epgPresentationMode = serializers.ChoiceField(choices=["CLASSIC_FULL", "PREVIEW_PIP", "MAGAZINE_LIST", "FULL_EXPANDABLE"], required=False, default="CLASSIC_FULL")
+    showNowNextOnSwitch = serializers.BooleanField(required=False, default=True)
+    overlayPosition = serializers.ChoiceField(choices=["BOTTOM", "TOP"], required=False, default="BOTTOM")
+    overlayOpacity = serializers.IntegerField(min_value=0, max_value=100, required=False, default=80)
+    overlayTimeout = serializers.IntegerField(min_value=1, max_value=60, required=False, default=5)
+    overlayShowLogo = serializers.BooleanField(required=False, default=True)
+    overlayShowDescription = serializers.BooleanField(required=False, default=True)
+    overlayShowResolution = serializers.BooleanField(required=False, default=True)
+    overlayShowSignalStrength = serializers.BooleanField(required=False, default=True)
+    overlayFontSize = serializers.ChoiceField(choices=["SMALL", "MEDIUM", "LARGE"], required=False, default="MEDIUM")
+    overlayBackgroundColor = serializers.CharField(max_length=20, required=False, default="DEFAULT")
+    overlayTextColor = serializers.CharField(max_length=20, required=False, default="DEFAULT")
