@@ -255,6 +255,27 @@ class M3UMovieRelation(models.Model):
             username = self.m3u_account.username
             password = self.m3u_account.password
             return f"{normalized_url}/movie/{username}/{password}/{self.stream_id}.{self.container_extension or 'mp4'}"
+        elif self.m3u_account.account_type == 'STALKER':
+            from core.stalker import StalkerClient
+            from apps.m3u.tasks import _stalker_authenticate_with_failover
+            custom_props = self.m3u_account.custom_properties or {}
+            mac = custom_props.get('mac_address', '')
+            stalker = StalkerClient(
+                server_url=self.m3u_account.server_url,
+                mac_address=mac,
+                sn=custom_props.get('sn', '0000000000000'),
+                device_id=custom_props.get('device_id'),
+                device_id2=custom_props.get('device_id2'),
+                username=self.m3u_account.username or "",
+                password=self.m3u_account.password or ""
+            )
+            try:
+                _stalker_authenticate_with_failover(self.m3u_account, stalker)
+                return stalker.create_link(self.stream_id, is_vod=True)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to create Stalker VOD link: {e}")
+                return None
         else:
             # For other account types, we would need another way to build URLs
             return None
@@ -305,6 +326,27 @@ class M3UEpisodeRelation(models.Model):
             username = self.m3u_account.username
             password = self.m3u_account.password
             return f"{normalized_url}/series/{username}/{password}/{self.stream_id}.{self.container_extension or 'mp4'}"
+        elif self.m3u_account.account_type == 'STALKER':
+            from core.stalker import StalkerClient
+            from apps.m3u.tasks import _stalker_authenticate_with_failover
+            custom_props = self.m3u_account.custom_properties or {}
+            mac = custom_props.get('mac_address', '')
+            stalker = StalkerClient(
+                server_url=self.m3u_account.server_url,
+                mac_address=mac,
+                sn=custom_props.get('sn', '0000000000000'),
+                device_id=custom_props.get('device_id'),
+                device_id2=custom_props.get('device_id2'),
+                username=self.m3u_account.username or "",
+                password=self.m3u_account.password or ""
+            )
+            try:
+                _stalker_authenticate_with_failover(self.m3u_account, stalker)
+                return stalker.create_link(self.stream_id, is_vod=True)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to create Stalker Series link: {e}")
+                return None
         else:
             # We might support non XC accounts in the future
             # For now, return None

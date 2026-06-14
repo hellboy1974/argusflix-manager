@@ -1288,42 +1288,70 @@ def refresh_series_episodes(account, series, external_series_id, episodes_data=N
     """Refresh episodes for a series - only called on-demand"""
     try:
         if not episodes_data:
-            # Fetch detailed series info including episodes
-            with XtreamCodesClient(
-                account.server_url,
-                account.username,
-                account.password,
-                account.get_user_agent().user_agent
-            ) as client:
-                series_info = client.get_series_info(external_series_id)
-                if series_info:
-                    # Update series with detailed info
-                    info = series_info.get('info', {})
-                    if info:
-                        # Only update fields if new value is non-empty and either no existing value or existing value is empty
-                        updated = False
-                        if should_update_field(series.description, info.get('plot')):
-                            series.description = extract_string_from_array_or_string(info.get('plot'))
-                            updated = True
-                        normalized_rating = normalize_rating(info.get('rating'))
-                        if normalized_rating and (not series.rating or not str(series.rating).strip()):
-                            series.rating = normalized_rating
-                            updated = True
-                        if should_update_field(series.genre, info.get('genre')):
-                            series.genre = extract_string_from_array_or_string(info.get('genre'))
-                            updated = True
-
-                        year = extract_year_from_data(info)
-                        if year and not series.year:
-                            series.year = year
-                            updated = True
-
-                        if updated:
-                            series.save()
-
-                    episodes_data = series_info.get('episodes', {})
-                else:
+            if account.account_type == M3UAccount.Types.STALKER:
+                from core.stalker import StalkerClient
+                from apps.m3u.tasks import _stalker_authenticate_with_failover
+                custom_props = account.custom_properties or {}
+                mac = custom_props.get('mac_address', '')
+                client = StalkerClient(
+                    server_url=account.server_url,
+                    mac_address=mac,
+                    sn=custom_props.get('sn', '0000000000000'),
+                    device_id=custom_props.get('device_id'),
+                    device_id2=custom_props.get('device_id2'),
+                    username=account.username or "",
+                    password=account.password or ""
+                )
+                try:
+                    _stalker_authenticate_with_failover(account, client)
+                    raw_episodes = client.get_seasons_and_episodes(external_series_id)
                     episodes_data = {}
+                    for ep in raw_episodes:
+                        season = str(ep.get('season') or 1)
+                        ep['episode_num'] = ep.get('series') or ep.get('episode') or ep.get('id')
+                        if season not in episodes_data:
+                            episodes_data[season] = []
+                        episodes_data[season].append(ep)
+                except Exception as e:
+                    logger.error(f"Failed to fetch Stalker episodes: {e}")
+                    episodes_data = {}
+            else:
+                # Fetch detailed series info including episodes
+                with XtreamCodesClient(
+                    account.server_url,
+                    account.username,
+                    account.password,
+                    account.get_user_agent().user_agent
+                ) as client:
+                    series_info = client.get_series_info(external_series_id)
+                    if series_info:
+                        # Update series with detailed info
+                        info = series_info.get('info', {})
+                        if info:
+                            # Only update fields if new value is non-empty and either no existing value or existing value is empty
+                            updated = False
+                            if should_update_field(series.description, info.get('plot')):
+                                series.description = extract_string_from_array_or_string(info.get('plot'))
+                                updated = True
+                            normalized_rating = normalize_rating(info.get('rating'))
+                            if normalized_rating and (not series.rating or not str(series.rating).strip()):
+                                series.rating = normalized_rating
+                                updated = True
+                            if should_update_field(series.genre, info.get('genre')):
+                                series.genre = extract_string_from_array_or_string(info.get('genre'))
+                                updated = True
+
+                            year = extract_year_from_data(info)
+                            if year and not series.year:
+                                series.year = year
+                                updated = True
+
+                            if updated:
+                                series.save()
+
+                        episodes_data = series_info.get('episodes', {})
+                    else:
+                        episodes_data = {}
 
         # Fetch the series relation once — used both to pass into batch_process_episodes
         # (so episode relations get the FK set) and to update metadata afterwards.
@@ -1648,24 +1676,17 @@ def batch_refresh_series_episodes(account_id, series_ids=None):
 
         logger.info(f"Batch refreshing episodes for {series_relations.count()} series")
 
-        with XtreamCodesClient(
-            account.server_url,
-            account.username,
-            account.password,
-            account.get_user_agent().user_agent
-        ) as client:
-
-            refreshed_count = 0
-            for relation in series_relations:
-                try:
-                    refresh_series_episodes(
-                        account,
-                        relation.series,
-                        relation.external_series_id
-                    )
-                    refreshed_count += 1
-                except Exception as e:
-                    logger.error(f"Error refreshing episodes for series {relation.series.name}: {str(e)}")
+        refreshed_count = 0
+        for relation in series_relations:
+            try:
+                refresh_series_episodes(
+                    account,
+                    relation.series,
+                    relation.external_series_id
+                )
+                refreshed_count += 1
+            except Exception as e:
+                logger.error(f"Error refreshing episodes for series {relation.series.name}: {str(e)}")
 
         logger.info(f"Batch episode refresh completed for {refreshed_count} series")
         return f"Batch episode refresh completed for {refreshed_count} series"
@@ -2132,6 +2153,11 @@ def refresh_movie_advanced_data(m3u_movie_relation_id, force_refresh=False):
 
         account = relation.m3u_account
         movie = relation.movie
+
+        if account.account_type != M3UAccount.Types.XC:
+            relation.last_advanced_refresh = now
+            relation.save(update_fields=['last_advanced_refresh'])
+            return "Advanced data fetch not required for this account type."
 
         from core.xtream_codes import Client as XtreamCodesClient
 

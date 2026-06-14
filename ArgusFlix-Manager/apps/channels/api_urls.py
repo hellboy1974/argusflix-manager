@@ -22,6 +22,8 @@ from .api_views import (
     BulkRemoveSeriesRecordingsAPIView,
     BulkDeleteUpcomingRecordingsAPIView,
     ComskipConfigAPIView,
+    BulkUpdateChannelsAPIView,
+    M3UEditorActionsAPIView,
 )
 
 app_name = 'channels'  # for DRF routing
@@ -39,12 +41,14 @@ urlpatterns = [
     # Bulk delete is a single APIView, not a ViewSet
     path('streams/bulk-delete/', BulkDeleteStreamsAPIView.as_view(), name='bulk_delete_streams'),
     path('channels/bulk-delete/', BulkDeleteChannelsAPIView.as_view(), name='bulk_delete_channels'),
+    path('channels/bulk-update/', BulkUpdateChannelsAPIView.as_view(), name='bulk_update_channels'),
     path('logos/bulk-delete/', BulkDeleteLogosAPIView.as_view(), name='bulk_delete_logos'),
     path('logos/cleanup/', CleanupUnusedLogosAPIView.as_view(), name='cleanup_unused_logos'),
     path('channels/<int:channel_id>/streams/', GetChannelStreamsAPIView.as_view(), name='get_channel_streams'),
     path('channels/<int:channel_id>/streams/stats/', GetChannelStreamStatsAPIView.as_view(), name='get_channel_stream_stats'),
     path('profiles/<int:profile_id>/channels/<int:channel_id>/', UpdateChannelMembershipAPIView.as_view(), name='update_channel_membership'),
     path('profiles/<int:profile_id>/channels/bulk-update/', BulkUpdateChannelMembershipAPIView.as_view(), name='bulk_update_channel_membership'),
+    path('m3u-editor/actions/<str:task_action>/', M3UEditorActionsAPIView.as_view(), name='m3u_editor_actions'),
     # DVR series rules (order matters: specific routes before catch-all slug)
     path('series-rules/', SeriesRulesAPIView.as_view(), name='series_rules'),
     path('series-rules/preview/', SeriesRulePreviewAPIView.as_view(), name='series_rules_preview'),

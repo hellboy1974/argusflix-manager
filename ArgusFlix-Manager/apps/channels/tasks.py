@@ -4606,3 +4606,66 @@ def set_channels_tvg_ids_from_epg(self, channel_ids):
             'error': str(e)
         })
         raise
+
+@shared_task(bind=True)
+def validate_channel_streams(self):
+    """
+    Background task to validate stream URLs using HEAD requests.
+    If a stream is 404 or times out, it is marked as hidden_from_output=True on the Channel.
+    """
+    logger.info("Starting dead link check for channel streams...")
+    from apps.channels.models import Channel
+    
+    channels = Channel.objects.filter(hidden_from_output=False).exclude(streams=None).prefetch_related('streams')
+    updated_count = 0
+    
+    for channel in channels:
+        all_dead = True
+        for stream in channel.streams.all():
+            is_valid = _validate_url(stream.url, timeout=2)
+            if is_valid:
+                all_dead = False
+                break
+        
+        if all_dead:
+            channel.hidden_from_output = True
+            channel.save(update_fields=['hidden_from_output'])
+            updated_count += 1
+            
+        time.sleep(1) # Delay between channels to avoid rate limit
+        
+    logger.info(f"Dead link check complete. Hid {updated_count} channels.")
+    return {'hidden_count': updated_count}
+
+@shared_task(bind=True)
+def auto_match_epg_for_channels(self):
+    """
+    Auto-match EPG data for channels missing tvg_id using fuzzy matching.
+    """
+    logger.info("Starting auto-EPG matcher...")
+    from apps.channels.models import Channel
+    from apps.epg.models import EPGData
+    from rapidfuzz import fuzz
+    from django.db.models import Q
+    
+    channels_without_epg = Channel.objects.filter(Q(tvg_id__isnull=True) | Q(tvg_id=""))
+    epg_data = list(EPGData.objects.all())
+    
+    updated_count = 0
+    for channel in channels_without_epg:
+        best_score = 0
+        best_epg = None
+        for epg in epg_data:
+            score = fuzz.token_sort_ratio(channel.name, epg.name)
+            if score > best_score:
+                best_score = score
+                best_epg = epg
+                
+        if best_score >= 85 and best_epg:
+            channel.tvg_id = best_epg.tvg_id
+            channel.epg_data = best_epg
+            channel.save(update_fields=['tvg_id', 'epg_data'])
+            updated_count += 1
+            
+    logger.info(f"Auto-EPG matcher complete. Matched {updated_count} channels.")
+    return {'matched_count': updated_count}

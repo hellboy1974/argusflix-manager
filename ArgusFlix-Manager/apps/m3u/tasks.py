@@ -786,6 +786,43 @@ def cleanup_stale_group_relationships(account, scan_start_time):
 
     return deleted_count
 
+def _stalker_authenticate_with_failover(account, stalker):
+    """Attempt Stalker authentication. If it fails, try finding an approved MAC in StalkerPortalScanResult."""
+    try:
+        stalker.authenticate()
+        return True
+    except Exception as e:
+        logger.warning(f"Stalker authentication failed for MAC {stalker.mac_address}: {e}")
+        from apps.m3u.models import StalkerPortalScanResult
+        fallback_macs = StalkerPortalScanResult.objects.filter(
+            portal_url=account.server_url,
+            status=StalkerPortalScanResult.Status.APPROVED
+        ).exclude(mac_address=stalker.mac_address)
+        
+        if fallback_macs.exists():
+            new_mac = fallback_macs.first()
+            logger.info(f"MAC Failover triggered. Switching to new MAC: {new_mac.mac_address}")
+            
+            # Update account
+            custom_props = account.custom_properties or {}
+            custom_props['mac_address'] = new_mac.mac_address
+            account.custom_properties = custom_props
+            account.save(update_fields=['custom_properties'])
+            
+            # Update stalker client and retry
+            stalker.mac_address = new_mac.mac_address
+            stalker.token = ""
+            stalker.session.cookies.clear()
+            try:
+                stalker.authenticate()
+                logger.info("Fallback MAC authenticated successfully.")
+                return True
+            except Exception as e2:
+                logger.error(f"Fallback Stalker authentication failed: {e2}")
+                raise e2
+        else:
+            logger.error("No fallback MAC addresses available.")
+            raise e
 
 def collect_stalker_streams(account_id, enabled_groups):
     """Collect all Stalker streams and filter by enabled groups."""
@@ -813,7 +850,7 @@ def collect_stalker_streams(account_id, enabled_groups):
             username=account.username or "",
             password=account.password or ""
         )
-        stalker.authenticate()
+        _stalker_authenticate_with_failover(account, stalker)
 
         logger.info("Fetching ALL live streams from Stalker provider...")
         all_stalker_streams = stalker.get_live_streams()
@@ -842,6 +879,10 @@ def collect_stalker_streams(account_id, enabled_groups):
                     logger.warning(f"Failed to generate playback link for {stream_name}: {e}")
                     continue
 
+                # Extract Catchup/Timeshift info
+                is_catchup = str(stream.get("tv_archive", 0)) == "1" or str(stream.get("enable_tv_archive", 0)) == "1"
+                catchup_days = str(stream.get("tv_archive_duration", 7)) if is_catchup else ""
+                
                 stream_data = {
                     "name": stream_name,
                     "url": playback_url,
@@ -853,6 +894,7 @@ def collect_stalker_streams(account_id, enabled_groups):
                         "category_id": category_id,
                         "cmd": cmd,
                         "num": stream.get("number", ""),
+                        **({ "catchup": "append", "catchup-days": catchup_days } if is_catchup else {}),
                         **{k: str(v) for k, v in stream.items() if k not in ["name", "title", "id", "tv_genre_id", "category_id", "cmd", "logo", "epg_progname", "number"] and v is not None}
                     }
                 }
@@ -1661,7 +1703,7 @@ def refresh_m3u_groups(account_id, use_cache=False, full_refresh=False, scan_sta
                 username=account.username or "",
                 password=account.password or ""
             )
-            stalker.authenticate()
+            _stalker_authenticate_with_failover(account, stalker)
             
             # Fetch Live Categories
             stalker_categories = stalker.get_live_categories()
@@ -3948,3 +3990,39 @@ def check_account_expirations():
     logger.info(
         f"Account expiration check complete: {len(active_notification_keys)} active notifications"
     )
+
+@shared_task(bind=True)
+def check_stalker_portal_health(self):
+    """
+    Check the health of active Stalker MAC addresses and send a notification 
+    if any of them are expiring within 7 days.
+    """
+    logger.info("Starting Stalker Portal Health Check...")
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.developer_notifications import send_notification
+    from apps.m3u.models import StalkerPortalScanResult
+
+    threshold_date = timezone.now() + timedelta(days=7)
+    
+    # Check approved scan results
+    expiring_macs = StalkerPortalScanResult.objects.filter(
+        status=StalkerPortalScanResult.Status.APPROVED,
+        expires_at__lte=threshold_date
+    )
+    
+    if expiring_macs.exists():
+        messages = []
+        for mac in expiring_macs:
+            if mac.expires_at < timezone.now():
+                messages.append(f"- {mac.mac_address} on {mac.portal_url} (EXPIRED on {mac.expires_at.strftime('%Y-%m-%d')})")
+            else:
+                messages.append(f"- {mac.mac_address} on {mac.portal_url} (Expires in {(mac.expires_at - timezone.now()).days} days)")
+                
+        msg_body = "The following Stalker MAC addresses are expiring soon or have expired:\n" + "\n".join(messages)
+        send_notification("Stalker Portal Health Warning", msg_body, level="warning")
+        logger.warning(f"Health Check found {expiring_macs.count()} expiring MACs.")
+    else:
+        logger.info("Health Check complete. No expiring MACs found.")
+        
+    return {"expiring_count": expiring_macs.count()}

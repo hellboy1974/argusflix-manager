@@ -4336,3 +4336,50 @@ class BulkRemoveSeriesRecordingsAPIView(APIView):
         except Exception:
             pass
         return Response({"success": True, "removed": count})
+
+class BulkUpdateChannelsAPIView(APIView):
+    @extend_schema(
+        summary="Bulk update channels",
+        description="Update multiple channels at once (e.g., from the M3U Editor drag-and-drop).",
+    )
+    def post(self, request):
+        updates = request.data.get('updates', [])
+        # updates: list of dicts {'id': 123, 'channel_group': 2, 'tvg_id': '...', 'hidden_from_output': True}
+        updated_count = 0
+        for item in updates:
+            try:
+                channel = Channel.objects.get(id=item['id'])
+                update_fields = []
+                if 'channel_group' in item:
+                    channel.channel_group_id = item['channel_group']
+                    update_fields.append('channel_group')
+                if 'tvg_id' in item:
+                    channel.tvg_id = item['tvg_id']
+                    update_fields.append('tvg_id')
+                if 'hidden_from_output' in item:
+                    channel.hidden_from_output = item['hidden_from_output']
+                    update_fields.append('hidden_from_output')
+                
+                if update_fields:
+                    channel.save(update_fields=update_fields)
+                    updated_count += 1
+            except Channel.DoesNotExist:
+                continue
+                
+        return Response({'success': True, 'updated_count': updated_count})
+
+class M3UEditorActionsAPIView(APIView):
+    @extend_schema(
+        summary="Trigger M3U Editor background tasks",
+        description="Trigger dead-link checks or auto-EPG matching.",
+    )
+    def post(self, request, task_action):
+        from .tasks import validate_channel_streams, auto_match_epg_for_channels
+        if task_action == 'dead-link-check':
+            validate_channel_streams.delay()
+            return Response({'success': True, 'message': 'Dead-Link Check gestartet'})
+        elif task_action == 'auto-epg-match':
+            auto_match_epg_for_channels.delay()
+            return Response({'success': True, 'message': 'Auto-EPG Match gestartet'})
+        return Response({'error': 'Unknown action'}, status=status.HTTP_400_BAD_REQUEST)
+
