@@ -35,6 +35,7 @@ import AdminCenter from './pages/AdminCenter';
 import MetadataProviders from './pages/MetadataProviders';
 import Profiles from './pages/Profiles';
 import RadioPage from './pages/Radio';
+import StalkerScanner from './pages/StalkerScanner';
 import useAuthStore from './store/auth';
 import FloatingVideo from './components/FloatingVideo';
 import { WebsocketProvider } from './WebSocket';
@@ -197,6 +198,7 @@ const App = () => {
                         <Route path="/admin-center" element={<AdminCenter />} />
                         <Route path="/profiles" element={<Profiles />} />
                         <Route path="/radio" element={<RadioPage />} />
+                        <Route path="/stalker-scanner" element={<StalkerScanner />} />
                       </>
                     ) : (
                       <Route path="/login" element={<Login needsSuperuser />} />

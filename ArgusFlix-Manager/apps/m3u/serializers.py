@@ -411,3 +411,17 @@ class ServerGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServerGroup
         fields = ["id", "name"]
+
+from .models import StalkerPortalScan, StalkerPortalScanResult
+
+class StalkerPortalScanResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StalkerPortalScanResult
+        fields = '__all__'
+
+class StalkerPortalScanSerializer(serializers.ModelSerializer):
+    results = StalkerPortalScanResultSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = StalkerPortalScan
+        fields = '__all__'

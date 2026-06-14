@@ -15,6 +15,7 @@ class M3UAccount(models.Model):
     class Types(models.TextChoices):
         STADNARD = "STD", "Standard"
         XC = "XC", "Xtream Codes"
+        STALKER = "STALKER", "Stalker Portal"
 
     class SyncPolicy(models.TextChoices):
         AUTO_ON_STARTUP = "auto_on_startup", "Beim Starten"
@@ -366,3 +367,59 @@ def create_profile_for_m3u_account(sender, instance, created, **kwargs):
 
         profile.max_streams = instance.max_streams
         profile.save()
+
+class StalkerPortalScan(models.Model):
+    class ScanType(models.TextChoices):
+        RANDOM = "random", "Random"
+        SEQUENTIAL = "sequential", "Sequential"
+        IMPORT = "import", "Import"
+
+    class Status(models.TextChoices):
+        RUNNING = "running", "Running"
+        COMPLETED = "completed", "Completed"
+        CANCELLED = "cancelled", "Cancelled"
+        FAILED = "failed", "Failed"
+
+    portal_url = models.URLField(max_length=1000)
+    scan_type = models.CharField(max_length=20, choices=ScanType.choices, default=ScanType.RANDOM)
+    mac_prefix = models.CharField(max_length=20, null=True, blank=True)
+    mac_range_start = models.CharField(max_length=20, null=True, blank=True)
+    mac_range_end = models.CharField(max_length=20, null=True, blank=True)
+    imported_macs = models.TextField(null=True, blank=True)
+    rate_limit = models.IntegerField(default=500, help_text="Delay between requests in ms")
+    
+    macs_to_test = models.IntegerField(null=True, blank=True)
+    macs_tested = models.IntegerField(default=0)
+    macs_found = models.IntegerField(default=0)
+    
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.RUNNING)
+    error = models.TextField(null=True, blank=True)
+    
+    worker_task_id = models.CharField(max_length=255, null=True, blank=True)
+    
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Scan {self.id} for {self.portal_url}"
+
+class StalkerPortalScanResult(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        IGNORED = "ignored", "Ignored"
+
+    scan = models.ForeignKey(StalkerPortalScan, on_delete=models.CASCADE, related_name="results")
+    portal_url = models.URLField(max_length=1000)
+    mac_address = models.CharField(max_length=20)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    
+    expires_at = models.DateTimeField(null=True, blank=True)
+    account_status = models.CharField(max_length=50, null=True, blank=True)
+    raw_profile = models.JSONField(null=True, blank=True)
+    
+    discovered_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Result {self.mac_address} ({self.status})"

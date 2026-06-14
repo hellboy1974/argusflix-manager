@@ -31,6 +31,7 @@ from core.utils import (
 from core.models import CoreSettings, UserAgent
 from asgiref.sync import async_to_sync
 from core.xtream_codes import Client as XCClient
+from core.stalker import StalkerClient
 from core.utils import send_websocket_update
 from .utils import normalize_stream_url
 
@@ -785,6 +786,85 @@ def cleanup_stale_group_relationships(account, scan_start_time):
 
     return deleted_count
 
+
+def collect_stalker_streams(account_id, enabled_groups):
+    """Collect all Stalker streams and filter by enabled groups."""
+    account = M3UAccount.objects.get(id=account_id)
+    all_streams = []
+
+    # Create a mapping from category_id to group info for filtering
+    enabled_category_ids = {}
+    for group_name, props in enabled_groups.items():
+        if "xc_id" in props:
+            enabled_category_ids[str(props["xc_id"])] = {
+                "name": group_name,
+                "props": props
+            }
+
+    try:
+        custom_props = account.custom_properties or {}
+        mac = custom_props.get('mac_address', '')
+        stalker = StalkerClient(
+            server_url=account.server_url,
+            mac_address=mac,
+            sn=custom_props.get('sn', '0000000000000'),
+            device_id=custom_props.get('device_id'),
+            device_id2=custom_props.get('device_id2'),
+            username=account.username or "",
+            password=account.password or ""
+        )
+        stalker.authenticate()
+
+        logger.info("Fetching ALL live streams from Stalker provider...")
+        all_stalker_streams = stalker.get_live_streams()
+
+        if not all_stalker_streams:
+            logger.warning("No live streams returned from Stalker provider")
+            return []
+
+        logger.info(f"Retrieved {len(all_stalker_streams)} total live streams from provider")
+
+        filtered_count = 0
+        for stream in all_stalker_streams:
+            stream_name = stream.get("name") or stream.get("title") or stream.get("alias") or f"{account.name} - {stream.get('id', 'Unknown')}"
+            
+            # Category ID from stalker stream (usually tv_genre_id)
+            category_id = str(stream.get("tv_genre_id", stream.get("category_id", "")))
+
+            if category_id in enabled_category_ids:
+                group_info = enabled_category_ids[category_id]
+                cmd = stream.get("cmd", "")
+                
+                # Fetch playback URL by generating the link
+                try:
+                    playback_url = stalker.create_link(cmd, is_vod=False)
+                except Exception as e:
+                    logger.warning(f"Failed to generate playback link for {stream_name}: {e}")
+                    continue
+
+                stream_data = {
+                    "name": stream_name,
+                    "url": playback_url,
+                    "attributes": {
+                        "tvg-id": stream.get("epg_progname", ""),
+                        "tvg-logo": stream.get("logo", ""),
+                        "group-title": group_info["name"],
+                        "stream_id": str(stream.get("id", "")),
+                        "category_id": category_id,
+                        "cmd": cmd,
+                        "num": stream.get("number", ""),
+                        **{k: str(v) for k, v in stream.items() if k not in ["name", "title", "id", "tv_genre_id", "category_id", "cmd", "logo", "epg_progname", "number"] and v is not None}
+                    }
+                }
+                all_streams.append(stream_data)
+                filtered_count += 1
+
+    except Exception as e:
+        logger.error(f"Failed to fetch Stalker streams: {str(e)}")
+        return []
+
+    logger.info(f"Filtered {filtered_count} Stalker streams from {len(enabled_category_ids)} enabled categories")
+    return all_streams
 
 def collect_xc_streams(account_id, enabled_groups):
     """Collect all XC streams in a single API call and filter by enabled groups."""
@@ -1551,6 +1631,57 @@ def refresh_m3u_groups(account_id, use_cache=False, full_refresh=False, scan_sta
             send_m3u_update(
                 account_id, "processing_groups", 100, status="error", error=error_msg
             )
+            lock_renewer.stop()
+            release_task_lock("refresh_m3u_account_groups", account_id)
+            return error_msg, None
+    elif account.account_type == M3UAccount.Types.STALKER:
+        logger.info(f"Processing STALKER account {account_id} with URL: {account.server_url}")
+
+        if not account.server_url:
+            error_msg = "Missing server URL for Stalker account"
+            logger.error(error_msg)
+            account.status = M3UAccount.Status.ERROR
+            account.last_message = error_msg
+            account.save(update_fields=["status", "last_message"])
+            send_m3u_update(account_id, "processing_groups", 100, status="error", error=error_msg)
+            lock_renewer.stop()
+            release_task_lock("refresh_m3u_account_groups", account_id)
+            return error_msg, None
+
+        custom_props = account.custom_properties or {}
+        mac = custom_props.get('mac_address', '')
+        
+        try:
+            stalker = StalkerClient(
+                server_url=account.server_url,
+                mac_address=mac,
+                sn=custom_props.get('sn', '0000000000000'),
+                device_id=custom_props.get('device_id'),
+                device_id2=custom_props.get('device_id2'),
+                username=account.username or "",
+                password=account.password or ""
+            )
+            stalker.authenticate()
+            
+            # Fetch Live Categories
+            stalker_categories = stalker.get_live_categories()
+            logger.info(f"Found {len(stalker_categories)} live categories for Stalker")
+            
+            for category in stalker_categories:
+                cat_name = category.get("title") or category.get("alias") or "Unknown Category"
+                cat_id = category.get("id", "0")
+                logger.info(f"Adding Stalker category: {cat_name} (ID: {cat_id})")
+                groups[cat_name] = {
+                    "xc_id": cat_id, # We reuse the 'xc_id' key to easily hook into existing logic
+                }
+                
+        except Exception as e:
+            error_msg = f"Failed to get Stalker live categories: {str(e)}"
+            logger.error(error_msg)
+            account.status = M3UAccount.Status.ERROR
+            account.last_message = error_msg
+            account.save(update_fields=["status", "last_message"])
+            send_m3u_update(account_id, "processing_groups", 100, status="error", error=error_msg)
             lock_renewer.stop()
             release_task_lock("refresh_m3u_account_groups", account_id)
             return error_msg, None
@@ -3353,8 +3484,8 @@ def _refresh_single_m3u_account_impl(account_id):
                         completed_batches += 1  # Still count it to avoid hanging
 
             logger.info(f"Thread-based processing completed for account {account_id}")
-        else:
-            # For XC accounts, get the groups with their custom properties containing xc_id
+        elif account.account_type in (M3UAccount.Types.XC, M3UAccount.Types.STALKER):
+            # For XC and STALKER accounts, get the groups with their custom properties containing xc_id
             logger.debug(f"Processing XC account with groups: {existing_groups}")
 
             # Get the ChannelGroupM3UAccount entries with their custom_properties
@@ -3386,9 +3517,12 @@ def _refresh_single_m3u_account_impl(account_id):
                 f"Filtered {len(filtered_groups)} groups for processing: {filtered_groups}"
             )
 
-            # Collect all XC streams in a single API call and filter by enabled categories
-            logger.info("Fetching all XC streams from provider and filtering by enabled categories...")
-            all_xc_streams = collect_xc_streams(account_id, filtered_groups)
+            # Collect all streams in a single API call and filter by enabled categories
+            logger.info("Fetching all streams from provider and filtering by enabled categories...")
+            if account.account_type == M3UAccount.Types.XC:
+                all_xc_streams = collect_xc_streams(account_id, filtered_groups)
+            else:
+                all_xc_streams = collect_stalker_streams(account_id, filtered_groups)
 
             if not all_xc_streams:
                 logger.warning("No streams collected from XC groups")
@@ -3580,7 +3714,7 @@ def _refresh_single_m3u_account_impl(account_id):
         )
 
         # Trigger VOD refresh if enabled and account is XtreamCodes type
-        if vod_enabled and account.account_type == M3UAccount.Types.XC:
+        if vod_enabled and account.account_type in (M3UAccount.Types.XC, M3UAccount.Types.STALKER):
             logger.info(f"VOD is enabled for account {account_id}, triggering VOD refresh")
             try:
                 from apps.vod.tasks import refresh_vod_content

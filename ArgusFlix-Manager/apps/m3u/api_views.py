@@ -787,3 +787,81 @@ class M3UAccountProfileViewSet(viewsets.ModelViewSet):
 
         # Perform the actual save
         serializer.save(m3u_account_id=m3u_account)
+
+from .models import StalkerPortalScan, StalkerPortalScanResult
+from .serializers import StalkerPortalScanSerializer, StalkerPortalScanResultSerializer
+from .scanner_tasks import run_stalker_scan_task
+
+class StalkerPortalScanViewSet(viewsets.ModelViewSet):
+    queryset = StalkerPortalScan.objects.all().order_by('-started_at')
+    serializer_class = StalkerPortalScanSerializer
+
+    def get_permissions(self):
+        try:
+            return [perm() for perm in permission_classes_by_action[self.action]]
+        except KeyError:
+            return [Authenticated()]
+
+    def create(self, request, *args, **kwargs):
+        # Create scan and start task
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        scan = serializer.save()
+        
+        run_stalker_scan_task.delay(scan.id)
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        scan = self.get_object()
+        if scan.status == StalkerPortalScan.Status.RUNNING:
+            scan.status = StalkerPortalScan.Status.CANCELLED
+            scan.save()
+            return Response({'status': 'cancelled'})
+        return Response({'status': 'error', 'message': 'Scan is not running'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'])
+    def results(self, request, pk=None):
+        scan = self.get_object()
+        results = scan.results.all().order_by('-discovered_at')
+        serializer = StalkerPortalScanResultSerializer(results, many=True)
+        return Response(serializer.data)
+
+class StalkerPortalScanResultViewSet(viewsets.ModelViewSet):
+    queryset = StalkerPortalScanResult.objects.all()
+    serializer_class = StalkerPortalScanResultSerializer
+
+    def get_permissions(self):
+        try:
+            return [perm() for perm in permission_classes_by_action[self.action]]
+        except KeyError:
+            return [Authenticated()]
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        result = self.get_object()
+        if result.status != StalkerPortalScanResult.Status.PENDING:
+            return Response({'error': 'Result already processed'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create M3UAccount
+        account_name = request.data.get('account_name') or f"{result.scan.portal_url} - {result.mac_address}"
+        
+        from .models import M3UAccount
+        account = M3UAccount.objects.create(
+            name=account_name,
+            account_type=M3UAccount.Types.STALKER,
+            custom_properties={
+                "mac_address": result.mac_address,
+                "portal_url": result.scan.portal_url
+            }
+        )
+        
+        result.status = StalkerPortalScanResult.Status.APPROVED
+        result.save()
+        
+        from .tasks import refresh_single_m3u_account
+        refresh_single_m3u_account.delay(account.id)
+        
+        return Response({'status': 'approved', 'account_id': account.id})

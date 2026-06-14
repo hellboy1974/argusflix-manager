@@ -9,11 +9,15 @@ from .api_views import (
     RefreshAccountInfoAPIView,
     UserAgentViewSet,
     M3UAccountProfileViewSet,
+    StalkerPortalScanViewSet,
+    StalkerPortalScanResultViewSet,
 )
 
 app_name = "m3u"
 
 router = DefaultRouter()
+router.register(r"stalker-scan", StalkerPortalScanViewSet, basename="stalker-scan")
+router.register(r"stalker-scan-results", StalkerPortalScanResultViewSet, basename="stalker-scan-results")
 router.register(r"accounts", M3UAccountViewSet, basename="m3u-account")
 router.register(
     r"accounts\/(?P<account_id>\d+)\/profiles",

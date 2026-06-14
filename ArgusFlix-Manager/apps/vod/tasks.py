@@ -4,6 +4,7 @@ from django.db import transaction, IntegrityError
 from django.db.models import Q
 from apps.m3u.models import M3UAccount
 from core.xtream_codes import Client as XtreamCodesClient
+from core.stalker import StalkerClient
 from .models import (
     VODCategory, Series, Movie, Episode, VODLogo,
     M3USeriesRelation, M3UMovieRelation, M3UEpisodeRelation, M3UVODCategoryRelation
@@ -12,6 +13,7 @@ from datetime import datetime
 import logging
 import json
 import re
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +27,9 @@ def refresh_vod_content(account_id):
     try:
         account = M3UAccount.objects.get(id=account_id, is_active=True)
 
-        if account.account_type != M3UAccount.Types.XC:
-            logger.warning(f"VOD refresh called for non-XC account {account_id}")
-            return "VOD refresh only available for XtreamCodes accounts"
+        if account.account_type not in (M3UAccount.Types.XC, M3UAccount.Types.STALKER):
+            logger.warning(f"VOD refresh called for unsupported account {account_id}")
+            return "VOD refresh only available for XC and STALKER accounts"
 
         logger.info(f"Starting batch VOD refresh for account {account.name}")
         start_time = timezone.now()
@@ -35,12 +37,28 @@ def refresh_vod_content(account_id):
         # Send start notification
         send_m3u_update(account_id, "vod_refresh", 0, status="processing")
 
-        with XtreamCodesClient(
-            account.server_url,
-            account.username,
-            account.password,
-            account.get_user_agent().user_agent
-        ) as client:
+        if account.account_type == M3UAccount.Types.STALKER:
+            custom_props = account.custom_properties or {}
+            mac = custom_props.get('mac_address', '')
+            client = StalkerClient(
+                server_url=account.server_url,
+                mac_address=mac,
+                sn=custom_props.get('sn', '0000000000000'),
+                device_id=custom_props.get('device_id'),
+                device_id2=custom_props.get('device_id2'),
+                username=account.username or "",
+                password=account.password or ""
+            )
+            client.authenticate()
+        else:
+            client = XtreamCodesClient(
+                account.server_url,
+                account.username,
+                account.password,
+                account.get_user_agent().user_agent
+            )
+
+        with client if hasattr(client, '__enter__') else contextlib.nullcontext(client):
 
             movie_categories, series_categories = refresh_categories(account.id, client)
 
@@ -87,12 +105,26 @@ def refresh_categories(account_id, client=None):
     account = M3UAccount.objects.get(id=account_id, is_active=True)
 
     if not client:
-        client = XtreamCodesClient(
-            account.server_url,
-            account.username,
-            account.password,
-            account.get_user_agent().user_agent
-        )
+        if account.account_type == M3UAccount.Types.STALKER:
+            custom_props = account.custom_properties or {}
+            mac = custom_props.get('mac_address', '')
+            client = StalkerClient(
+                server_url=account.server_url,
+                mac_address=mac,
+                sn=custom_props.get('sn', '0000000000000'),
+                device_id=custom_props.get('device_id'),
+                device_id2=custom_props.get('device_id2'),
+                username=account.username or "",
+                password=account.password or ""
+            )
+            client.authenticate()
+        else:
+            client = XtreamCodesClient(
+                account.server_url,
+                account.username,
+                account.password,
+                account.get_user_agent().user_agent
+            )
     logger.info(f"Refreshing movie categories for account {account.name}")
 
     # First, get the category list to properly map category IDs and names

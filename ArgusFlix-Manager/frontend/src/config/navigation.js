@@ -77,6 +77,7 @@ export const NAV_ITEMS = {
       { id: 'dashboard_stats', label: 'Dashboard Stats', icon: ChartLine, path: '/stats' },
       { id: 'sources', label: 'Verbindungen', icon: ListOrdered, path: '/sources' },
       { id: 'content_import', label: 'Content Import', icon: Import, path: '/content-import' },
+      { id: 'stalker_scanner', label: 'Stalker Werkzeuge', icon: Webhook, path: '/stalker-scanner' },
       { id: 'epg_mapping', label: 'EPG Mapping', icon: Map, path: '/epg-mapping' },
       { id: 'automations', label: 'Automations', icon: Settings2, path: '/automations' },
       { id: 'argus_devices', label: 'Argus TV Devices', icon: Smartphone, path: '/devices' },
