@@ -94,12 +94,19 @@ if ! docker compose version &> /dev/null; then
 fi
 
 # 3. Clone Repository
-REPO_URL="https://github.com/hellboy1974/argusflix-manager.git"
+if [ -n "$GITHUB_TOKEN" ]; then
+    REPO_URL="https://${GITHUB_TOKEN}@github.com/hellboy1974/argusflix-manager.git"
+else
+    REPO_URL="https://github.com/hellboy1974/argusflix-manager.git"
+fi
 INSTALL_DIR="/opt/argusflix-manager"
 
 if [ -d "$INSTALL_DIR" ]; then
     echo -e "${YELLOW}Directory $INSTALL_DIR already exists. Pulling latest changes...${NC}"
     cd $INSTALL_DIR
+    if [ -n "$GITHUB_TOKEN" ]; then
+        git remote set-url origin $REPO_URL
+    fi
     git pull
 else
     echo -e "${YELLOW}Cloning repository to $INSTALL_DIR...${NC}"
