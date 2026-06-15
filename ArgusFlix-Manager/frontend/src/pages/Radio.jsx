@@ -9,7 +9,7 @@ const axios = {
   patch: async (url, data, config) => ({ data: await api.patch(url, data, config) }),
   delete: async (url, config) => ({ data: await api.delete(url, config) }),
 };
-import PageHeader from '../components/layout/PageHeader';
+import { Stack, Group, Title, Text } from '@mantine/core';
 import { Table, Button, Input, Form, Modal, Switch, Tabs, Select } from 'antd';
 
 export default function RadioStations() {
@@ -206,11 +206,17 @@ export default function RadioStations() {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title="Internet Radio"
-        icon={RadioIcon}
-        description="Manage your custom internet radio stations and genres"
-      />
+      <Stack gap="xs" mb="lg">
+        <Group gap="xs" align="center">
+          <RadioIcon size={28} />
+          <Title order={2} style={{ fontFamily: 'Outfit, Inter, sans-serif', fontWeight: 600 }}>
+            Internet Radio
+          </Title>
+        </Group>
+        <Text c="dimmed" size="sm">
+          Manage your custom internet radio stations and genres
+        </Text>
+      </Stack>
       <div className="bg-white rounded-lg shadow mt-4 p-4">
         <Tabs defaultActiveKey="1" items={items} />
       </div>

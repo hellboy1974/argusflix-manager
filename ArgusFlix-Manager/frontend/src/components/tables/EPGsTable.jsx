@@ -348,7 +348,7 @@ const EPGsTable = () => {
     } catch (error) {
       console.error('Error toggling active state:', error);
     }
-  }, []);
+  };
 
   const handleSyncGitHubLogos = async () => {
     setIsSyncingLogos(true);
@@ -784,7 +784,8 @@ const EPGsTable = () => {
             <Menu.Item onClick={createDummyEPG}>Dummy EPG Source</Menu.Item>
           </Menu.Dropdown>
         </Menu>
-      </Flex>
+      </Group>
+    </Flex>
 
       <Paper
         style={{

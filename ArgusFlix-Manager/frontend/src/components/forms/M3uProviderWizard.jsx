@@ -104,7 +104,7 @@ export default function M3uProviderWizard({ opened, onClose, portal, onSave }) {
       };
 
       if (portal) {
-        await api.patch(\/api/v1/m3u-accounts/\/\, payload);
+        await api.patch(`/api/v1/m3u-accounts/${portal.id}/`, payload);
         notifications.show({ title: 'Erfolg', message: 'M3U-Link gespeichert.', color: 'green' });
       } else {
         await api.post('/api/v1/m3u-accounts/', payload);
@@ -123,7 +123,7 @@ export default function M3uProviderWizard({ opened, onClose, portal, onSave }) {
     if (window.confirm('Möchtest Du diesen Link wirklich löschen?')) {
       try {
         setLoading(true);
-        await api.delete(\/api/v1/m3u-accounts/\/\);
+        await api.delete(`/api/v1/m3u-accounts/${portal.id}/`);
         notifications.show({ title: 'Erfolg', message: 'M3U-Link gelöscht.', color: 'green' });
         onSave();
       } catch (err) {

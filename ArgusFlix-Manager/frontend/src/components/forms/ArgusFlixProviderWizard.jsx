@@ -99,7 +99,7 @@ export default function ArgusFlixProviderWizard({ opened, onClose, portal, onSav
     if (selected) {
       form.setFieldValue('token', selected.token);
       if (!form.values.name) {
-        form.setFieldValue('name', \ArgusFlix: \\);
+        form.setFieldValue('name', `ArgusFlix: ${selected.name}`);
       }
     }
   };
@@ -122,7 +122,7 @@ export default function ArgusFlixProviderWizard({ opened, onClose, portal, onSav
       };
 
       if (portal) {
-        await api.patch(\/api/v1/m3u/accounts/\/\, payload);
+        await api.patch(`/api/v1/m3u/accounts/${portal.id}/`, payload);
         notifications.show({ title: 'Erfolg', message: 'ArgusFlix Manager Verbindung aktualisiert.', color: 'green' });
       } else {
         await api.post('/api/v1/m3u/accounts/', payload);
@@ -141,7 +141,7 @@ export default function ArgusFlixProviderWizard({ opened, onClose, portal, onSav
     if (window.confirm('Möchtest Du diese Verbindung wirklich löschen?')) {
       try {
         setLoading(true);
-        await api.delete(\/api/v1/m3u/accounts/\/\);
+        await api.delete(`/api/v1/m3u/accounts/${portal.id}/`);
         notifications.show({ title: 'Erfolg', message: 'Verbindung gelöscht.', color: 'green' });
         onSave();
       } catch (err) {

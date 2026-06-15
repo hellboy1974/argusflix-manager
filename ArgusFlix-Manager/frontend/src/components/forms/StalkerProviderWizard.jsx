@@ -103,7 +103,7 @@ export default function StalkerProviderWizard({ opened, onClose, portal, onSave 
     try {
       setLoading(true);
       const payload = {
-        name: values.name.startsWith('Stalker:') ? values.name : Stalker: \,
+        name: values.name.startsWith('Stalker:') ? values.name : `Stalker: ${values.name}`,
         server_url: values.server_url,
         sync_policy: values.sync_policy,
         sync_with_devices: values.sync_with_devices,
@@ -119,7 +119,7 @@ export default function StalkerProviderWizard({ opened, onClose, portal, onSave 
       };
 
       if (portal) {
-        await api.patch(\/api/v1/m3u-accounts/\/\, payload);
+        await api.patch(`/api/v1/m3u-accounts/${portal.id}/`, payload);
         notifications.show({ title: 'Erfolg', message: 'Portal gespeichert.', color: 'green' });
       } else {
         await api.post('/api/v1/m3u-accounts/', payload);
@@ -138,7 +138,7 @@ export default function StalkerProviderWizard({ opened, onClose, portal, onSave 
     if (window.confirm('Möchtest Du dieses Portal wirklich löschen?')) {
       try {
         setLoading(true);
-        await api.delete(\/api/v1/m3u-accounts/\/\);
+        await api.delete(`/api/v1/m3u-accounts/${portal.id}/`);
         notifications.show({ title: 'Erfolg', message: 'Portal gelöscht.', color: 'green' });
         onSave();
       } catch (err) {

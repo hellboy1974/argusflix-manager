@@ -105,7 +105,7 @@ export default function JellyfinProviderWizard({ opened, onClose, server, onSave
       };
 
       if (server) {
-        await api.patch(\/api/v1/mediaservers/\/\, payload);
+        await api.patch(`/api/v1/mediaservers/${server.id}/`, payload);
         notifications.show({ title: 'Erfolg', message: 'Jellyfin Server gespeichert.', color: 'green' });
       } else {
         await api.post('/api/v1/mediaservers/', payload);
@@ -124,7 +124,7 @@ export default function JellyfinProviderWizard({ opened, onClose, server, onSave
     if (window.confirm('Möchtest Du diesen Jellyfin Server wirklich löschen?')) {
       try {
         setLoading(true);
-        await api.delete(\/api/v1/mediaservers/\/\);
+        await api.delete(`/api/v1/mediaservers/${server.id}/`);
         notifications.show({ title: 'Erfolg', message: 'Server gelöscht.', color: 'green' });
         onSave();
       } catch (err) {
@@ -139,7 +139,7 @@ export default function JellyfinProviderWizard({ opened, onClose, server, onSave
     if (!server) return;
     try {
       setTesting(true);
-      const res = await api.post(\/api/v1/mediaservers/\/test_connection/\);
+      const res = await api.post(`/api/v1/mediaservers/${server.id}/test_connection/`);
       notifications.show({ title: 'Erfolg', message: 'Verbindung erfolgreich!', color: 'green' });
     } catch (err) {
       notifications.show({ title: 'Verbindungsfehler', message: err.response?.data?.message || err.message, color: 'red' });

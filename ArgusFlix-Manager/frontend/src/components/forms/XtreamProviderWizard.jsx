@@ -111,7 +111,7 @@ export default function XtreamProviderWizard({ opened, onClose, portal, onSave }
       };
 
       if (portal) {
-        await api.patch(\/api/v1/m3u-accounts/\/\, payload);
+        await api.patch(`/api/v1/m3u-accounts/${portal.id}/`, payload);
         notifications.show({ title: 'Erfolg', message: 'Panel gespeichert.', color: 'green' });
       } else {
         await api.post('/api/v1/m3u-accounts/', payload);
@@ -130,7 +130,7 @@ export default function XtreamProviderWizard({ opened, onClose, portal, onSave }
     if (window.confirm('Möchtest Du dieses Panel wirklich löschen?')) {
       try {
         setLoading(true);
-        await api.delete(\/api/v1/m3u-accounts/\/\);
+        await api.delete(`/api/v1/m3u-accounts/${portal.id}/`);
         notifications.show({ title: 'Erfolg', message: 'Panel gelöscht.', color: 'green' });
         onSave();
       } catch (err) {

@@ -18,8 +18,8 @@ import {
   Textarea
 } from '@mantine/core';
 import { Play, Square, Check, Trash } from 'lucide-react';
-import { api } from '../api';
-import useWebSocketStore from '../store/websocket';
+import api from '../api';
+import { useWebSocket } from '../WebSocket';
 
 const StalkerScanner = () => {
   const [scans, setScans] = useState([]);
@@ -36,7 +36,7 @@ const StalkerScanner = () => {
   const [importedMacs, setImportedMacs] = useState('');
   const [rateLimit, setRateLimit] = useState(333); // default ~3/sec
 
-  const wsMessage = useWebSocketStore((state) => state.lastMessage);
+  const [,, wsMessage] = useWebSocket();
 
   useEffect(() => {
     fetchScans();
