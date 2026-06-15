@@ -21,7 +21,7 @@ import ConnectLogsPage from './pages/ConnectLogs';
 import Users from './pages/Users';
 import LogosPage from './pages/Logos';
 import ArgusDevicesPage from './pages/ArgusDevices';
-import AppPageLayouts from './pages/AppPageLayouts';
+
 import MoviesPage from './pages/Movies';
 import SeriesPage from './pages/Series';
 import CustomPlaylistsPage from './pages/CustomPlaylists';
