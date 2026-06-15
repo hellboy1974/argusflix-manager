@@ -151,7 +151,7 @@ fi
 # 5. Start Docker Containers
 echo -e "${YELLOW}Starting Docker containers...${NC}"
 # Use the AIO docker-compose file
-COMPOSE_CMD="docker compose -f docker/docker-compose.aio.yml"
+COMPOSE_CMD="docker compose -f ArgusFlix-Manager/docker/docker-compose.aio.yml"
 
 $COMPOSE_CMD up -d --build
 
@@ -163,7 +163,7 @@ sleep 15
 echo -e "${YELLOW}Applying database migrations...${NC}"
 $COMPOSE_CMD exec -T argusflix_manager python manage.py migrate
 
-if [ -f "fixtures.json" ]; then
+if [ -f "ArgusFlix-Manager/fixtures.json" ]; then
     echo -e "${YELLOW}Loading EPG Pre-Seeding and default fixtures...${NC}"
     $COMPOSE_CMD exec -T argusflix_manager python manage.py loaddata fixtures.json
 fi

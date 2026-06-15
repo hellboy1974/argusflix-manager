@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # --- KONFIGURATION (Bitte an euren Server anpassen) ---
-PROJECT_DIR="/opt/ArgusFlix-Manager"                     # Der Pfad zur Installation auf dem Server
+PROJECT_DIR="/opt/argusflix-manager/ArgusFlix-Manager"                     # Der Pfad zur Installation auf dem Server
 UPSTREAM_REPO="https://github.com/Start-Automating/Dispatcharr.git"
 UPSTREAM_BRANCH="main"                                   # Haupt-Branch des Entwicklers
 VENV_DIR="venv"                                          # Name des Virtual Environments im Projektordner
