@@ -1,6 +1,6 @@
 # Define base image build arguments (must be before any FROM)
-ARG REPO_OWNER=argusflix_manager
-ARG REPO_NAME=argusflix_manager
+ARG REPO_OWNER=dispatcharr
+ARG REPO_NAME=dispatcharr
 ARG BASE_TAG=base
 
 # --- Build frontend ---
