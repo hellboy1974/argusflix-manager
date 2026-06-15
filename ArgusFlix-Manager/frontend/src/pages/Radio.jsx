@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Radio as RadioIcon, List } from 'lucide-react';
-import axios from 'axios';
+import api from '../api';
+
+const axios = {
+  get: async (url, config) => ({ data: await api.get(url, config) }),
+  post: async (url, data, config) => ({ data: await api.post(url, data, config) }),
+  put: async (url, data, config) => ({ data: await api.put(url, data, config) }),
+  patch: async (url, data, config) => ({ data: await api.patch(url, data, config) }),
+  delete: async (url, config) => ({ data: await api.delete(url, config) }),
+};
 import PageHeader from '../components/layout/PageHeader';
 import { Table, Button, Input, Form, Modal, Switch, Tabs, Select } from 'antd';
 
