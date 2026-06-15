@@ -4,6 +4,7 @@ import traceback
 import json
 import uuid
 import time
+from datetime import datetime, timezone
 from urllib.parse import urlparse, urlunparse, urlencode
 
 logger = logging.getLogger(__name__)
@@ -33,8 +34,8 @@ class Client:
         self.endpoint = self._get_portal_endpoint()
         
         adapter = requests.adapters.HTTPAdapter(
-            pool_connections=1,
-            pool_maxsize=2,
+            pool_connections=10,
+            pool_maxsize=15,
             max_retries=3,
             pool_block=False
         )
@@ -156,6 +157,36 @@ class Client:
         
         logger.info(f"Stalker Authentication successful for MAC {self.mac_address}")
         return True
+
+    def handshake(self):
+        """Perform handshake and return the token"""
+        logger.debug(f"Stalker Handshake for MAC {self.mac_address}")
+        hs_params = {
+            'token': '',
+            'prehash': '0'
+        }
+        hs_data = self._make_request('stb', 'handshake', params=hs_params, is_handshake=True)
+        if isinstance(hs_data, dict) and hs_data.get('token'):
+            self.token = hs_data['token']
+            logger.debug(f"Stalker Token obtained: {self.token}")
+            return self.token
+        elif isinstance(hs_data, str):
+            self.token = hs_data
+            logger.debug(f"Stalker Token obtained: {self.token}")
+            return self.token
+        return None
+
+    def get_profile(self):
+        """Fetch user profile using current authentication state"""
+        params = {
+            'hd': '1',
+            'sn': self.sn,
+            'stb_type': self.model,
+            'device_id': self.device_id,
+            'device_id2': self.device_id2,
+            'auth_second_step': '1'
+        }
+        return self._make_request('stb', 'get_profile', params=params)
 
     def get_live_categories(self):
         """Fetch TV Genres"""
@@ -311,3 +342,145 @@ class Client:
             return res
             
         raise ValueError(f"Could not parse create_link response: {res}")
+
+
+def detect_expiry(data, depth=0):
+    """
+    Recursively inspects dict keys to find an expiration date.
+    Returns the raw string, integer, or float expiration value if found, or None.
+    """
+    if not isinstance(data, dict) or depth > 4:
+        return None
+
+    primary_keys = [
+        "expire_date",
+        "end_date",
+        "max_view_date",
+        "expire_billing_date",
+        "tariff_expired_date",
+        "date_end",
+        "exp_date",
+        "expDate",
+        "expired",
+        "expires",
+        "expiry_date",
+        "access_end",
+        "end_date_time",
+        "valid_until",
+        "end",
+        "to",
+        "active_until",
+    ]
+
+    unlimited_values = [
+        "unlimited",
+        "lifetime",
+        "never",
+        "infinity",
+        "infinite",
+        "permanent",
+        "forever",
+        "no expiry",
+        "no limit",
+        "no expiration",
+    ]
+
+    # 1. Check primary keys
+    for key in primary_keys:
+        val = data.get(key)
+        if val is not None:
+            val_str = str(val).strip().lower()
+            if val_str in unlimited_values:
+                return "Unlimited"
+            if val_str not in [
+                "",
+                "0",
+                "0000-00-00",
+                "0000-00-00 00:00:00",
+                "null",
+                "none",
+                "false",
+            ]:
+                return str(val)
+
+    # 2. Aggressive search: Check ANY key that contains date/expire/end keywords
+    for k, v in data.items():
+        if v is None:
+            continue
+        k_low = str(k).lower()
+        v_str = str(v).strip()
+        if not v_str:
+            continue
+
+        if any(
+            x in k_low
+            for x in ["expire", "end_date", "valid_until", "exp_date", "access_end"]
+        ):
+            if v_str.lower() not in [
+                "0",
+                "0000-00-00",
+                "0000-00-00 00:00:00",
+                "null",
+                "none",
+                "false",
+            ]:
+                if "-" in v_str or (v_str.isdigit() and len(v_str) >= 10):
+                    return v_str
+
+    # 3. Check common sub-objects (recursive)
+    for sub in [
+        "account_info",
+        "stb_account",
+        "active_sub",
+        "billing",
+        "profile",
+        "payment",
+        "tariff",
+        "subscription",
+        "services",
+    ]:
+        sub_data = data.get(sub)
+        if isinstance(sub_data, dict):
+            res = detect_expiry(sub_data, depth + 1)
+            if res:
+                return res
+        elif isinstance(sub_data, list) and len(sub_data) > 0:
+            for item in sub_data:
+                if isinstance(item, dict):
+                    res = detect_expiry(item, depth + 1)
+                    if res:
+                        return res
+
+    return None
+
+
+def clean_expiry_value(val):
+    """
+    Parses a raw expiration value string/timestamp into ISO-8601 string or numeric timestamp.
+    """
+    if val is None:
+        return None
+    val_str = str(val).strip()
+    
+    if val_str.isdigit() and len(val_str) >= 10:
+        try:
+            return float(val_str)
+        except ValueError:
+            pass
+
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%d-%m-%Y %H:%M:%S", "%d-%m-%Y"):
+        try:
+            dt = datetime.strptime(val_str, fmt)
+            dt = dt.replace(tzinfo=timezone.utc)
+            return dt.isoformat()
+        except ValueError:
+            continue
+
+    if "-" in val_str:
+        return val_str.replace(" ", "T")
+
+    return val_str
+
+
+# Export alias to fix ImportError in tasks
+StalkerClient = Client

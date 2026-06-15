@@ -701,9 +701,9 @@ class AppMenuSection(models.Model):
 
 
 class DeviceCommand(models.Model):
-    "\""
+    """
     Commands sent from the Manager to the Android TV App.
-    "\""
+    """
     COMMAND_CHOICES = [
         ('TRIGGER_BACKUP', 'Trigger Backup'),
         ('EXECUTE_RESTORE_WITH_FILE', 'Execute Restore with File'),
@@ -729,9 +729,9 @@ class DeviceCommand(models.Model):
 
 
 class DeviceBackup(models.Model):
-    "\""
+    """
     Backups uploaded from the TV App.
-    "\""
+    """
     device_id = models.CharField(max_length=255, help_text="Unique identifier for the TV box")
     device_name = models.CharField(max_length=255, blank=True, help_text="Friendly name of the TV box")
     backup_file = models.FileField(upload_to='device_backups/')
@@ -747,9 +747,9 @@ class DeviceBackup(models.Model):
         return f"Backup from {self.device_id} on {self.created_at}"
 
 class AppPageLayout(models.Model):
-    "\""
+    """
     Defines the dynamic UI sections (Hero, Carousels) for the TV App screens.
-    "\""
+    """
     PAGE_CHOICES = [
         ('HOME', 'Home Screen'),
         ('LIVE_TV', 'Live TV Screen'),

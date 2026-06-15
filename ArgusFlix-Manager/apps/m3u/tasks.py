@@ -861,28 +861,58 @@ def collect_stalker_streams(account_id, enabled_groups):
 
         logger.info(f"Retrieved {len(all_stalker_streams)} total live streams from provider")
 
-        filtered_count = 0
+        # Filter first, then resolve links in parallel
+        streams_to_resolve = []
         for stream in all_stalker_streams:
             stream_name = stream.get("name") or stream.get("title") or stream.get("alias") or f"{account.name} - {stream.get('id', 'Unknown')}"
-            
-            # Category ID from stalker stream (usually tv_genre_id)
             category_id = str(stream.get("tv_genre_id", stream.get("category_id", "")))
-
             if category_id in enabled_category_ids:
-                group_info = enabled_category_ids[category_id]
+                streams_to_resolve.append((stream, stream_name, category_id))
+
+        filtered_count = 0
+        if streams_to_resolve:
+            from concurrent.futures import ThreadPoolExecutor
+
+            def resolve_stalker_link(item):
+                stream, stream_name, category_id = item
                 cmd = stream.get("cmd", "")
-                
-                # Fetch playback URL by generating the link
                 try:
                     playback_url = stalker.create_link(cmd, is_vod=False)
+                    return {
+                        "stream": stream,
+                        "stream_name": stream_name,
+                        "category_id": category_id,
+                        "playback_url": playback_url,
+                        "success": True
+                    }
                 except Exception as e:
                     logger.warning(f"Failed to generate playback link for {stream_name}: {e}")
-                    continue
+                    return {
+                        "stream": stream,
+                        "stream_name": stream_name,
+                        "category_id": category_id,
+                        "playback_url": None,
+                        "success": False
+                    }
 
-                # Extract Catchup/Timeshift info
+            logger.info(f"Resolving {len(streams_to_resolve)} Stalker streams in parallel using ThreadPoolExecutor...")
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                resolved_results = list(executor.map(resolve_stalker_link, streams_to_resolve))
+
+            for res in resolved_results:
+                if not res["success"] or not res["playback_url"]:
+                    continue
+                
+                stream = res["stream"]
+                stream_name = res["stream_name"]
+                category_id = res["category_id"]
+                playback_url = res["playback_url"]
+                group_info = enabled_category_ids[category_id]
+                cmd = stream.get("cmd", "")
+
                 is_catchup = str(stream.get("tv_archive", 0)) == "1" or str(stream.get("enable_tv_archive", 0)) == "1"
                 catchup_days = str(stream.get("tv_archive_duration", 7)) if is_catchup else ""
-                
+
                 stream_data = {
                     "name": stream_name,
                     "url": playback_url,
@@ -1705,6 +1735,13 @@ def refresh_m3u_groups(account_id, use_cache=False, full_refresh=False, scan_sta
             )
             _stalker_authenticate_with_failover(account, stalker)
             
+            # Queue async profile refresh task to run in background
+            try:
+                logger.info(f"Queueing background profile refresh for Stalker account {account.name}")
+                refresh_account_profiles.delay(account.id)
+            except Exception as e:
+                logger.warning(f"Failed to queue Stalker profile refresh task: {str(e)}")
+
             # Fetch Live Categories
             stalker_categories = stalker.get_live_categories()
             logger.info(f"Found {len(stalker_categories)} live categories for Stalker")
@@ -3071,9 +3108,9 @@ def refresh_account_profiles(account_id):
     try:
         account = M3UAccount.objects.get(id=account_id, is_active=True)
 
-        if account.account_type != M3UAccount.Types.XC:
-            logger.debug(f"Account {account_id} is not XC type, skipping profile refresh")
-            return f"Account {account_id} is not an XtreamCodes account"
+        if account.account_type not in (M3UAccount.Types.XC, M3UAccount.Types.STALKER):
+            logger.debug(f"Account {account_id} is not XC or STALKER type, skipping profile refresh")
+            return f"Account {account_id} is not an XC or STALKER account"
 
         from apps.m3u.models import M3UAccountProfile
 
@@ -3085,6 +3122,77 @@ def refresh_account_profiles(account_id):
         if not profiles.exists():
             logger.info(f"No active profiles found for account {account.name}")
             return f"No active profiles for account {account_id}"
+
+        if account.account_type == M3UAccount.Types.STALKER:
+            from core.stalker import detect_expiry, clean_expiry_value
+            custom_props = account.custom_properties or {}
+            mac = custom_props.get('mac_address', '')
+            
+            profiles_updated = 0
+            profiles_failed = 0
+            
+            for profile in profiles:
+                try:
+                    profile_props = profile.custom_properties or {}
+                    
+                    client_mac = profile_props.get('mac_address') or mac
+                    client_sn = profile_props.get('sn') or custom_props.get('sn', '0000000000000')
+                    client_dev1 = profile_props.get('device_id') or custom_props.get('device_id')
+                    client_dev2 = profile_props.get('device_id2') or custom_props.get('device_id2')
+                    
+                    stalker = StalkerClient(
+                        server_url=account.server_url,
+                        mac_address=client_mac,
+                        sn=client_sn,
+                        device_id=client_dev1,
+                        device_id2=client_dev2,
+                        username=account.username or "",
+                        password=account.password or ""
+                    )
+                    
+                    if stalker.authenticate():
+                        profile_data = stalker.get_profile()
+                        if profile_data:
+                            # Detect expiry date
+                            raw_expiry = detect_expiry(profile_data)
+                            expiry_val = clean_expiry_value(raw_expiry)
+                            
+                            # Merge status and other details
+                            status_val = profile_data.get('status') or profile_data.get('active') or "1"
+                            if status_val == "1" or status_val is True:
+                                status_val = "Active"
+                            elif status_val == "0" or status_val is False:
+                                status_val = "Inactive"
+                                
+                            user_info = {
+                                'exp_date': expiry_val,
+                                'status': status_val,
+                                'username': client_mac,
+                                'mac_address': client_mac,
+                            }
+                            
+                            existing_props = profile.custom_properties or {}
+                            existing_props['user_info'] = user_info
+                            existing_props['stalker_profile'] = profile_data
+                            profile.custom_properties = existing_props
+                            profile.save()
+                            
+                            # Trigger warning/notification evaluation
+                            evaluate_profile_expiration_notification(profile)
+                            
+                            profiles_updated += 1
+                            logger.info(f"Updated Stalker info for profile '{profile.name}'")
+                        else:
+                            profiles_failed += 1
+                            logger.warning(f"Failed to get profile data for stalker profile '{profile.name}'")
+                    else:
+                        profiles_failed += 1
+                        logger.warning(f"Failed to authenticate stalker profile '{profile.name}'")
+                except Exception as profile_error:
+                    profiles_failed += 1
+                    logger.error(f"Failed to update Stalker info for profile '{profile.name}': {str(profile_error)}")
+            
+            return f"Stalker profile refresh complete. Updated: {profiles_updated}, Failed: {profiles_failed}"
 
         # Get user agent for this account
         try:
