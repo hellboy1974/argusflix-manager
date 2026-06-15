@@ -12,7 +12,7 @@ import {
   Text,
   LoadingOverlay,
 } from '@mantine/core';
-import { IconGripVertical, IconDeviceFloppy } from '@tabler/icons-react';
+import { GripVertical, Save } from 'lucide-react';
 import { useListState } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
@@ -80,7 +80,7 @@ const MetadataProviders = () => {
       <LoadingOverlay visible={loading || saving} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
       <Group justify="space-between" mb="lg">
         <Title order={2}>Metadata Providers</Title>
-        <Button onClick={handleSave} leftSection={<IconDeviceFloppy size={16} />}>
+        <Button onClick={handleSave} leftSection={<Save size={16} />}>
           Save Changes
         </Button>
       </Group>
@@ -117,7 +117,7 @@ const MetadataProviders = () => {
                           <Table.Td>
                             <div {...provided.dragHandleProps}>
                               <ActionIcon variant="subtle" color="gray" size="sm">
-                                <IconGripVertical size={16} />
+                                <GripVertical size={16} />
                               </ActionIcon>
                             </div>
                           </Table.Td>
