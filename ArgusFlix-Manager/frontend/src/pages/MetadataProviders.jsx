@@ -12,10 +12,9 @@ import {
   Text,
   LoadingOverlay,
 } from '@mantine/core';
-import { GripVertical, Save } from 'lucide-react';
+import { Save, ArrowUp, ArrowDown } from 'lucide-react';
 import { useListState } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import API from '../api';
 
 const MetadataProviders = () => {
@@ -41,9 +40,14 @@ const MetadataProviders = () => {
     }
   };
 
-  const handleDragEnd = ({ destination, source }) => {
-    if (!destination) return;
-    setProviders.reorder({ from: source.index, to: destination.index });
+  const moveUp = (index) => {
+    if (index === 0) return;
+    setProviders.reorder({ from: index, to: index - 1 });
+  };
+
+  const moveDown = (index) => {
+    if (index === providers.length - 1) return;
+    setProviders.reorder({ from: index, to: index + 1 });
   };
 
   const handleSave = async () => {
@@ -86,65 +90,62 @@ const MetadataProviders = () => {
       </Group>
 
       <Text c="dimmed" mb="md">
-        Configure API keys and prioritize which provider is queried first for metadata and images. Drag the handles to reorder.
+        Configure API keys and prioritize which provider is queried first for metadata and images. Use the Up/Down arrows to reorder.
       </Text>
 
       <Paper shadow="sm" radius="md" p="md" withBorder>
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Table verticalSpacing="sm">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th style={{ width: 40 }}></Table.Th>
-                <Table.Th>Provider</Table.Th>
-                <Table.Th>API Key</Table.Th>
-                <Table.Th style={{ width: 80, textAlign: 'center' }}>Active</Table.Th>
+        <Table verticalSpacing="sm">
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th style={{ width: 100, textAlign: 'center' }}>Priority</Table.Th>
+              <Table.Th>Provider</Table.Th>
+              <Table.Th>API Key</Table.Th>
+              <Table.Th style={{ width: 80, textAlign: 'center' }}>Active</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {providers.map((item, index) => (
+              <Table.Tr key={item.id.toString()}>
+                <Table.Td>
+                  <Group gap="xs" wrap="nowrap" justify="center">
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size="sm"
+                      disabled={index === 0}
+                      onClick={() => moveUp(index)}
+                    >
+                      <ArrowUp size={16} />
+                    </ActionIcon>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size="sm"
+                      disabled={index === providers.length - 1}
+                      onClick={() => moveDown(index)}
+                    >
+                      <ArrowDown size={16} />
+                    </ActionIcon>
+                  </Group>
+                </Table.Td>
+                <Table.Td fw={500}>{item.name}</Table.Td>
+                <Table.Td>
+                  <TextInput
+                    placeholder={`API Key for ${item.name}`}
+                    value={item.api_key || ''}
+                    onChange={(e) => updateProviderField(index, 'api_key', e.currentTarget.value)}
+                  />
+                </Table.Td>
+                <Table.Td style={{ textAlign: 'center' }}>
+                  <Switch
+                    checked={item.is_active}
+                    onChange={(e) => updateProviderField(index, 'is_active', e.currentTarget.checked)}
+                  />
+                </Table.Td>
               </Table.Tr>
-            </Table.Thead>
-            <Droppable droppableId="providers-list" direction="vertical">
-              {(provided) => (
-                <Table.Tbody {...provided.droppableProps} ref={provided.innerRef}>
-                  {providers.map((item, index) => (
-                    <Draggable key={item.id.toString()} index={index} draggableId={item.id.toString()}>
-                      {(provided, snapshot) => (
-                        <Table.Tr
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          style={{
-                            ...provided.draggableProps.style,
-                            backgroundColor: snapshot.isDragging ? 'var(--mantine-color-default-hover)' : undefined,
-                          }}
-                        >
-                          <Table.Td>
-                            <div {...provided.dragHandleProps}>
-                              <ActionIcon variant="subtle" color="gray" size="sm">
-                                <GripVertical size={16} />
-                              </ActionIcon>
-                            </div>
-                          </Table.Td>
-                          <Table.Td fw={500}>{item.name}</Table.Td>
-                          <Table.Td>
-                            <TextInput
-                              placeholder={`API Key for ${item.name}`}
-                              value={item.api_key || ''}
-                              onChange={(e) => updateProviderField(index, 'api_key', e.currentTarget.value)}
-                            />
-                          </Table.Td>
-                          <Table.Td style={{ textAlign: 'center' }}>
-                            <Switch
-                              checked={item.is_active}
-                              onChange={(e) => updateProviderField(index, 'is_active', e.currentTarget.checked)}
-                            />
-                          </Table.Td>
-                        </Table.Tr>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </Table.Tbody>
-              )}
-            </Droppable>
-          </Table>
-        </DragDropContext>
+            ))}
+          </Table.Tbody>
+        </Table>
       </Paper>
     </Container>
   );
