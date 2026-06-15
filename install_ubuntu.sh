@@ -1,5 +1,3 @@
-# install_ubuntu.sh - Automated installer for ArgusFlix Manager on Ubuntu/Debian
-
 set -e
 
 # Colors for output
