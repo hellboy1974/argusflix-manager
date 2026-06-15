@@ -59,7 +59,7 @@ const UpdatesContent = () => {
     // category: { id, type }
     try {
       // We added 'acknowledge-categories' endpoint
-      await api.post(\/api/v1/m3u-accounts/\/acknowledge-categories/\, {
+      await api.post(`/api/v1/m3u-accounts/${providerId}/acknowledge-categories/`, {
         categories: [{ id: category.id, type: category.type }],
         acknowledge_all: false
       });
@@ -72,7 +72,7 @@ const UpdatesContent = () => {
 
   const handleAcknowledgeAll = async (providerId) => {
     try {
-      await api.post(\/api/v1/m3u-accounts/\/acknowledge-categories/\, {
+      await api.post(`/api/v1/m3u-accounts/${providerId}/acknowledge-categories/`, {
         acknowledge_all: true
       });
       fetchUpdates();
